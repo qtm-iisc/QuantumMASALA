@@ -5,4 +5,4 @@ This is a suite of codes which implement plane-wave pseudopotential based electr
 
 
 ## Installation Instructions:
-pip install --editable .
+`pip install --editable .`
