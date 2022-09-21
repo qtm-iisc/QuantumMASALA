@@ -11,7 +11,7 @@ from .rho import ElectronDen
 from .wfc import ElectronWfc, ElectronWfcBgrp
 
 __all__ = ["constants", "PWComm",
-           "RealLattice", "AtomBasis", "Crystal",
+           "RealLattice", "ReciprocalLattice", "AtomBasis", "Crystal",
            "UPFv2Data",
            "KPoints", "KPointsKgrp",
            "GSpace", "GSpaceWfc",

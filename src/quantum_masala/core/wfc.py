@@ -13,34 +13,39 @@ RANDOMIZE_AMP = 0.05
 
 
 class ElectronWfc:
-    r"""Container for bloch wavefunctions of given bands across input k-points
+    r"""Container for bloch wavefunctions of a given k-point.
 
-    For given list of k-points, a `GSpaceWfc` object is generated which represents the
-    (unique) G-Sphere for each k-point. Empty arrays for storing `nbnd` wavefunctions are
-    created for each k-point. All eigenvalues are stored in a separate single array.
+    For a given k-point, a `GSpaceWfc` object is generated which represents
+    the list of G-vectors such that the wave vector :math:`\vec{G}+\vec{k}` is within
+    the KE cutoff :math:`E_{rho} / 4`. Empty arrays for storing `nbnd` wavefunctions, their
+    energies and their occupations are created.
 
     Attributes
     ----------
     gspc : GSpace
-        Represents the G-space truncated based on Kinetic Energy cutoff '4*ecutwfc`
-    kpts : KPointsKgrp
-        Input list of k-points. Part of the full set of k-points distributed across k-groups.
+        Represents the 'G' space truncated based on Kinetic Energy cutoff '4*ecutwfc`.
+    k_cryst : tuple[float, float, float]
+        k-point in crystal coords.
+    k_weight : float
+        weight associated to given k-point
     gwfc : GSpaceWfc
-        Represents the G-Sphere (basis) of all k-points, truncated based on KE Cutoff 'ecutwfc'
+        Represents the 'G+k' space, truncated based on KE Cutoff 'ecutwfc'
 
     numspin : {1, 2}
         1 if calculation is non-polarized, 2 if spin-polarized (LSDA).
     noncolin : bool
-        `True` if non-colinear calculation. Not implemented
+        `True` if non-colinear calculation
 
     numbnd : int
         Number of bands assigned to the process' b-group
 
-    l_evc_gk : list[np.ndarray]
-        List of numpy arrays of complex numbers to store the eigen-wavefunctions
-        in reciprocal space :math:`\mathbf{G} + \mathbf{k}` for each k-point in `kgrp`
-    l_evl : np.ndarray
-        NumPy array containing list of all eigenvalues of `l_evc_gk`
+    evc_gk : list[np.ndarray]
+        Array of complex numbers to store the (periodic part of the) bloch wavefunctions
+        as fourier components of G vectors in `gwfc`
+    evl : np.ndarray
+        Array of corresponding eigenvalues of `evc_gk`
+    occ : np.ndarray
+        Array of corresponsing occupation number of `evc_gk`
     """
 
     pwcomm: PWComm = PWComm()
@@ -48,7 +53,8 @@ class ElectronWfc:
     def __init__(
         self,
         gspc: GSpace,
-        k_cryst: list[float, float, float],
+        k_cryst: tuple[float, float, float],
+        k_weight: float,
         idxk: int,
         numspin: int,
         numbnd: int,
@@ -59,14 +65,13 @@ class ElectronWfc:
         self.idxk = idxk
         self.k_cryst = np.empty(3, dtype='f8')
         self.k_cryst[:] = k_cryst
+        self.k_weight = k_weight
 
         self.gwfc = GSpaceWfc(gspc, self.k_cryst)
         self.fft_dri = FFTGSpaceWfc(self.gwfc)
 
         if numspin not in [1, 2]:
             raise ValueError(f"'numspin' must be either 1 or 2. Got {numspin}")
-        if noncolin:
-            raise NotImplementedError(f"Non-collinear Calculation not implemented")
         self.numspin = 1 if numspin == 1 else 2
         self.noncolin = noncolin
 
@@ -111,4 +116,20 @@ class ElectronWfc:
         return rho_r
 
 
-ElectronWfcBgrp = ElectronWfc
+class ElectronWfcBgrp(ElectronWfc):
+
+    pwcomm: PWComm = PWComm()
+
+    def __init__(
+            self,
+            gspc: GSpace,
+            k_cryst: tuple[float, float, float],
+            k_weight: float,
+            idxk: int,
+            numspin: int,
+            numbnd: int,
+            noncolin: bool = False,
+    ):
+        self.numbnd_all = numbnd
+        self.numbnd_proc = self.pwcomm.kgrp_intracomm.split_numbnd(numbnd)
+        super().__init__(gspc, k_cryst, k_weight, idxk, numspin, self.numbnd_proc, noncolin)
