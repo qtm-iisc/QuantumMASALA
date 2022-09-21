@@ -150,9 +150,9 @@ class ElectronDen:
                 raise ValueError(f"'f_r.shape' must be {grid_shape}. Got {f_r.shape}")
 
         if sum_over_spin:
-            return self.grho.realspc_dv * np.sum(f_r * self.r, axis=(-1, -2, -3, -4))
+            return self.grho.reallat_dv * np.sum(f_r * self.r, axis=(-1, -2, -3, -4))
         else:
-            return self.grho.realspc_dv * np.sum(f_r * self.r, axis=(-1, -2, -3))
+            return self.grho.reallat_dv * np.sum(f_r * self.r, axis=(-1, -2, -3))
 
     def _normalize(self) -> None:
         rho_int = self.integral_rho_f_dv(1, sum_over_spin=True)
@@ -182,7 +182,7 @@ class ElectronDen:
             rho_neg = np.abs(self._r) - self._r.real
             i_rho_neg = np.nonzero(rho_neg > EPS5)
             if len(i_rho_neg[0]) != 0:
-                del_rho = np.sum(np.abs(self._r[i_rho_neg])) * self.grho.realspc_dv
+                del_rho = np.sum(np.abs(self._r[i_rho_neg])) * self.grho.reallat_dv
                 warn("negative/complex values found in `rho.r`.\n"
                      f"Error: {del_rho}")
             self._r[:] = np.abs(self._r[:], out=self._r[:])

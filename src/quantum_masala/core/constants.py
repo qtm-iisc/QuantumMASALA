@@ -1,4 +1,4 @@
-"""Units and Constants used across all I/O Routines.
+"""Units and Constants used across QuantumMASALA.
 
 Values of Physical Constants from NIST (2018)
 https://physics.nist.gov/cuu/Constants/index.html

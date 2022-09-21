@@ -106,7 +106,7 @@ class ElectronWfc:
     def compute_rho_r(self) -> np.ndarray:
         evc_r = self.fft_dri.g2r(self.evc_gk)
         l_rho_r = evc_r.conj() * evc_r
-        l_rho_r /= np.sum(l_rho_r, axis=(-1, -2, -3), keepdims=True) * self.gspc.realspc_dv
+        l_rho_r /= np.sum(l_rho_r, axis=(-1, -2, -3), keepdims=True) * self.gspc.reallat_dv
         rho_r = np.sum(l_rho_r * np.expand_dims(self.occ, axis=(-1, -2, -3)), axis=1)
         return rho_r
 
