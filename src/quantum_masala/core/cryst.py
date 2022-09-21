@@ -1,3 +1,20 @@
+"""Module for describing crystal structures.
+
+This module contains classes that represent a crystal's
+    - Lattice of Translations (both Bravais and Reciprocal Lattice)
+    - Basis Atoms (grouped by their types/species)
+
+The `Lattice` classes and their derivatives have methods implemented
+for coordinate transformations.
+
+`RealLattice` and `ReciprocalLattice` have class methods for generating
+instances from translation vectors and instances of each other.
+
+The `AtomBasis` class represents all atoms of a type described by a
+`PseudoPotFile` instance in the crystal's unit cell. The basis of the
+crystal is formed from a list of `AtomBasis` objects.
+"""
+
 from dataclasses import dataclass, field
 from typing import Type
 
@@ -73,7 +90,7 @@ class Lattice:
 
         Returns
         -------
-            NumPy array with the same shape as `arr` containing the vectors in crystal coords.
+        Array with the same shape as `arr` containing the vectors in crystal coords.
         """
         vec_ = np.expand_dims(arr, axis)
         mat_ = self.primvec_inv.reshape((3, 3) + (1,) * (arr.ndim - axis - 1))
@@ -92,7 +109,7 @@ class Lattice:
 
         Returns
         -------
-            NumPy Array with the same shape as `arr` containing the vectors in cartesian coords.
+        Array with the same shape as `arr` containing the vectors in cartesian coords.
         """
         vec_ = np.expand_dims(arr, axis)
         mat_ = self.primvec.reshape((3, 3) + (1,) * (arr.ndim - axis - 1))
@@ -171,14 +188,14 @@ class Lattice:
 
 
 class RealLattice(Lattice):
-    """Represents Real-Space Lattice of a Crystal.
+    """Represents Bravais Lattice of a Crystal.
 
     Extends `Lattice` with attribute aliases and methods for transformation to and from 'alat' coords.
 
     Attributes
     ----------
     alat : float
-        Real-space Lattice Parameter 'a'
+        Bravais Lattice Parameter 'a'
     latvec : np.ndarray
         Alias of `super().primvec`
     latvec_inv : np.ndarray
@@ -200,7 +217,7 @@ class RealLattice(Lattice):
         alat : float
             Lattice parameter 'a'
         latvec : array_like
-            3X3 Array representing the primitive translation vectors of the real-space lattice
+            3X3 Array representing the primitive translation vectors of the bravais lattice
         """
         self.alat: float = alat
         latvec = np.array(latvec)
@@ -211,12 +228,32 @@ class RealLattice(Lattice):
 
     @classmethod
     def from_axes_cart(cls, alat: float, a1: Vector3D, a2: Vector3D, a3: Vector3D):
+        """Generates `RealLattice` instance from a list of
+        primitive translation vectors in atomic units"""
         latvec = np.array([a1, a2, a3]).T
         return cls(alat, latvec)
 
     @classmethod
     def from_axes_alat(cls, alat: float, a1: Vector3D, a2: Vector3D, a3: Vector3D):
+        """Generates `RealLattice` instance from a list of
+        primitive translation vectors in `alat` units"""
         latvec = alat * np.array([a1, a2, a3]).T
+        return cls(alat, latvec)
+
+    @classmethod
+    def from_recilat(cls, recilat: 'ReciprocalLattice'):
+        """Factory Method to construct from `RealLattice` instance.
+
+        Parameters
+        ----------
+        recilat : ReciprocalLattice
+
+        Returns
+        -------
+        `ReciprocalLattice` instance representing the reciprocal space of the crystal described by `reallat`
+        """
+        alat = TPI / recilat.tpiba
+        latvec = np.transpose(recilat.recvec_inv) * TPI
         return cls(alat, latvec)
 
     @property
@@ -326,11 +363,15 @@ class ReciprocalLattice(Lattice):
 
     @classmethod
     def from_axes_cart(cls, tpiba: float, b1: Vector3D, b2: Vector3D, b3: Vector3D):
+        """Generates `ReciprocalLattice` instance from a list of
+        primitive translation vectors in atomic units"""
         recvec = np.array([b1, b2, b3]).T
         return cls(tpiba, recvec)
 
     @classmethod
     def from_axes_tpiba(cls, tpiba: float, b1: Vector3D, b2: Vector3D, b3: Vector3D):
+        """Generates `ReciprocalLattice` instance from a list of
+        primitive translation vectors in `tpiba` units"""
         recvec = tpiba * np.array([b1, b2, b3]).T
         return cls(tpiba, recvec)
 
@@ -388,7 +429,7 @@ class ReciprocalLattice(Lattice):
         """
         if coords in ['cryst', 'cart']:
             return super().dot(l_vec1, l_vec2, coords)
-        if coords == 'alat':
+        if coords == 'tpiba':
             return super().dot(l_vec1, l_vec2, 'cart') * self.tpiba**2
         else:
             raise ValueError(f"'coords' must be one of 'cryst', 'cart' or 'tpiba'. Got {coords}")
@@ -409,7 +450,7 @@ class ReciprocalLattice(Lattice):
         """
         if coords in ['cryst', 'cart']:
             return super().norm2(l_vec, coords)
-        if coords == 'alat':
+        if coords == 'tpiba':
             return super().norm2(l_vec, 'cart') * self.tpiba ** 2
         else:
             raise ValueError(f"'coords' must be one of 'cryst', 'cart' or 'tpiba'. Got {coords}")
@@ -422,7 +463,7 @@ class AtomBasis:
     Attributes
     ----------
     reallat: RealLattice
-        Lattice of the Crystal
+        Bravais Lattice of the Crystal
     ppdata: Type[PseudoPotFile]
         Pseudopotential Data of the species
     label: str
@@ -475,7 +516,7 @@ class Crystal:
     Attributes
     ----------
     reallat: RealLattice
-        Real-Space Lattice of the crystal
+        Bravais Lattice of the crystal
     recilat: ReciprocalLattice
         Reciprocal-Space lattice of the crystal
     l_species: list[AtomBasis]
