@@ -5,7 +5,8 @@ import numpy as np
 from ..gspc import GSpace
 from ..gspc_wfc import GSpaceWfc
 
-from .config import FFT_METHOD
+from quantum_masala.config import FFT_CONFIG
+FFT_METHOD = FFT_CONFIG["METHOD"]
 
 
 def FFTDriver_():

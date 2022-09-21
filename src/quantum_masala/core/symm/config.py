@@ -1,2 +1,0 @@
-SPGLIB_SYMPREC: float = 1E-5
-SPGLIB_ANGLETOL: float = -1.0

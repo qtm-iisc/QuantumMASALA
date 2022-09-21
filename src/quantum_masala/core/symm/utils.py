@@ -3,7 +3,9 @@ import spglib
 
 from ..cryst import Lattice, Crystal
 
-from .config import SPGLIB_SYMPREC, SPGLIB_ANGLETOL
+from quantum_masala.config import SPGLIB_CONFIG
+SYMPREC = SPGLIB_CONFIG["SYMPREC"]
+ANGLE_TOL = SPGLIB_CONFIG["ANGLE_TOL"]
 
 symm_dtype = [("rotations", "i4", (3, 3)), ("translations", "f8", (3,))]
 
@@ -29,7 +31,7 @@ def compute_symmetry_spglib(
     Please refer to `Spglib for Python` page for information regarding the `spglib_cell`:
     https://spglib.github.io/spglib/python-spglib.html#crystal-structure-cell
     """
-    symm_data = spglib.get_symmetry(spglib_cell, symprec=SPGLIB_SYMPREC)
+    symm_data = spglib.get_symmetry(spglib_cell, symprec=SYMPREC)
     if symm_data is None:
         symm_data = {
             "rotations": np.eye(3, dtype="i4"),

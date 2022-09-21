@@ -3,7 +3,8 @@ from typing import Optional
 
 import numpy as np
 
-from .config import FFTLIB
+from quantum_masala.config import FFT_CONFIG
+FFTLIB = FFT_CONFIG["LIB"]
 
 
 def FFTLib_(*args):

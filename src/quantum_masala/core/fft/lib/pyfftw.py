@@ -5,7 +5,9 @@ import pyfftw
 
 from ..libwrapper import FFTLibWrapper
 
-from ..config import PYFFTW_PLANNER_EFFORT, PYFFTW_NUM_THREADS
+from quantum_masala.config import PYFFTW_CONFIG
+PLANNER_EFFORT = PYFFTW_CONFIG["PLANNER_EFFORT"]
+NUM_THREADS = PYFFTW_CONFIG["NUM_THREADS"]
 
 
 class PyFFTWLibWrapper(FFTLibWrapper):
@@ -26,8 +28,8 @@ class PyFFTWLibWrapper(FFTLibWrapper):
         kwargs["overwrite_input"] = True
         kwargs["auto_align_input"] = True
         kwargs["auto_contiguous"] = True
-        kwargs["planner_effort"] = PYFFTW_PLANNER_EFFORT
-        kwargs["threads"] = PYFFTW_NUM_THREADS
+        kwargs["planner_effort"] = PLANNER_EFFORT
+        kwargs["threads"] = NUM_THREADS
 
         self.fft_worker = fft_builder(arr, **kwargs)
         self.ifft_worker = ifft_builder(arr, **kwargs)

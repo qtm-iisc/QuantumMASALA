@@ -8,7 +8,8 @@ from spglib import get_ir_reciprocal_mesh
 from .cryst import ReciprocalLattice, Crystal
 from .mpicomm import PWComm
 
-from .symm.config import SPGLIB_SYMPREC
+from quantum_masala.config import SPGLIB_CONFIG
+SYMPREC = SPGLIB_CONFIG["SYMPREC"]
 
 ROUND_ROBIN_KPTS = True
 
@@ -61,7 +62,7 @@ class KPoints:
                 cryst.spglib_cell,
                 shifts,
                 is_time_reversal,
-                symprec=SPGLIB_SYMPREC,
+                symprec=SYMPREC,
             )
             mapping, grid = ir_reciprocal_mesh
             iarr_irred, weights = np.unique(mapping, return_counts=True)
