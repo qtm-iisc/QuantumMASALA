@@ -14,27 +14,53 @@ SYMPREC = SPGLIB_CONFIG["SYMPREC"]
 ROUND_ROBIN_KPTS = True
 
 
-@dataclass
 class KPoints:
     recilat: ReciprocalLattice
-    cryst: ArrayLike
+    cryst: np.ndarray
     weights: np.ndarray
     numk: int = field(init=False)
 
-    def __post_init__(self):
-        self.cryst = np.array(self.cryst, dtype='f8', order='C')
-        self.weights = np.array(self.weights, dtype='f8', order='C')
+    def __init__(self, recilat: ReciprocalLattice, cryst: ArrayLike,
+                 weights: ArrayLike):
+        self.recilat = recilat
+        self.weights = np.array(weights, dtype='f8')
+        self.weights /= np.sum(self.weights)
+        self.cryst = np.empty((3, len(self.weights)), dtype='f8')
+        self.cryst[:] = cryst
+        self.numk = len(self.weights)
 
-        if self.cryst.ndim != 2:
-            raise ValueError(f"'cryst' must be a 2D Array. Got {self.cryst.shape}")
-        if self.weights.ndim != 1:
-            raise ValueError(f"'weights' must be an 1D Array. Got {self.weights.shape}")
-        if self.cryst.shape[0] != 3:
-            raise ValueError(f"first axis of 'cryst' must be 3. Got {self.cryst.shape[0]}")
-        self.numk = self.cryst.shape[1]
-        if self.weights.shape[0] != self.numk:
-            raise ValueError("size of 'weights' must match number of k-points"
-                             f"Got {self.weights.shape[0]} vs {self.numk}")
+    @classmethod
+    def from_cart(cls, recilat: ReciprocalLattice, *l_kpts_cart):
+        weights = []
+        cart = []
+        for k_cart, k_weight in l_kpts_cart:
+            cart.append(k_cart)
+            weights.append(k_weight)
+
+        cryst = recilat.cart2cryst(cart, axis=1).T
+        return cls(recilat, cryst, weights)
+
+    @classmethod
+    def from_cryst(cls, recilat: ReciprocalLattice, *l_kpts_cryst):
+        weights = []
+        cryst = []
+        for k_cart, k_weight in l_kpts_cryst:
+            cryst.append(k_cart)
+            weights.append(k_weight)
+
+        cryst = np.array(cryst).T
+        return cls(recilat, cryst, weights)
+
+    @classmethod
+    def from_tpiba(cls, recilat: ReciprocalLattice, *l_kpts_tpiba):
+        weights = []
+        tpiba = []
+        for k_cart, k_weight in l_kpts_tpiba:
+            tpiba.append(k_cart)
+            weights.append(k_weight)
+
+        cryst = recilat.tpiba2cryst(tpiba, axis=1).T
+        return cls(recilat, cryst, weights)
 
     @property
     def cart(self):
@@ -98,10 +124,10 @@ def sync_kpts_all(pwcomm: PWComm, kpts_all: KPoints):
 
 
 class KPointsKgrp(KPoints):
+    pwcomm = PWComm()
 
-    def __init__(self, pwcomm: PWComm, kpts_all: KPoints):
-        self.pwcomm = pwcomm
-        self.kpts_all = sync_kpts_all(pwcomm, kpts_all)
+    def __init__(self, kpts_all: KPoints):
+        self.kpts_all = sync_kpts_all(self.pwcomm, kpts_all)
 
         numk_all = self.kpts_all.numk
         numkgrp = self.pwcomm.numkgrp
@@ -111,7 +137,7 @@ class KPointsKgrp(KPoints):
                              f"Got 'numkgrp'={numkgrp}, 'numk'={numk_all}")
         idxkgrp = self.pwcomm.idxkgrp
         if ROUND_ROBIN_KPTS:
-            l_ikpts = list(range(idxkgrp, numkgrp))
+            l_ikpts = list(range(idxkgrp, numk_all, numkgrp))
         else:
             start = (numk_all // numkgrp) * idxkgrp + min(idxkgrp, numk_all % numkgrp)
             stop = start + (numk_all // numkgrp) + (idxkgrp < numk_all % numkgrp)

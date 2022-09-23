@@ -7,8 +7,6 @@ import numpy as np
 from .cryst import Crystal
 from .gspc import GSpace
 from .fft import FFTGSpace
-
-
 from .symm import SymmGspc
 from .mpicomm import PWComm
 
@@ -16,7 +14,7 @@ EPS5 = 1E-5
 EPS10 = 1E-10
 
 
-class ElectronDen:
+class Rho:
     r"""Represents (spin-dependent) electron density in crystal
 
     Contains both core and valence electron data. Methods to update density are implemented,
@@ -71,7 +69,6 @@ class ElectronDen:
         crystal: Crystal,
         grho: GSpace,
         numspin: int,
-        numel: float,
         fft_rho: Optional[FFTGSpace] = None,
         rho: Optional[np.ndarray] = None,
         rhocore: Optional[np.ndarray] = None,
@@ -83,18 +80,17 @@ class ElectronDen:
             fft_rho = FFTGSpace(self.grho)
         self.fft_rho = fft_rho
 
-        self._symmmod = SymmGspc(crystal, self.grho)
-
         if numspin not in [1, 2]:
             raise ValueError(f"'numspin' must be either '1' or '2'. Got {numspin}")
         self.numspin = numspin
 
-        if not isinstance(numel, (int, float)):
-            raise ValueError(f"'numel' must be an integer or float. Got {type(numel)}")
-        if numel <= 0:
-            raise ValueError(f"'numel' must be positive. Got {numel}")
-        self.numel = numel
+        self.numel = crystal.numel
+
         self.symm_flag = symm_flag
+        if symm_flag:
+            self._symmmod = SymmGspc(crystal, self.grho)
+        else:
+            self._symmmod = None
 
         self.core_g = np.empty(self.grho.numg, dtype="c16")
         self.core_r = np.empty(self.grho.grid_shape, dtype="c16")
@@ -110,12 +106,15 @@ class ElectronDen:
                     f"'rhocore.shape' must be either {(self.grho.numg,)} or {self.grho.grid_shape}. "
                     f"Got {rhocore.shape}"
                 )
+        else:
+            self.core_g[:] = 0
+            self.core_r[:] = 0
 
         self._g = np.empty((self.numspin, self.grho.numg), dtype="c16")
         self._r = np.empty((self.numspin, *self.grho.grid_shape), dtype="c16")
 
         if rho is not None:
-            self.update_rho(rho)
+            self.update(rho)
 
     @property
     def r(self) -> np.ndarray:
@@ -155,43 +154,45 @@ class ElectronDen:
             return self.grho.reallat_dv * np.sum(f_r * self.r, axis=(-1, -2, -3))
 
     def _normalize(self) -> None:
-        rho_int = self.integral_rho_f_dv(1, sum_over_spin=True)
+        rho_int = np.sum(self._g[:, 0]) * self.grho.reallat_dv
+        rho_int *= (1 + (self.numspin == 1))
+
         if rho_int < EPS10:
             raise ValueError("values in 'rho.r' too small to normalize.\n"
                              f"computed total charge = {rho_int}")
+        if np.abs(rho_int - self.numel) > EPS5:
+            warn(f"total charge renormalized from {rho_int} to {self.numel}")
         fac = self.numel / rho_int
         self._g *= fac
         self._r *= fac
 
-    def update_rho(self, rho_new: np.ndarray, sync: bool = True) -> None:
-        if self.pwcomm.is_world_root:
-            if rho_new.shape[0] != self.numspin:
-                raise ValueError(
-                    f"'rho_new.shape[0]' must be equal to 'numspin'. "
-                    f"Expected {self.numspin}, got {rho_new.shape[0]}"
-                )
-            if rho_new.shape[1:] == (self.grho.numg,):
-                self._r[:] = self.fft_rho.g2r(rho_new)
-            elif rho_new.shape[1:] == self.grho.grid_shape:
-                self._r[:] = rho_new
-            else:
-                raise ValueError(
-                    f"'rho_new.shape[1:]' must be either {(self.grho.numg,)} (in G-space) "
-                    f"or {self.grho.grid_shape} (in Real Space). Got {rho_new.shape[1:]}"
-                )
-            rho_neg = np.abs(self._r) - self._r.real
-            i_rho_neg = np.nonzero(rho_neg > EPS5)
-            if len(i_rho_neg[0]) != 0:
-                del_rho = np.sum(np.abs(self._r[i_rho_neg])) * self.grho.reallat_dv
-                warn("negative/complex values found in `rho.r`.\n"
-                     f"Error: {del_rho}")
-            self._r[:] = np.abs(self._r[:], out=self._r[:])
+    def update(self, rho_new: np.ndarray) -> None:
+        if rho_new.shape[0] != self.numspin:
+            raise ValueError(
+                f"'rho_new.shape[0]' must be equal to 'numspin'. "
+                f"Expected {self.numspin}, got {rho_new.shape[0]}"
+            )
+        if rho_new.shape[1:] == (self.grho.numg,):
+            self._r[:] = self.fft_rho.g2r(rho_new)
+        elif rho_new.shape[1:] == self.grho.grid_shape:
+            self._r[:] = rho_new
+        else:
+            raise ValueError(
+                f"'rho_new.shape[1:]' must be either {(self.grho.numg,)} (in G-space) "
+                f"or {self.grho.grid_shape} (in Real Space). Got {rho_new.shape[1:]}"
+            )
 
-            self._g[:] = self.fft_rho.r2g(self._r, self._g)
-            if self.symm_flag:
-                self._g[:] = self._symmmod.symmetrize(self._g)
+        rho_neg = np.abs(self._r) - self._r.real
+        i_rho_neg = np.nonzero(rho_neg > EPS5)
+        if len(i_rho_neg[0]) != 0:
+            del_rho = np.sum(np.abs(self._r[i_rho_neg])) * self.grho.reallat_dv
+            warn("negative/complex values found in `rho.r`.\n"
+                 f"Error: {del_rho}")
+        self._r[:] = np.abs(self._r[:], out=self._r[:])
 
-        if sync:
-            self.sync()
+        self._g[:] = self.fft_rho.r2g(self._r, self._g)
+        if self.symm_flag:
+            self._g[:] = self._symmmod.symmetrize(self._g)
 
+        self.sync()
         self._normalize()

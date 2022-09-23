@@ -12,7 +12,6 @@ else:
     USE_MPI = False
 
 
-
 class FFTConfig(TypedDict):
     LIB: Literal["NUMPY", "SCIPY", "MKLFFT", "PYFFTW"]
     METHOD: Literal["SLAB", "STICKS"]
@@ -25,29 +24,9 @@ class PyFFTWConfig(TypedDict):
     NUM_THREADS: int
 
 
-class SpFFTConfig(TypedDict):
-    NUM_THREADS: int
-
-
-PYFFTW_CONFIG: PyFFTWConfig = {"PLANNER_EFFORT": "FFTW_PATIENT",
-                               "NUM_THREADS": 1
-                               }
-SPFFT_CONFIG: SpFFTConfig = {"NUM_THREADS": 1}
-FFT_CONFIG: FFTConfig = {"LIB": "PYFFTW",
-                         "METHOD": "SLAB"
-                         }
-
-
-
 class SpglibConfig(TypedDict):
     SYMPREC: float
     ANGLE_TOL: float
-
-
-SPGLIB_CONFIG: SpglibConfig = {"SYMPREC": 1e-5,
-                               "ANGLE_TOL": -1.0
-                               }
-
 
 
 class LibXCConfig(TypedDict):
@@ -57,13 +36,39 @@ class LibXCConfig(TypedDict):
     GGA_SIG_THR: Optional[float]
 
 
+class SpFFTConfig(TypedDict):
+    NUM_THREADS: int
+
+
+class SCFConfig(TypedDict):
+    MIXMOD: Literal["GENBRO", "MODBRO", "ANDERSON"]
+
+
+class EigSolverConfig(TypedDict):
+    SOLVER: Literal["DAVIDSON", "CG"]
+    USE_GPU: bool
+
+
+PYFFTW_CONFIG: PyFFTWConfig = {"PLANNER_EFFORT": "FFTW_PATIENT",
+                               "NUM_THREADS": 1
+                               }
+SPFFT_CONFIG: SpFFTConfig = {"NUM_THREADS": 1}
+FFT_CONFIG: FFTConfig = {"LIB": "PYFFTW",
+                         "METHOD": "SLAB"
+                         }
+SPGLIB_CONFIG: SpglibConfig = {"SYMPREC": 1e-5,
+                               "ANGLE_TOL": -1.0
+                               }
 LIBXC_CONFIG: LibXCConfig = {
     "APPLY_THR": True,
     "LDA_RHO_THR": None,
     "GGA_RHO_THR": None,
     "GGA_SIG_THR": None,
 }
-
 LIBXC_MAP: dict[str, str] = {"pbe": "gga_x_pbe gga_c_pbe"}
 
-GPU_MODE = False
+SCF_CONFIG: SCFConfig = {"MIXMOD": "GENBRO",
+                         }
+
+EIGSOLVER_CONFIG: EigSolverConfig = {"SOLVER": "DAVIDSON",
+                                     "USE_GPU": False}

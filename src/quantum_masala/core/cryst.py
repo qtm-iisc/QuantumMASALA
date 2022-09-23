@@ -19,7 +19,6 @@ from dataclasses import dataclass, field
 from typing import Type
 
 import numpy as np
-from numpy.typing import ArrayLike
 
 from .ppdata import PseudoPotFile
 from .constants import TPI
@@ -92,6 +91,7 @@ class Lattice:
         -------
         Array with the same shape as `arr` containing the vectors in crystal coords.
         """
+        arr = np.asarray(arr)
         vec_ = np.expand_dims(arr, axis)
         mat_ = self.primvec_inv.reshape((3, 3) + (1,) * (arr.ndim - axis - 1))
         return np.sum(mat_ * vec_, axis=axis + 1)
@@ -111,6 +111,7 @@ class Lattice:
         -------
         Array with the same shape as `arr` containing the vectors in cartesian coords.
         """
+        arr = np.asarray(arr)
         vec_ = np.expand_dims(arr, axis)
         mat_ = self.primvec.reshape((3, 3) + (1,) * (arr.ndim - axis - 1))
         return np.sum(mat_ * vec_, axis=axis + 1)
@@ -227,14 +228,14 @@ class RealLattice(Lattice):
         self.adot = self.metric
 
     @classmethod
-    def from_axes_cart(cls, alat: float, a1: Vector3D, a2: Vector3D, a3: Vector3D):
+    def from_cart(cls, alat: float, a1: Vector3D, a2: Vector3D, a3: Vector3D):
         """Generates `RealLattice` instance from a list of
         primitive translation vectors in atomic units"""
         latvec = np.array([a1, a2, a3]).T
         return cls(alat, latvec)
 
     @classmethod
-    def from_axes_alat(cls, alat: float, a1: Vector3D, a2: Vector3D, a3: Vector3D):
+    def from_alat(cls, alat: float, a1: Vector3D, a2: Vector3D, a3: Vector3D):
         """Generates `RealLattice` instance from a list of
         primitive translation vectors in `alat` units"""
         latvec = alat * np.array([a1, a2, a3]).T
@@ -362,14 +363,14 @@ class ReciprocalLattice(Lattice):
         self.bdot = self.metric
 
     @classmethod
-    def from_axes_cart(cls, tpiba: float, b1: Vector3D, b2: Vector3D, b3: Vector3D):
+    def from_cart(cls, tpiba: float, b1: Vector3D, b2: Vector3D, b3: Vector3D):
         """Generates `ReciprocalLattice` instance from a list of
         primitive translation vectors in atomic units"""
         recvec = np.array([b1, b2, b3]).T
         return cls(tpiba, recvec)
 
     @classmethod
-    def from_axes_tpiba(cls, tpiba: float, b1: Vector3D, b2: Vector3D, b3: Vector3D):
+    def from_tpiba(cls, tpiba: float, b1: Vector3D, b2: Vector3D, b3: Vector3D):
         """Generates `ReciprocalLattice` instance from a list of
         primitive translation vectors in `tpiba` units"""
         recvec = tpiba * np.array([b1, b2, b3]).T
@@ -456,7 +457,6 @@ class ReciprocalLattice(Lattice):
             raise ValueError(f"'coords' must be one of 'cryst', 'cart' or 'tpiba'. Got {coords}")
 
 
-@dataclass
 class AtomBasis:
     """Class representing all the atoms of a given species in a unit cell
 
@@ -477,26 +477,41 @@ class AtomBasis:
     """
 
     reallat: RealLattice
-    ppdata: Type[PseudoPotFile]
+    label: str
     mass: float
+    ppdata: Type[PseudoPotFile]
 
-    cryst: ArrayLike
+    cryst: np.ndarray
+    numatoms: int
 
-    label: str = field(init=False)
-    numatoms: int = field(init=False)
-
-    def __post_init__(self):
+    def __init__(self, reallat: RealLattice, ppdata: Type[PseudoPotFile],
+                 mass: float, cryst: np.ndarray):
+        self.reallat = reallat
+        self.ppdata = ppdata
         self.label = self.ppdata.label
-
-        if not isinstance(self.cryst, list):
-            raise ValueError("Input argument 'cryst' must be a list of 3d vectors")
-        self.cryst = np.array(self.cryst, dtype='f8', order='F').T
-
-        if self.cryst.ndim != 2:
-            raise ValueError(f"'cryst' must be a 2D Array. Got {self.cryst.shape}")
-        if self.cryst.shape[0] != 3:
-            raise ValueError(f"first axis of 'cryst' must be 3. Got {self.cryst.shape[0]}")
+        self.mass = mass
+        self.cryst = np.array(cryst, dtype='f8')
         self.numatoms = self.cryst.shape[1]
+
+    @classmethod
+    def from_cart(cls, reallat: RealLattice, ppdata: Type[PseudoPotFile],
+                  mass: float, *l_pos_cart):
+        cart = np.array(l_pos_cart).T
+        cryst = reallat.cart2cryst(cart)
+        return cls(reallat, ppdata, mass, cryst)
+
+    @classmethod
+    def from_cryst(cls, reallat: RealLattice, ppdata: Type[PseudoPotFile],
+                  mass: float, *l_pos_cryst):
+        cryst = np.array(l_pos_cryst).T
+        return cls(reallat, ppdata, mass, cryst)
+
+    @classmethod
+    def from_alat(cls, reallat: RealLattice, ppdata: Type[PseudoPotFile],
+                  mass: float, *l_pos_alat):
+        alat = np.array(l_pos_alat).T
+        cryst = reallat.alat2cryst(alat)
+        return cls(reallat, ppdata, mass, cryst)
 
     @property
     def cart(self) -> np.ndarray:
@@ -533,10 +548,12 @@ class Crystal:
     reallat: RealLattice
     l_species: list[AtomBasis]
 
+    numel: float = field(init=False)
     recilat: ReciprocalLattice = field(init=False)
     spglib_cell: tuple[np.ndarray, np.ndarray, tuple[int, ...]] = field(init=False)
 
     def __post_init__(self):
+        self.numel = sum(sp.numatoms * sp.ppdata.valence for sp in self.l_species)
         self.recilat = ReciprocalLattice.from_reallat(self.reallat)
 
         lattice = self.reallat.latvec.T

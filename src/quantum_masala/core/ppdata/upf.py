@@ -69,7 +69,7 @@ class UPFv2Data(PseudoPotFile):
     rhoatom: np.ndarray
 
     @classmethod
-    def read(cls, label: str, dirname: str):
+    def from_file(cls, label: str, dirname: str):
         """Factory Method to parse UPFv2 files into `UPFv2Data` instances.
 
         Parameters
@@ -144,4 +144,4 @@ class UPFv2Data(PseudoPotFile):
             data["dij"] = np.zeros((0, 0), dtype=np.float64)
             data["l_beta_times_r"] = []
 
-        return cls(label, dirname, **data)
+        return cls(label, dirname, data['z_valence'], **data)

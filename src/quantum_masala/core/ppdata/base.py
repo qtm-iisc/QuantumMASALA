@@ -27,9 +27,11 @@ class PseudoPotFile(ABC):
     filename: str = field(init=False)
     md5_checksum: str = field(init=False)
 
+    valence: int
+
     @classmethod
     @abstractmethod
-    def read(cls, label: str, dirname: str):
+    def from_file(cls, label: str, dirname: str, valence: int):
         return
 
     def __post_init__(self):

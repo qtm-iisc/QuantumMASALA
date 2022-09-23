@@ -147,6 +147,31 @@ class KgrpInterComm:
                 self.rank = self.idxkgrp
             self.size = self.numkgrp
 
+    def allreduce_sum(self, val: Any):
+        """Alias of `Comm.allreduce(val, op=SUM)`"""
+        if self.size == 1:
+            return val
+        return self.comm.allreduce(val, op=SUM)
+
+    def allreduce_min(self, val: Any):
+        """Alias of `Comm.allreduce(val, op=MIN)`"""
+        if self.size == 1:
+            return val
+        return self.comm.allreduce(val, op=MIN)
+
+    def allreduce_max(self, val: Any):
+        """Alias of `Comm.allreduce(val, op=MAX)`"""
+        if self.size == 1:
+            return val
+        return self.comm.allreduce(val, op=MAX)
+
+    def Allreduce_sum(self, l_psi: np.ndarray):
+        """Alias of `Comm.Allreduce_sum(IN_PLACE, l_psi)"""
+        if self.size == 1:
+            return l_psi
+        self.comm.Allreduce(IN_PLACE, l_psi)
+        return l_psi
+
 
 class KgrpIntraComm:
     """Communicator Module for K-Group
@@ -264,7 +289,7 @@ class KgrpIntraComm:
 
         return l_psi_all
 
-    def psi_Allreduce_sum(self, l_psi: np.ndarray):
+    def Allreduce_sum(self, l_psi: np.ndarray):
         """Alias of `Comm.Allreduce_sum(IN_PLACE, l_psi)"""
         if self.size == 1:
             return l_psi

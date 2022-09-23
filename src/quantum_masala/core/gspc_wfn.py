@@ -3,7 +3,7 @@ import numpy as np
 from .gspc import GSpace
 
 
-class GSpaceWfc:
+class GSpaceWfn:
 
     def __init__(self, gspc: GSpace, k_cryst: np.ndarray):
         self.gspc = gspc

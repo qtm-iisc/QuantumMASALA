@@ -3,7 +3,7 @@ from typing import Optional
 import numpy as np
 
 from ..gspc import GSpace
-from ..gspc_wfc import GSpaceWfc
+from ..gspc_wfn import GSpaceWfn
 
 from quantum_masala.config import FFT_CONFIG
 FFT_METHOD = FFT_CONFIG["METHOD"]
@@ -34,10 +34,10 @@ class FFTGSpace(FFTDriver_()):
 
 
 class FFTGSpaceWfc(FFTDriver_()):
-    """FFT Interface for `GSpaceWfc` instances.
+    """FFT Interface for `GSpaceWfn` instances.
     """
 
-    def __init__(self, gwfc: GSpaceWfc):
+    def __init__(self, gwfc: GSpaceWfn):
         grid_shape = gwfc.gspc.grid_shape
         super().__init__(grid_shape, gwfc.idxgrid)
 
