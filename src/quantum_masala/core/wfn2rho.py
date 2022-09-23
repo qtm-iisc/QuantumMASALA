@@ -42,6 +42,8 @@ class Wfn2Rho(Rho):
             self.pwcomm.kgrp_intercomm.Allreduce_sum(self._r)
 
         self._g[:] = self.fft_rho.r2g(self._r)
+        if self.symm_flag:
+            self._g[:] = self._symmmod.symmetrize(self._g)
         self.sync()
         self._normalize()
 
