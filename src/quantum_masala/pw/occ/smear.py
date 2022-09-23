@@ -81,6 +81,7 @@ class SmearMod(OccMod):
         f = (l_evl - e_mu) / self.degauss
         mask = np.abs(f) < SMEAR_THESHOLD
 
+        l_occ[:] = 0
         l_occ[:] = np.heaviside(-f, 0, out=l_occ, where=~mask)
         l_occ[mask] = self.smearfun_occ(f[mask])
         return l_occ
