@@ -22,7 +22,6 @@ class PseudoPotFile(ABC):
     md5_checksum :
         MD5 Hash of the data file.
     """
-    label: str
     dirname: str
     filename: str = field(init=False)
     md5_checksum: str = field(init=False)
@@ -31,7 +30,7 @@ class PseudoPotFile(ABC):
 
     @classmethod
     @abstractmethod
-    def from_file(cls, label: str, dirname: str, valence: int):
+    def from_file(cls, dirname: str, valence: int):
         return
 
     def __post_init__(self):

@@ -16,7 +16,7 @@ crystal is formed from a list of `AtomBasis` objects.
 """
 
 from dataclasses import dataclass, field
-from typing import Type
+from typing import Optional, Union, Type
 
 import numpy as np
 
@@ -477,41 +477,49 @@ class AtomBasis:
     """
 
     reallat: RealLattice
-    label: str
-    mass: float
-    ppdata: Type[PseudoPotFile]
+    label: Union[str, int]
+    mass: Optional[float]
+    ppdata: Optional[Type[PseudoPotFile]]
 
     cryst: np.ndarray
     numatoms: int
 
-    def __init__(self, reallat: RealLattice, ppdata: Type[PseudoPotFile],
-                 mass: float, cryst: np.ndarray):
+    def __init__(self, reallat: RealLattice, label: Union[str, int], mass: Optional[float],
+                 ppdata: Optional[Type[PseudoPotFile]], cryst: np.ndarray
+                 ):
         self.reallat = reallat
-        self.ppdata = ppdata
-        self.label = self.ppdata.label
+        self.label = label
         self.mass = mass
+        self.ppdata = ppdata
+
+        if cryst.ndim != 2 or cryst.shape[0] != 3:
+            raise ValueError("'cryst' must be a 2D Array where its 'shape[0]' must be 3. "
+                             f"Got {cryst.shape}")
         self.cryst = np.array(cryst, dtype='f8')
         self.numatoms = self.cryst.shape[1]
 
     @classmethod
-    def from_cart(cls, reallat: RealLattice, ppdata: Type[PseudoPotFile],
-                  mass: float, *l_pos_cart):
+    def from_cart(cls, reallat: RealLattice, label: Union[str, int], mass: Optional[float],
+                  ppdata: Optional[Type[PseudoPotFile]],
+                  *l_pos_cart):
         cart = np.array(l_pos_cart).T
         cryst = reallat.cart2cryst(cart)
-        return cls(reallat, ppdata, mass, cryst)
+        return cls(reallat, label, mass, ppdata, cryst)
 
     @classmethod
-    def from_cryst(cls, reallat: RealLattice, ppdata: Type[PseudoPotFile],
-                  mass: float, *l_pos_cryst):
+    def from_cryst(cls, reallat: RealLattice, label: Union[str, int], mass: Optional[float],
+                   ppdata: Optional[Type[PseudoPotFile]],
+                   *l_pos_cryst):
         cryst = np.array(l_pos_cryst).T
-        return cls(reallat, ppdata, mass, cryst)
+        return cls(reallat, label, mass, ppdata, cryst)
 
     @classmethod
-    def from_alat(cls, reallat: RealLattice, ppdata: Type[PseudoPotFile],
-                  mass: float, *l_pos_alat):
+    def from_alat(cls, reallat: RealLattice, label: Union[str, int], mass: Optional[float],
+                  ppdata: Optional[Type[PseudoPotFile]],
+                  *l_pos_alat):
         alat = np.array(l_pos_alat).T
         cryst = reallat.alat2cryst(alat)
-        return cls(reallat, ppdata, mass, cryst)
+        return cls(reallat, label, mass, ppdata, cryst)
 
     @property
     def cart(self) -> np.ndarray:
@@ -548,12 +556,16 @@ class Crystal:
     reallat: RealLattice
     l_species: list[AtomBasis]
 
-    numel: float = field(init=False)
+    numel: Optional[float] = field(init=False)
     recilat: ReciprocalLattice = field(init=False)
     spglib_cell: tuple[np.ndarray, np.ndarray, tuple[int, ...]] = field(init=False)
 
     def __post_init__(self):
-        self.numel = sum(sp.numatoms * sp.ppdata.valence for sp in self.l_species)
+        if None in [sp.ppdata for sp in self.l_species]:
+            self.numel = None
+        else:
+            self.numel = sum(sp.numatoms * sp.ppdata.valence for sp in self.l_species)
+
         self.recilat = ReciprocalLattice.from_reallat(self.reallat)
 
         lattice = self.reallat.latvec.T

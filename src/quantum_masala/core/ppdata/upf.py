@@ -144,4 +144,4 @@ class UPFv2Data(PseudoPotFile):
             data["dij"] = np.zeros((0, 0), dtype=np.float64)
             data["l_beta_times_r"] = []
 
-        return cls(label, dirname, data['z_valence'], **data)
+        return cls(dirname, data['z_valence'], **data)
