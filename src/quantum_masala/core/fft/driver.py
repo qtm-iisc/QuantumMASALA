@@ -1,3 +1,14 @@
+"""Contains Driver classes to perform FFT involving a truncated Fourier Space.
+
+The Drivers perform FFT operations by calling the required 3D (I)FFT methods
+in supported FFT Libraries. Before(After) calling the actual IFFT(FFT) method,
+the FFT components are placed in (removed from) a 3D FFT grid based on the list
+of indices within the truncated Fourier Spaced given at initialization.
+
+Refer to the module's ``__init__.py`` for a brief description of the two FFT
+drivers.
+"""
+
 from abc import ABC, abstractmethod
 from typing import Optional
 
@@ -26,6 +37,26 @@ def FFTLib_(*args):
 
 
 class FFTDriver(ABC):
+    """Class Specification for FFT Drivers
+
+    FFT Drivers must inherit this Abstract Base Class and implement required
+    methods to ensure compatibility with implemented FFT Interfaces
+
+    Parameters
+    ----------
+    grid_shape : `tuple[int, int, int]`
+        Shape of the 3D FFT Grid
+    idxgrid : `tuple[list[int], list[int], list[int]]`
+        List of indices that are within the truncated Fourier Space
+    numgrid : `int`
+        Number of points within the truncated Fourier Space
+
+    """
+
+    grid_shape: tuple[int, int, int]
+    idxgrid: tuple[list[int], list[int], list[int]]
+    numgrid: int
+
     __slots__ = ["grid_shape", "idxgrid", "numgrid"]
 
     @abstractmethod
