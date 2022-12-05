@@ -1,167 +1,160 @@
-# TODO: Check Documentation
-from typing import Optional, Union, TypeVar
+__all__ = ['Wavefun', 'wfn_generate', 'wfn_gen_rho']
 
+from typing import Optional
 import numpy as np
 
-from .mpicomm import PWComm
-from .gspc import GSpace
-from .gspc_wfn import GSpaceWfn
-from .fft import FFTGSpaceWfc
+from quantum_masala.core import GSpace, GkSpace, GField, KPoints
+from quantum_masala.core.pwcomm import KgrpIntracomm
+from quantum_masala import config
+
 
 RANDOMIZE_AMP = 0.05
 
 
-class WfnKBase_:
-    r"""Container for bloch wavefunctions of a given k-point.
+class Wavefun:
+    """Container for Bloch Wavefunctions that are the eigenkets of the
+    Kohn-Sham Hamiltonian in Plane-Wave Basis.
 
-    For a given k-point, a `GSpaceWfc` object is generated which represents
-    the list of G-vectors such that the wave vector :math:`\vec{G}+\vec{k}` is within
-    the KE cutoff :math:`E_{rho} / 4`. Empty arrays for storing `nbnd` wavefunctions, their
-    energies and their occupations are created.
-
-    Attributes
+    Parameters
     ----------
     gspc : GSpace
-        Represents the 'G' space truncated based on Kinetic Energy cutoff '4*ecutwfc`.
-    k_cryst : tuple[float, float, float]
-        k-point in crystal coords.
-    k_weight : float
-        weight associated to given k-point. Sum across all k-points must be normalized to 1.
-    gwfc : GSpaceWfn
-        Represents the 'G+k' space, truncated based on KE Cutoff 'ecutwfc'
-
-    numspin : {1, 2}
-        1 if calculation is non-polarized, 2 if spin-polarized (LSDA).
-    noncolin : bool
-        `True` if non-colinear calculation
-
+        G-Space representing the smooth grid for wavefunctions. Note that its
+        cutoff must be 4 times the wavefunction Kinetic Energy cutoff 'ecutwfc'
+    k_cryst: tuple[float, float, float]
+        Crystal coordinates of the k-point
+    k_weight: float
+        Weight of the input k-point; For Integrating across the first Brillouin
+        Zone of the Reciprocal Lattice
     numbnd : int
-        Number of bands assigned to the process' b-group
-
-    evc_gk : list[np.ndarray]
-        Array of complex numbers to store the (periodic part of the) bloch wavefunctions
-        as fourier components of G vectors in `gwfc`
-    evl : np.ndarray
-        Array of corresponding eigenvalues of `evc_gk`
-    occ : np.ndarray
-        Array of corresponsing occupation number of `evc_gk`
+        Number of bands to store
+    noncolin : bool
+        Non-collinear calculation yet to be implemented
     """
-
-    pwcomm: PWComm = PWComm()
-    gspc: GSpace = None
-    numspin: int = None
-    numbnd: int = None
-    noncolin: bool = False
-
-    bnd_par: bool = False
-
-    def __init__(
-        self,
-        k_cryst: tuple[float, float, float],
-        k_weight: float,
-        idxk: int,
-    ):
-        self.k_cryst = np.empty(3, dtype='f8')
+    def __init__(self, gspc: GSpace, k_cryst: tuple[float, float, float],
+                 k_weight: float, numspin: int, numbnd: int, noncolin: bool):
+        self.kgrp_intracomm: KgrpIntracomm = config.pwcomm.kgrp_intracomm
+        """PW Communicator object
+        """
+        self.k_cryst: np.ndarray = np.empty(3, dtype='f8')
+        """(``(3, )``, ``'f8'``) Crystal Coordinates of k-point
+        """
         self.k_cryst[:] = k_cryst
-        self.k_weight = k_weight
-        self.idxk = idxk
 
-        self.gwfc = GSpaceWfn(self.gspc, self.k_cryst)
-        self.fft_dri = FFTGSpaceWfc(self.gwfc)
+        self.k_weight: float = k_weight
+        """Weight of k-point; For integrating quantities across all k-points
+        """
 
-        self.evc_gk = np.empty((self.numspin, self.numbnd, self.gwfc.numgk * (1 + self.noncolin)), dtype='c16')
-        self.evl = np.empty((self.numspin, self.numbnd), dtype='f8')
-        self.occ = np.empty((self.numspin, self.numbnd), dtype='f8')
+        self.gspc: GSpace = gspc
+        """Represents the smooth FFT grid for wavefunctions
+        """
+        self.gkspc: GkSpace = GkSpace(self.gspc, self.k_cryst)
+        r"""Represents the set of :math:`\mathbf{G}+\mathbf{k}` vectors within
+        Kinetic energy cutoff 'ecutwfc' = ``self.gspc.ecut / 4``
+        """
 
-    def sync(self):
-        self.evc_gk = self.pwcomm.kgrp_intracomm.Bcast(self.evc_gk)
-        self.evl = self.pwcomm.kgrp_intracomm.Bcast(self.evl)
-        self.occ = self.pwcomm.kgrp_intracomm.Bcast(self.occ)
+        self.numspin: int = numspin
+        """Number of spin states
+        """
+        self.numbnd: int = numbnd
+        """Number of bands
+        """
+        self.noncolin: bool = noncolin
+        """To be implemented
+        """
+        self.evc_gk: np.ndarray = np.empty((self.numspin, self.numbnd,
+                                            self.gkspc.numgk * (1 + self.noncolin)),
+                                           dtype='c16')
+        """(``(self.numspin self.numbnd, self.gkspc.numgk)``, ``'c16'``)
+        List of wavefunctions in PW Basis described by ``self.gkspc``
+        """
+        self.evl: np.ndarray = np.empty((self.numspin, self.numbnd), dtype='f8')
+        """(``(self.numspin self.numbnd)``, ``'f8'``) List of energy eigenvalues
+        """
+        self.occ: np.ndarray = np.empty((self.numspin, self.numbnd), dtype='f8')
+        """(``(self.numspin self.numbnd)``, ``'f8'``) List of occupation
+        numbers
+        """
+        self.sync()
 
-    def init_random_wfc(self, seed: Optional[int] = None):
-        if seed is not None:
-            if isinstance(seed, int):
-                seed += self.idxk
-            else:
-                seed = None
+    def sync(self, evc: bool = True, evl: bool = True, occ: bool = True):
+        if evc:
+            self.evc_gk = self.kgrp_intracomm.Bcast(self.evc_gk)
+        if evl:
+            self.evl = self.kgrp_intracomm.Bcast(self.evl)
+        if occ:
+            self.occ = self.kgrp_intracomm.Bcast(self.occ)
+
+    def init_random(self, seed=None):
         rng = np.random.default_rng(seed)
         rng.random(out=self.evc_gk.view('f8'))
-        np.multiply(self.evc_gk.real, np.exp(2*np.pi*1j * self.evc_gk.imag), out=self.evc_gk)
-        self.evc_gk /= 1 + self.gwfc.norm2
+        np.multiply(self.evc_gk.real, np.exp(2*np.pi*1j * self.evc_gk.imag),
+                    out=self.evc_gk)
+        self.evc_gk /= 1 + self.gkspc.norm2
+        self.sync(evc=True, evl=False, occ=False)
 
-    def randomize_wfc(self, seed: Optional[int] = None):
-        if seed is not None:
-            if isinstance(seed, int):
-                seed += self.idxk
-            else:
-                seed = None
+    def randomize_wfc(self, seed=None):
         rng = np.random.default_rng(seed)
-
         shape = self.evc_gk.shape
         self.evc_gk *= 1 + RANDOMIZE_AMP * (rng.random(shape) + 1j * rng.random(shape))
+        self.sync(evc=True, evl=False, occ=False)
 
-    def compute_amp_r(self, idxspbnd: tuple[Union[list[int], slice],
-                                            Union[list[int], slice]
-                                            ] = (slice(None), slice(None))) -> np.ndarray:
+    def compute_amp_r(self, l_idxbnd) -> np.ndarray:
         if not self.noncolin:
-            evc_r = self.fft_dri.g2r(self.evc_gk[idxspbnd])
+            evc_r = self.gkspc.fft_mod.g2r(self.evc_gk[l_idxbnd])
         else:
             raise NotImplementedError('non-colinear not implemented')
         l_amp_r = evc_r.conj() * evc_r
         l_amp_r /= np.sum(l_amp_r, axis=(-1, -2, -3), keepdims=True) * self.gspc.reallat_dv
         return l_amp_r
 
-    @property
-    def rho_r(self):
-        sl = (slice(None), self.pwcomm.kgrp_intracomm.psi_scatter_slice(0, self.numbnd))
+    def get_rho(self):
+        sl = (slice(None), self.kgrp_intracomm.psi_scatter_slice(0, self.numbnd))
         l_amp_r = self.compute_amp_r(sl)
         rho_r = np.sum(l_amp_r * np.expand_dims(self.occ[sl], axis=(-1, -2, -3)), axis=1)
-        self.pwcomm.kgrp_intracomm.Allreduce_sum(rho_r)
-        return rho_r
+        self.kgrp_intracomm.Allreduce_sum_inplace(rho_r)
+        return GField.from_array(self.gspc, rho_r)
 
 
-class WfnKBgrp_(WfnKBase_):
-
-    bnd_par = True
-
-    def __init__(
-            self,
-            k_cryst: tuple[float, float, float],
-            k_weight: float,
-            idxk: int,
-    ):
-        self.numbnd_all = self.numbnd
-        self.numbnd_proc = self.pwcomm.kgrp_intracomm.split_numbnd(self.numbnd)
-        super().__init__(k_cryst, k_weight, idxk)
-
-    def sync(self):
-        raise ValueError("wavefunction data are distributed across processes in k-group")
-
-    @property
-    def rho_r(self):
-        l_amp_r = self.compute_amp_r()
-        rho_r = np.sum(l_amp_r * np.expand_dims(self.occ, axis=(-1, -2, -3)), axis=1)
-        self.pwcomm.kgrp_intracomm.Allreduce_sum(rho_r)
-        return rho_r
+def wfn_generate(gspc: GSpace, kpts: KPoints,
+                 numspin: int, numbnd: int, noncolin: bool,
+                 idxkpts: Optional[list[int]] = None):
+    """Generates ``Wavefun`` instances for each k-point in ``kpts``.
 
 
-WfnK = TypeVar('WfnK', bound=Union[WfnKBase_, WfnKBgrp_])
+    Parameters
+    ----------
+    gspc : GSpace
+    kpts : KPoints
+    numspin : int
+    numbnd : int
+    noncolin : bool
 
-
-def WavefunK(gspc_: GSpace, numspin: int, numbnd: int, noncolin: bool = False,
-             dist_bands: bool = False):
+    Returns
+    -------
+    l_wfn : list[Wavefun]
+    """
     if numspin not in [1, 2]:
         raise ValueError(f"'numspin' must be either 1 or 2. Got {numspin}")
-
-    if not isinstance(numbnd, int):
-        raise ValueError(f"'numbnd' must be an integer. Got {type(numbnd)}")
-    if numbnd <= 0:
+    if not isinstance(numbnd, int) or numbnd < 0:
         raise ValueError(f"'numbnd' must be a positive integer. Got {numbnd}")
+    if noncolin:
+        raise ValueError(f"'noncolin = True' not yet implemmented")
 
-    cls_vars = {'gspc': gspc_, 'numspin': numspin, 'numbnd': numbnd,
-                'noncolin': noncolin}
+    l_wfn = []
+    if idxkpts is None:
+        idxkpts = range(kpts.numk)
+    for idxk in idxkpts:
+        l_wfn.append(Wavefun(gspc, *kpts[idxk], numspin, numbnd, noncolin))
 
-    if not dist_bands:
-        return type("WfnK", (WfnKBase_,), cls_vars)
-    else:
-        return type("WfnKBgrp", (WfnKBgrp_,), cls_vars)
+    return l_wfn
+
+
+def wfn_gen_rho(l_wfn: list[Wavefun]):
+    rho = sum(wfn.k_weight * wfn.get_rho() for wfn in l_wfn)
+
+    pwcomm = config.pwcomm
+    if pwcomm.kgrp_rank == 0:
+        pwcomm.kgrp_intercomm.Allreduce_sum_inplace(rho.g)
+    pwcomm.world_comm.Bcast(rho.g)
+
+    return rho
