@@ -1,4 +1,4 @@
-__all__  = ["scf"]
+__all__ = ["scf"]
 from typing import Optional, Callable, Any
 import numpy as np
 
@@ -96,7 +96,7 @@ def scf(crystal: Crystal, kpts: KPoints,
                       for wfn in l_wfn_kgrp)
         if pwcomm.kgrp_rank == 0:
             e_eigen = pwcomm.kgrp_intercomm.allreduce_sum(e_eigen)
-        e_eigen = pwcomm.world_comm.bcast(e_eigen)
+        e_eigen = pwcomm.world_comm.bcast(e_eigen) * (2 if numspin == 1 else 1)
         en['one_el'] = e_eigen - np.sum(rho_out.integrate_r(v_hart + v_xc)).real
         en['total'] = en['one_el'] + en['ewald'] + en['hart'] + en['xc']
         en['hwf'] = e_eigen - np.sum(rho.integrate_r(v_hart + v_xc)).real \

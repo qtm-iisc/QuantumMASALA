@@ -9,7 +9,7 @@ from quantum_masala.pseudo import NonlocGenerator
 
 class KSHam:
     __slots__ = ["gkspc", "ke_gk", "l_vkb", "l_vkb_H", "dij",
-                 "noncolin", "numspin", "vloc_r", "idxspin", "numhpsi"]
+                 "noncolin", "numspin", "vloc_r", "idxspin"]
 
     def __init__(self, gkspc: GkSpace, numspin: int, noncolin: bool,
                  vloc: GField,
@@ -24,12 +24,11 @@ class KSHam:
 
         self.noncolin = noncolin
         self.numspin = numspin
-        if vloc.shape != (2, ):
+        if vloc.shape != (self.numspin, ):
             raise ValueError("'vloc.shape' must be ('numspin', ). "
                              f"Got numspin={numspin}, vloc.shape={vloc.shape}")
         self.vloc_r = vloc.r
         self.idxspin = None
-        self.numhpsi = 0
 
     @classmethod
     def from_wfn(cls, wfn: Wavefun, vloc: GField, l_nloc: list[NonlocGenerator]):
@@ -46,7 +45,6 @@ class KSHam:
         self.idxspin = idxspin
 
     def h_psi(self, l_psi: np.ndarray, l_hpsi: np.ndarray):
-        self.numhpsi += l_psi.shape[0]
         l_hpsi[:] = self.ke_gk * l_psi
         l_hpsi += self.gkspc.fft_mod.r2g(
             self.vloc_r[self.idxspin]

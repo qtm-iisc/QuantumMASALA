@@ -130,4 +130,5 @@ def compute_occ(l_wfn: list[Wavefun], numel: int,
     if pwcomm.kgrp_rank == 0:
         e_smear = pwcomm.kgrp_intercomm.allreduce_sum(e_smear)
     e_smear = pwcomm.world_comm.bcast(e_smear)
+    e_smear *= fac
     return e_fermi, e_smear

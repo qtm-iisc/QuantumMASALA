@@ -5,6 +5,7 @@ __all__ = ["AtomBasis", "Crystal"]
 from typing import Optional
 import numpy as np
 from quantum_masala.core import RealLattice, ReciprocalLattice, PseudoPotFile
+from quantum_masala.constants import ANGSTROM_BOHR
 
 
 class AtomBasis:
@@ -66,6 +67,16 @@ class AtomBasis:
         alat = np.array(l_pos_alat).T
         cryst = reallat.alat2cryst(alat)
         return cls(label, mass, ppdata, reallat, cryst)
+
+    @classmethod
+    def from_angstrom(cls, label, mass, ppdata, reallat, *l_pos_ang):
+        cart = np.array(l_pos_ang).T * ANGSTROM_BOHR
+        cryst = reallat.cart2cryst(cart)
+        return cls(label, mass, ppdata, reallat, cryst)
+
+    @classmethod
+    def from_bohr(cls, label, mass, ppdata, reallat, *l_pos_bohr):
+        return cls.from_cart(label, mass, ppdata, reallat, *l_pos_bohr)
 
 
 class Crystal:

@@ -111,6 +111,8 @@ class Wavefun:
         sl = (slice(None), self.kgrp_intracomm.psi_scatter_slice(0, self.numbnd))
         l_amp_r = self.compute_amp_r(sl)
         rho_r = np.sum(l_amp_r * np.expand_dims(self.occ[sl], axis=(-1, -2, -3)), axis=1)
+        if self.numspin == 1:
+            rho_r *= 2
         self.kgrp_intracomm.Allreduce_sum_inplace(rho_r)
         return GField.from_array(self.gspc, rho_r)
 

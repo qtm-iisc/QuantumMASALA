@@ -74,7 +74,7 @@ def xc_compute(rho: GField, rhocore: GField,
 
     grho = rho.gspc
     numspin = rho.shape[0]
-    rhoaux = rho + rhocore
+    rhoaux = rho + (1/numspin)*rhocore
 
     xc_spin = "unpolarized" if numspin == 1 else "polarized"
     exch_func = LibXCFunctional(exch_name, xc_spin)

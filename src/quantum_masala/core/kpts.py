@@ -55,9 +55,9 @@ class KPoints:
             cart.append(k_cart)
             weights.append(k_weight)
 
-        cryst = recilat.cart2cryst(cart, axis=1).T
+        cryst = recilat.cart2cryst(cart, axis=1)
         weights = _sanitize_weights(weights)
-        return cls(recilat, len(cryst), cryst, weights)
+        return cls(recilat, len(cryst), cryst.T, weights)
 
     @classmethod
     def from_cryst(cls, recilat, *l_kpts_cryst):
@@ -66,9 +66,9 @@ class KPoints:
             cryst.append(k_cart)
             weights.append(k_weight)
 
-        cryst = np.array(cryst).T
+        cryst = np.array(cryst)
         weights = _sanitize_weights(weights)
-        return cls(recilat, len(cryst), cryst, weights)
+        return cls(recilat, len(cryst), cryst.T, weights)
 
     @classmethod
     def from_tpiba(cls, recilat, *l_kpts_tpiba):
@@ -77,9 +77,9 @@ class KPoints:
             tpiba.append(k_cart)
             weights.append(k_weight)
 
-        cryst = recilat.tpiba2cryst(tpiba, axis=1).T
+        cryst = recilat.tpiba2cryst(tpiba, axis=1)
         weights = _sanitize_weights(weights)
-        return cls(recilat, len(cryst), cryst, weights)
+        return cls(recilat, len(cryst), cryst.T, weights)
 
     @classmethod
     def mpgrid(cls, cryst: Crystal,

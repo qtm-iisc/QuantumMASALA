@@ -55,7 +55,10 @@ def solver(ham: KSHam,
     ndim = numeig
     psi[:ndim] = evc
 
+    numhpsi = 0
     def compute_hpsi(istart: int, istop: int):
+        nonlocal numhpsi
+        numhpsi += max(istop - istart, 0)
         sl = kgrp_intracomm.psi_scatter_slice(istart, istop)
         if sl.stop > sl.start:
             ham.h_psi(psi[sl], hpsi[sl])
@@ -136,4 +139,4 @@ def solver(ham: KSHam,
             ovl_red[(range(numeig), range(numeig))] = 1
             evc_red[(range(numeig), range(numeig))] = 1
 
-    return evl.real, evc, {'numiter': idxiter, 'numhpsi': ham.numhpsi}
+    return evl.real, evc, {'numiter': idxiter, 'numhpsi': numhpsi}
