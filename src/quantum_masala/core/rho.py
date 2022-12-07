@@ -31,6 +31,8 @@ def rho_normalize(rho: GField, numel: float):
         del_rho = -np.sum(rho_r[idx_neg_r]) * grho.reallat_dv
         warn("negative values found in `rho.r`.\n"
              f"Error: {del_rho}")
+        rho_r = np.abs(rho_r)
+        rho.r = rho_r
 
     rho_int = np.sum(rho_r) * grho.reallat_dv
 

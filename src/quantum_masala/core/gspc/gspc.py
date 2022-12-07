@@ -15,7 +15,7 @@ from quantum_masala.constants import TPI
 from .gspc_symm import SymmMod
 
 
-GOOD_PRIMES: list[int] = [2, 3, 5, 7]
+GOOD_PRIMES: list[int] = [2, 3, 5]
 """List of primes used for finding optimal FFT grid lengths.
 """
 

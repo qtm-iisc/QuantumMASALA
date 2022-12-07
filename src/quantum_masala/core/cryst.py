@@ -1,6 +1,6 @@
 
 
-__all__ = ["AtomBasis", "Crystal"]
+__all__ = ['AtomBasis', 'Crystal', 'crystal_gen_supercell']
 
 from typing import Optional
 import numpy as np
@@ -82,16 +82,16 @@ class AtomBasis:
 class Crystal:
 
     def __init__(self, reallat, l_atoms: list[AtomBasis]):
-        self.reallat = reallat
-        self.recilat = ReciprocalLattice.from_reallat(self.reallat)
+        self.reallat: RealLattice = reallat
+        self.recilat: ReciprocalLattice = ReciprocalLattice.from_reallat(self.reallat)
 
-        self.l_atoms = l_atoms
+        self.l_atoms: list[AtomBasis] = l_atoms
 
         lattice = self.reallat.latvec.T
         positions = [sp.cryst.T for sp in self.l_atoms]
         numbers = sum(((isp,) * len(pos) for isp, pos in enumerate(positions)),
                       ())
-        positions = np.concatenate(positions, axis=1)
+        positions = np.concatenate(positions, axis=0)
         self.spglib_cell = (lattice, positions, numbers)
 
     @property
@@ -103,3 +103,29 @@ class Crystal:
                                  "specified for all atoms")
             numel += sp.ppdata.valence * sp.numatoms
         return round(numel)
+
+
+def crystal_gen_supercell(crystal: Crystal, numrepeat: tuple[int, int, int]):
+    for ni in numrepeat:
+        if not isinstance(ni, int) or ni < 1:
+            raise ValueError(f"'numrepeat' must be a tuple of 3 positive integers. "
+                             f"Got {numrepeat}")
+
+    numrepeat = np.array(numrepeat)
+    xi = [np.arange(n, dtype='i8') for n in numrepeat]
+    grid = np.array(np.meshgrid(*xi, indexing='ij')).reshape(3, -1, 1)
+
+    reallat = crystal.reallat
+    alat_sup = numrepeat[0] * reallat.alat
+    latvec_sup = numrepeat * reallat.latvec
+    reallat_sup = RealLattice(alat_sup, latvec_sup)
+    l_atoms_sup = []
+    for sp in crystal.l_atoms:
+        cryst = (grid + sp.cryst.reshape(3, 1, -1)).reshape(3, -1)
+        cart_sup = reallat.cryst2cart(cryst)
+        cryst_sup = reallat_sup.cart2cryst(cart_sup)
+        l_atoms_sup.append(
+            AtomBasis(sp.label, sp.mass, sp.ppdata, reallat_sup, cryst_sup)
+        )
+
+    return Crystal(reallat_sup, l_atoms_sup)

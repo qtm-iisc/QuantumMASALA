@@ -30,6 +30,10 @@ class PWConfig:
     mixing_method: Literal['genbroyden', 'mixbroyden',
                            'anderson'] = 'anderson'
 
+    tddft_exp_method: Literal['taylor', 'splitoperator'] = 'taylor'
+    taylor_order: int = 4
+    tddft_prop_method: Literal['etrs', 'splitoperator'] = 'etrs'
+
     def init_pwcomm(self):
         from .core.pwcomm import PWComm
         self.pwcomm = PWComm(self.numkgrp)

@@ -29,14 +29,18 @@ def _simpson(f_r: np.ndarray, r_ab: np.ndarray):
 def _sph2pw(r: np.ndarray, r_ab: np.ndarray, f_times_r2: np.ndarray,
             g: np.ndarray):
     numg = g.shape[0]
-    numf = f_times_r2.shape[0]
-    f_g = np.empty((numg, numf), dtype='c16')
+    f_g = np.empty((*f_times_r2.shape[:-1], numg), dtype='c16')
+    numr = r.shape[0]
 
-    for idxg in range(numg):
-        sph_j0_gr = spherical_jn(0, g[idxg] * r)
-        f_g[idxg] = _simpson(sph_j0_gr * f_times_r2, r_ab)
+    r_ab = r_ab.copy()
+    r_ab *= 1./3
+    r_ab[1:-1:2] *= 4
+    r_ab[2:-1:2] *= 2
+    f_g[:] = spherical_jn(0, g * r[0]) * f_times_r2[..., 0] * r_ab[0]
+    for idxr in range(numr):
+        f_g[:] += spherical_jn(0, g * r[idxr]) * f_times_r2[..., idxr] * r_ab[idxr]
 
-    return f_g.T
+    return f_g
 
 
 def rho_generate_atomic(sp: AtomBasis, grho: GSpace):

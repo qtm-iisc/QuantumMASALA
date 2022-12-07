@@ -82,6 +82,10 @@ class KPoints:
         return cls(recilat, len(cryst), cryst.T, weights)
 
     @classmethod
+    def gamma(cls, recilat):
+        return cls(recilat, 1, np.zeros((3, 1), dtype='f8'), np.ones(1, dtype='f8'))
+
+    @classmethod
     def mpgrid(cls, cryst: Crystal,
                grid_shape: tuple[int, int, int],
                shifts: tuple[bool, bool, bool],
