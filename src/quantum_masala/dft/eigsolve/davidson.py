@@ -14,6 +14,7 @@ def solver(ham: KSHam,
         import cupy as xp
     else:
         import numpy as xp
+        from scipy.linalg import eigh
 
     # Setting up preconditioner
     ham_diag = ham.ke_gk + vbare_g0 \
@@ -79,33 +80,35 @@ def solver(ham: KSHam,
             kgrp_intracomm.Allreduce_sum_inplace(psi[sl])
             kgrp_intracomm.Allreduce_sum_inplace(hpsi[sl])
 
-            psi[sl] *= -evl_red[:nunconv].reshape(-1, 1)
-            psi[sl] += hpsi[sl]
-            g_psi(psi[sl], evl_red[:nunconv])
-            psi[sl] /= xp.linalg.norm(psi[sl], axis=1, keepdims=True)
+        psi[sl] *= -evl_red[:nunconv].reshape(-1, 1)
+        psi[sl] += hpsi[sl]
+        g_psi(psi[sl], evl_red[:nunconv])
+        psi[sl] /= xp.linalg.norm(psi[sl], axis=1, keepdims=True)
         kgrp_intracomm.barrier()
         ndim += nunconv
 
     def solve_red():
         ham_red_ = ham_red[:ndim, :ndim]
         ovl_red_ = ovl_red[:ndim, :ndim]
-        ham_red_[:] = psi[:ndim].conj() @ hpsi[:ndim].T
-        ovl_red_[:] = psi[:ndim].conj() @ psi[:ndim].T
-
-        ham_red_.ravel()[:: ndim + 1] = ham_red_.ravel()[:: ndim + 1].real
-        ovl_red_.ravel()[:: ndim + 1] = ovl_red_.ravel()[:: ndim + 1].real
+        evc_red_ = evc_red[:, :ndim].T
+        ham_red_[ndim-nunconv:] = psi[ndim-nunconv:ndim].conj() @ hpsi[:ndim].T
+        ovl_red_[ndim-nunconv:] = psi[ndim-nunconv:ndim].conj() @ psi[:ndim].T
 
         if kgrp_intracomm.rank == 0:
             # Generalized Eigenvalue Problem Ax = eBx
-            A, B = ham_red_, ovl_red_
-            L = xp.linalg.cholesky(B)
-            L_inv = xp.linalg.inv(L)
-            A_ = L_inv @ A @ L_inv.conj().T
-
-            A_evl, A_evc = xp.linalg.eigh(A_, 'L')
-
-            evl_red[:numeig] = A_evl[:numeig]
-            evc_red[:, :ndim] = xp.linalg.solve(L.conj().T, A_evc[:, :numeig]).T
+            evl_red[:], evc_red_[:] = eigh(ham_red_, ovl_red_,
+                                           subset_by_index=[0, numeig-1])
+            # evl_red[:], evc_red_[:] = lobpcg(ham_red_, evc_red_, ovl_red_,
+            #                                  largest=False)
+            # A, B = ham_red_, ovl_red_
+            # L = xp.linalg.cholesky(B)
+            # L_inv = xp.linalg.inv(L)
+            # A_ = L_inv @ A @ L_inv.conj().T
+            #
+            # A_evl, A_evc = xp.linalg.eigh(A_, 'L')
+            #
+            # evl_red[:numeig] = A_evl[:numeig]
+            # evc_red[:, :ndim] = xp.linalg.solve(L.conj().T, A_evc[:, :numeig]).T
 
         kgrp_intracomm.Bcast(evl_red)
         kgrp_intracomm.Bcast(evc_red[:, :ndim])

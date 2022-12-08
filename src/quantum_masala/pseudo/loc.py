@@ -7,6 +7,7 @@ from quantum_masala.core import AtomBasis, GSpace, GField
 from .upf import UPFv2Data
 
 EPS6 = 1e-6
+BLOCK_SIZE = 20
 
 
 def _simpson(f_r: np.ndarray, r_ab: np.ndarray):
@@ -37,9 +38,14 @@ def _sph2pw(r: np.ndarray, r_ab: np.ndarray, f_times_r2: np.ndarray,
     r_ab[1:-1:2] *= 4
     r_ab[2:-1:2] *= 2
     f_g[:] = spherical_jn(0, g * r[0]) * f_times_r2[..., 0] * r_ab[0]
-    for idxr in range(numr):
-        f_g[:] += spherical_jn(0, g * r[idxr]) * f_times_r2[..., idxr] * r_ab[idxr]
 
+    g = g.reshape(-1, 1)
+    f_times_r2 = np.expand_dims(f_times_r2, axis=-2)
+    for idxr in range(0, numr, BLOCK_SIZE):
+        f_g[:] += np.sum(spherical_jn(0, g * r[idxr:idxr+BLOCK_SIZE])
+                         * f_times_r2[..., idxr:idxr + BLOCK_SIZE]
+                         * r_ab[idxr:idxr + BLOCK_SIZE],
+                        axis=-1)
     return f_g
 
 

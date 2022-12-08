@@ -12,7 +12,7 @@ class PWConfig:
 
     fft_type: Literal['slab', 'sticks'] = "slab"
     fft_backend: Optional[Literal['mkl_fft', 'pyfftw',
-                                  'scipy', 'numpy']] = 'mkl_fft'
+                                  'scipy', 'numpy']] = None
     fft_threads: int = 1
     pyfftw_planner: Literal['FFTW_ESTIMATE', 'FFTW_MEASURE',
                             'FFTW_PATIENT', 'FFTW_EXHAUSTIVE'] = 'FFTW_PATIENT'
@@ -25,7 +25,7 @@ class PWConfig:
 
     eigsolve_method: Literal['davidson', 'primme'] = 'davidson'
     davidson_maxiter: int = 20
-    davidson_numwork: int = 4
+    davidson_numwork: int = 2
 
     mixing_method: Literal['genbroyden', 'mixbroyden',
                            'anderson'] = 'anderson'
