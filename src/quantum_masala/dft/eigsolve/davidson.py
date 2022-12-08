@@ -74,11 +74,10 @@ def solver(ham: KSHam,
         nonlocal ndim
         sl = slice(ndim, ndim + nunconv)
         sl_bgrp = kgrp_intracomm.psi_scatter_slice(0, ndim)
-        if sl_bgrp.stop > sl_bgrp.start:
-            psi[sl] = evc_red[:nunconv][(slice(None), sl_bgrp)] @ psi[sl_bgrp]
-            hpsi[sl] = evc_red[:nunconv][(slice(None), sl_bgrp)] @ hpsi[sl_bgrp]
-            kgrp_intracomm.Allreduce_sum_inplace(psi[sl])
-            kgrp_intracomm.Allreduce_sum_inplace(hpsi[sl])
+        psi[sl] = evc_red[:nunconv][(slice(None), sl_bgrp)] @ psi[sl_bgrp]
+        hpsi[sl] = evc_red[:nunconv][(slice(None), sl_bgrp)] @ hpsi[sl_bgrp]
+        kgrp_intracomm.Allreduce_sum_inplace(psi[sl])
+        kgrp_intracomm.Allreduce_sum_inplace(hpsi[sl])
 
         psi[sl] *= -evl_red[:nunconv].reshape(-1, 1)
         psi[sl] += hpsi[sl]
@@ -91,8 +90,12 @@ def solver(ham: KSHam,
         ham_red_ = ham_red[:ndim, :ndim]
         ovl_red_ = ovl_red[:ndim, :ndim]
         evc_red_ = evc_red[:, :ndim].T
-        ham_red_[ndim-nunconv:] = psi[ndim-nunconv:ndim].conj() @ hpsi[:ndim].T
-        ovl_red_[ndim-nunconv:] = psi[ndim-nunconv:ndim].conj() @ psi[:ndim].T
+
+        sl_bgrp = kgrp_intracomm.psi_scatter_slice(ndim - nunconv, ndim)
+        ham_red_[sl_bgrp] = psi[sl_bgrp].conj() @ hpsi[:ndim].T
+        ovl_red_[sl_bgrp] = psi[sl_bgrp].conj() @ psi[:ndim].T
+        kgrp_intracomm.psi_Allgather_inplace(ham_red[ndim-nunconv:ndim])
+        kgrp_intracomm.psi_Allgather_inplace(ovl_red[ndim-nunconv:ndim])
 
         if kgrp_intracomm.rank == 0:
             # Generalized Eigenvalue Problem Ax = eBx
@@ -134,7 +137,10 @@ def solver(ham: KSHam,
                 break
 
             psi[:numeig] = evc[:]
-            hpsi[:numeig] = evc_red[:numeig, :ndim] @ hpsi[:ndim]
+
+            sl_bgrp = kgrp_intracomm.psi_scatter_slice(0, ndim)
+            hpsi[:numeig] = evc_red[:numeig, sl_bgrp] @ hpsi[sl_bgrp]
+            kgrp_intracomm.Allreduce_sum_inplace(hpsi[:numeig])
 
             ndim = numeig
             ham_red[:], ovl_red[:], evc_red[:, :] = 0, 0, 0
