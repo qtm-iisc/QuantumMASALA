@@ -8,7 +8,7 @@ from quantum_masala import config
 from quantum_masala.constants import SQRT_PI, TPI
 
 SMEAR_THRESHOLD = 50
-SMEAR_TOL = 1E-9
+SMEAR_TOL = 1E-10
 
 
 def gauss_occ(f: np.ndarray):

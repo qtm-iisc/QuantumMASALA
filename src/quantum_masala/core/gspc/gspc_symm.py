@@ -10,11 +10,13 @@ ROUND_PREC: int = 6
 
 
 class SymmMod:
-    def __init__(self, crystal: Crystal, g_cryst: np.ndarray):
-        recilat = crystal.recilat
-        self.numg = g_cryst.shape[1]
-        g_norm2 = recilat.norm2(g_cryst)
-        idxsort = np.lexsort((*g_cryst, np.around(g_norm2, ROUND_PREC)))
+    def __init__(self, crystal: Crystal, gspc: 'GSpace'):
+        self.numg = gspc.numg
+        grid_shape = gspc.grid_shape
+        nx, ny, nz = grid_shape
+        g_cryst = gspc.cryst
+        g_norm2 = gspc.norm2
+        idxsort = gspc.idxsort
 
         reallat_symm, recilat_symm = get_symmetry_crystal(crystal)
         if reallat_symm is not None:
@@ -26,32 +28,46 @@ class SymmMod:
             rot_recispc = np.eye(3).reshape(1, 3, 3)
             trans_realspc = np.zeros((1, 3))
 
-        l_grot_rank = np.zeros((self.numsymm, self.numg), dtype='i8')
-        for isymm in range(self.numsymm):
-            grot_cryst = rot_recispc[isymm] @ g_cryst
-            grot_norm2 = np.around(recilat.norm2(grot_cryst), ROUND_PREC)
-            isort = np.lexsort((*grot_cryst, grot_norm2))
-            l_grot_rank[isymm][isort] = np.arange(self.numg, dtype='i8')
+        gsort_norm2 = g_norm2[idxsort]
+        _, isplit = np.unique(np.around(gsort_norm2, ROUND_PREC), return_index=True)
+        l_shellidx = np.split(idxsort, isplit)[1:]
+        l_groupidx = []
+        l_groupphase = []
+        for shellidx in l_shellidx:
+            gshell_cryst = g_cryst[:, shellidx]
 
-        g_rank = np.amin(l_grot_rank, axis=0)
-        _, l_istar = np.unique(g_rank, return_index=True)
-        shell_idx = l_grot_rank.T[l_istar]
-        shell_idx = idxsort[shell_idx]
-        isort = np.argsort(shell_idx[:, 0])
-        shell_idx = np.array(shell_idx[isort])
+            grot_cryst = np.tensordot(rot_recispc, gshell_cryst, axes=1)
+            ix, iy, iz = [grot_cryst[:, i] + grid_shape[i] // 2 for i in range(3)]
+            grot_rank = ix + (nx * iy) + (nx * ny * iz)
+            gshell_rank = grot_rank[0]
 
-        l_grot_shell = np.tensordot(rot_recispc, g_cryst[:, shell_idx[:, 0]], axes=1)
-        shell_phase = np.exp(TPIJ * np.sum(l_grot_shell * trans_realspc.reshape((-1, 3, 1)), axis=1))
-        shell_phase = np.array(shell_phase.T)
+            oob = (ix < 0) + (iy < 0) + (iz < 0) \
+                + (ix >= nx) + (iy >= ny) + (iz >= nz)
+            if np.any(oob):
+                raise ValueError("Rotated vectors do not map to original vectors "
+                                 "due to insufficient grid shape")
+
+            gstar_rank = np.amin(grot_rank, axis=0)
+            _, gstar_idx = np.unique(gstar_rank, return_index=True)
+            groupidx = np.searchsorted(gshell_rank, grot_rank[:, gstar_idx])
+
+            l_groupidx.append(shellidx[groupidx.T])
+            groupphase = np.exp(
+                TPIJ * np.sum(trans_realspc.reshape(-1, 3, 1)
+                              * grot_cryst[:, :, gstar_idx], axis=1)
+            ).T
+            l_groupphase.append(groupphase)
+
+        self.shell_idx = np.concatenate(l_groupidx, axis=0)
+        self.shell_phase = np.concatenate(l_groupphase, axis=0)
+
         g_phase = np.zeros(self.numg, dtype='c16')
         g_count = np.zeros(self.numg, dtype='i8')
         for isymm in range(self.numsymm):
-            g_phase[shell_idx[:, isymm]] += shell_phase[:, isymm]
-            g_count[shell_idx[:, isymm]] += 1
-
-        self.shell_idx = shell_idx
-        self.shell_phase = shell_phase
-        self.g_phaseconj = np.conj(g_phase) / g_count
+            idxg = self.shell_idx[:, isymm]
+            g_phase[idxg] += self.shell_phase[:, isymm]
+            g_count[idxg] += 1
+        self.g_phaseconj = g_phase / g_count
 
     def _symmetrize(self, arr_g: np.ndarray):
         shell_avg = np.empty(self.numg, dtype="c16")
