@@ -144,7 +144,7 @@ class GSpace:
         """
         self.idxsort: np.ndarray = np.lexsort((self.cryst[0], self.cryst[1],
                                                self.cryst[2],
-                                               np.around(g_2[icut], ROUND_PREC)
+                                               np.around(self.norm2, ROUND_PREC)
                                                ))
         """(``(self.numg, )``, ``'i8'``) Index to sort G-vectors
         in ascending order of length
@@ -165,7 +165,7 @@ class GSpace:
         """FFT Module to perform Fourier Transform between 'r'eal and 'g'-space
         """
 
-        self.symm_mod: SymmMod = SymmMod(crystal, self.cryst)
+        self.symm_mod = SymmMod(crystal, self)
         """Symmetrization Module to ensure values have same symmetry as crystal
         """
 
