@@ -16,7 +16,7 @@ from quantum_masala.dft.pot import (
     hartree_compute, xc_compute,
     ewald_compute,
 )
-from quantum_masala.dft.ksham import KSHam
+
 from quantum_masala.dft.eigsolve import solve_wfn
 
 from quantum_masala.dft.occ import fixed, smear
@@ -84,6 +84,12 @@ def scf(crystal: Crystal, kpts: KPoints,
         v_loc = v_ion + v_hart + v_xc
         v_loc.Bcast()
         return v_loc
+
+    if config.use_gpu:
+        from .gpu.ksham_gpu import KSHamGPU as KSHam
+    else:
+        from .ksham import KSHam
+
 
     def gen_ham(wfn: Wavefun):
         return KSHam.from_wfn(wfn, v_loc, l_nloc)

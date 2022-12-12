@@ -12,14 +12,7 @@ _CUPY_INSTALLED = find_spec('cupy') is not None
 
 def solve_wfn(wfn: Wavefun, gen_ham: Callable[[Wavefun], KSHam],
               diago_thr: float, **prec_params: dict[str, Any]):
-    if config.use_gpu:
-        if not _CUPY_INSTALLED:
-            raise ValueError("'CuPy' not installed. Cannot run in GPU. "
-                             "Please set 'USE_GPU' in 'quantum_masala.config' to False"
-                             "to run in CPU")
-        ham = gen_ham(wfn)
-    else:
-        ham = gen_ham(wfn)
+    ham = gen_ham(wfn)
 
     if config.eigsolve_method == 'davidson':
         from .davidson import solver
