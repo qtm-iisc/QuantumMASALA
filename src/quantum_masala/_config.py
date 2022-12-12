@@ -1,3 +1,5 @@
+# TODO: Refactor this where fft_backend is a property with setters
+from os import getenv
 from dataclasses import dataclass
 from typing import Optional, Literal
 
@@ -13,9 +15,9 @@ class PWConfig:
     fft_type: Literal['slab', 'sticks'] = "slab"
     fft_backend: Optional[Literal['mkl_fft', 'pyfftw',
                                   'scipy', 'numpy']] = None
-    fft_threads: int = 1
+    fft_threads: int = int(getenv("OMP_NUM_THREADS", "1"))
     pyfftw_planner: Literal['FFTW_ESTIMATE', 'FFTW_MEASURE',
-                            'FFTW_PATIENT', 'FFTW_EXHAUSTIVE'] = 'FFTW_PATIENT'
+                            'FFTW_PATIENT', 'FFTW_EXHAUSTIVE'] = 'FFTW_MEASURE'
 
     spglib_symprec: float = 1E-5
 

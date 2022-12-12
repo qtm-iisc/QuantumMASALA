@@ -15,10 +15,9 @@ def solver(ham: KSHam,
     else:
         import numpy as xp
         from scipy.linalg import eigh
-
     # Setting up preconditioner
     ham_diag = ham.ke_gk + vbare_g0 \
-        + np.sum(np.diag(ham.dij).reshape(-1, 1)
+        + xp.sum(xp.diag(ham.dij).reshape(-1, 1)
                  * (ham.l_vkb_H.T * ham.l_vkb), axis=0)
 
     def g_psi(psi_: xp.ndarray, l_evl_: xp.ndarray):
@@ -33,14 +32,12 @@ def solver(ham: KSHam,
 
     numeig, numgk = evc_gk.shape
 
-    # Buffer for solution
-    evc = xp.empty((numeig, numgk), dtype=xp.complex128)
+    # Buffer for solution and initializing it
+    evc = xp.array(evc_gk, dtype=xp.complex128)
     evl = xp.empty(numeig, dtype=xp.complex128)
     unconv_flag = xp.ones(numeig, dtype=xp.bool)
     nunconv = numeig
 
-    # Setting initial guess
-    evc[:] = evc_gk
     evc[:] /= xp.linalg.norm(evc, axis=1, keepdims=True)
     kgrp_intracomm.Bcast(evc)
 
@@ -91,27 +88,26 @@ def solver(ham: KSHam,
         ovl_red_ = ovl_red[:ndim, :ndim]
         evc_red_ = evc_red[:, :ndim].T
 
-        sl_bgrp = kgrp_intracomm.psi_scatter_slice(ndim - nunconv, ndim)
+        sl_bgrp = kgrp_intracomm.psi_scatter_slice(0, ndim)
         ham_red_[sl_bgrp] = psi[sl_bgrp].conj() @ hpsi[:ndim].T
         ovl_red_[sl_bgrp] = psi[sl_bgrp].conj() @ psi[:ndim].T
-        kgrp_intracomm.psi_Allgather_inplace(ham_red[ndim-nunconv:ndim])
-        kgrp_intracomm.psi_Allgather_inplace(ovl_red[ndim-nunconv:ndim])
+        kgrp_intracomm.psi_Allgather_inplace(ham_red[0:ndim])
+        kgrp_intracomm.psi_Allgather_inplace(ovl_red[0:ndim])
 
         if kgrp_intracomm.rank == 0:
             # Generalized Eigenvalue Problem Ax = eBx
-            evl_red[:], evc_red_[:] = eigh(ham_red_, ovl_red_,
-                                           subset_by_index=[0, numeig-1])
-            # evl_red[:], evc_red_[:] = lobpcg(ham_red_, evc_red_, ovl_red_,
-            #                                  largest=False)
-            # A, B = ham_red_, ovl_red_
-            # L = xp.linalg.cholesky(B)
-            # L_inv = xp.linalg.inv(L)
-            # A_ = L_inv @ A @ L_inv.conj().T
-            #
-            # A_evl, A_evc = xp.linalg.eigh(A_, 'L')
-            #
-            # evl_red[:numeig] = A_evl[:numeig]
-            # evc_red[:, :ndim] = xp.linalg.solve(L.conj().T, A_evc[:, :numeig]).T
+            A, B = ham_red_, ovl_red_
+            L = xp.linalg.cholesky(B)
+            L_inv = xp.linalg.inv(L)
+            A_ = L_inv @ A @ L_inv.conj().T
+
+            A_evl, A_evc = xp.linalg.eigh(A_, 'L')
+
+            evl_red[:numeig] = A_evl[:numeig]
+            evc_red[:, :ndim] = xp.linalg.solve(L.conj().T, A_evc[:, :numeig]).T
+            # else:
+            #     evl_red[:], evc_red_[:] = eigh(ham_red_, ovl_red_,
+            #                                    subset_by_index=[0, numeig-1])
 
         kgrp_intracomm.Bcast(evl_red)
         kgrp_intracomm.Bcast(evc_red[:, :ndim])
@@ -148,4 +144,8 @@ def solver(ham: KSHam,
             ovl_red[(range(numeig), range(numeig))] = 1
             evc_red[(range(numeig), range(numeig))] = 1
 
-    return evl.real, evc, {'numiter': idxiter, 'numhpsi': numhpsi}
+    if config.use_gpu:
+        return xp.asnumpy(evl.real), xp.asnumpy(evc), \
+               {'numiter': idxiter, 'numhpsi': numhpsi}
+    else:
+        return evl.real, evc, {'numiter': idxiter, 'numhpsi': numhpsi}

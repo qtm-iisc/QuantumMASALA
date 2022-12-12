@@ -8,13 +8,14 @@ from quantum_masala.pseudo import NonlocGenerator
 
 
 class KSHam:
-    __slots__ = ["gkspc", "ke_gk", "l_vkb", "l_vkb_H", "dij",
+    __slots__ = ["gkspc", "fft_mod", "ke_gk", "l_vkb", "l_vkb_H", "dij",
                  "noncolin", "numspin", "vloc_r", "idxspin"]
 
     def __init__(self, gkspc: GkSpace, numspin: int, noncolin: bool,
                  vloc: GField,
                  l_nloc: list[NonlocGenerator]):
         self.gkspc = gkspc
+        self.fft_mod = self.gkspc.fft_mod
         self.ke_gk = 0.5 * self.gkspc.norm2
 
         l_vkb_dij = [nloc.gen_vkb_dij(self.gkspc) for nloc in l_nloc]
@@ -46,11 +47,16 @@ class KSHam:
 
     def h_psi(self, l_psi: np.ndarray, l_hpsi: np.ndarray):
         l_hpsi[:] = self.ke_gk * l_psi
-        l_hpsi += self.gkspc.fft_mod.r2g(
+        l_hpsi += self.fft_mod.r2g(
             self.vloc_r[self.idxspin]
-            * self.gkspc.fft_mod.g2r(
+            * self.fft_mod.g2r(
                 l_psi,
             ),
         )
         proj = l_psi @ self.l_vkb_H
         l_hpsi += (proj @ self.dij.T) @ self.l_vkb
+
+    def h_psi_serial(self, l_psi: np.ndarray, l_hpsi: np.ndarray):
+        numpsi = l_psi.shape[0]
+        for ipsi in range(numpsi):
+            self.h_psi(l_psi[ipsi], l_hpsi[ipsi])
