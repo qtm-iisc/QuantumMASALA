@@ -58,7 +58,8 @@ def get_symmetry_lattice(lat: Lattice) -> np.ndarray:
     return compute_symmetry_spglib(cell)
 
 
-def get_symmetry_crystal(crystal: Crystal) -> (np.ndarray, np.ndarray):
+def get_symmetry_crystal(crystal: Crystal,
+                         check_supercell: bool = True) -> (np.ndarray, np.ndarray):
     """Function for determining symmetry operations of given crystal.
     Returns symmetries of both real-space and reciprocal-space lattices"""
     spglib_cell = crystal.spglib_cell
@@ -70,4 +71,16 @@ def get_symmetry_crystal(crystal: Crystal) -> (np.ndarray, np.ndarray):
             np.transpose(reallat_symm["rotations"], axes=(0, 2, 1))
         ).astype("i4")
 
-    return reallat_symm, recilat_symm
+    if not check_supercell:
+        return reallat_symm, recilat_symm
+
+    idx_idsymm = np.nonzero(
+        np.all(reallat_symm["rotations"] - np.eye(3, dtype='i8'), axis=(1, 2))
+    )
+    if len(idx_idsymm[0]) == 1:
+        return reallat_symm, recilat_symm
+
+    idx_notrans = np.nonzero(
+        np.linalg.norm(reallat_symm["translations"], axis=1) == 0
+    )
+    return reallat_symm[idx_notrans], recilat_symm[idx_notrans]
