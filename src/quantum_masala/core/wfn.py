@@ -108,9 +108,12 @@ class Wavefun:
         return l_amp_r
 
     def get_rho(self):
-        sl = (slice(None), self.kgrp_intracomm.psi_scatter_slice(0, self.numbnd))
-        l_amp_r = self.compute_amp_r(sl)
-        rho_r = np.sum(l_amp_r * np.expand_dims(self.occ[sl], axis=(-1, -2, -3)), axis=1)
+        rho_r = np.zeros((self.numspin, *self.gspc.grid_shape), dtype='c16')
+        sl = self.kgrp_intracomm.psi_scatter_slice(0, self.numbnd)
+        for ispin in range(self.numspin):
+            for ipsi in range(sl.start, sl.stop):
+                rho_r[ispin] += self.occ[ispin, ipsi] * \
+                                self.compute_amp_r((ispin, ipsi))
         if self.numspin == 1:
             rho_r *= 2
         self.kgrp_intracomm.Allreduce_sum_inplace(rho_r)
@@ -153,7 +156,8 @@ def wfn_generate(gspc: GSpace, kpts: KPoints,
 
 def wfn_gen_rho(l_wfn: list[Wavefun]):
     gspc = l_wfn[0].gspc
-    rho = GField.zeros(gspc, 2)
+    numspin = l_wfn[0].numspin
+    rho = GField.zeros(gspc, numspin)
     for wfn in l_wfn:
         rho += wfn.k_weight * wfn.get_rho()
 

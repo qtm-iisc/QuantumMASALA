@@ -128,6 +128,7 @@ def scf(crystal: Crystal, kpts: KPoints,
         rho.symmetrize()
     rho_normalize(rho_start, numel)
     rho.Bcast()
+    stats = 0
     for idxiter in range(max_iter):
         v_loc = compute_pot_local()
 
@@ -135,7 +136,9 @@ def scf(crystal: Crystal, kpts: KPoints,
         if config.eigsolve_method == 'davidson':
             prec_params['vbare_g0'] = v_ion.g[0, 0] / np.prod(grho.grid_shape)
         for _wfn in l_wfn_kgrp:
-            solve_wfn(_wfn, gen_ham, diago_thr, **prec_params)
+            stats_ = solve_wfn(_wfn, gen_ham, diago_thr, **prec_params)
+            stats = stats_ + stats
+        print("STATS: ", stats)
         if occ == 'fixed':
             en['occ_max'], en['unocc_min'] = fixed.compute_occ(
                 l_wfn_kgrp, numel
