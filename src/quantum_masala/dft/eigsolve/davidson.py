@@ -1,5 +1,6 @@
 __all__ = ['solver']
 
+from time import perf_counter
 import numpy as np
 
 from quantum_masala import config
@@ -54,14 +55,17 @@ def solver(ham: KSHam,
     psi[:ndim] = evc
 
     numhpsi = 0
+    hpsi_time = 0
     def compute_hpsi(istart: int, istop: int):
-        nonlocal numhpsi
+        nonlocal numhpsi, hpsi_time
+        start_time = perf_counter()
         numhpsi += max(istop - istart, 0)
         sl = kgrp_intracomm.psi_scatter_slice(istart, istop)
         if sl.stop > sl.start:
             ham.h_psi(psi[sl], hpsi[sl])
         kgrp_intracomm.barrier()
         kgrp_intracomm.psi_Allgather_inplace(hpsi[istart:istop])
+        hpsi_time += perf_counter() - start_time
 
     def move_unconv():
         evc_red[:nunconv] = evc_red[:numeig][unconv_flag]
@@ -95,19 +99,20 @@ def solver(ham: KSHam,
         kgrp_intracomm.psi_Allgather_inplace(ovl_red[0:ndim])
 
         if kgrp_intracomm.rank == 0:
-            # Generalized Eigenvalue Problem Ax = eBx
-            A, B = ham_red_, ovl_red_
-            L = xp.linalg.cholesky(B)
-            L_inv = xp.linalg.inv(L)
-            A_ = L_inv @ A @ L_inv.conj().T
+            if config.use_gpu:
+                # Generalized Eigenvalue Problem Ax = eBx
+                A, B = ham_red_, ovl_red_
+                L = xp.linalg.cholesky(B)
+                L_inv = xp.linalg.inv(L)
+                A_ = L_inv @ A @ L_inv.conj().T
 
-            A_evl, A_evc = xp.linalg.eigh(A_, 'L')
+                A_evl, A_evc = xp.linalg.eigh(A_, 'L')
 
-            evl_red[:numeig] = A_evl[:numeig]
-            evc_red[:, :ndim] = xp.linalg.solve(L.conj().T, A_evc[:, :numeig]).T
-            # else:
-            #     evl_red[:], evc_red_[:] = eigh(ham_red_, ovl_red_,
-            #                                    subset_by_index=[0, numeig-1])
+                evl_red[:numeig] = A_evl[:numeig]
+                evc_red[:, :ndim] = xp.linalg.solve(L.conj().T, A_evc[:, :numeig]).T
+            else:
+                evl_red[:], evc_red_[:] = eigh(ham_red_, ovl_red_,
+                                               subset_by_index=[0, numeig-1])
 
         kgrp_intracomm.Bcast(evl_red)
         kgrp_intracomm.Bcast(evc_red[:, :ndim])
@@ -148,4 +153,5 @@ def solver(ham: KSHam,
         return xp.asnumpy(evl.real), xp.asnumpy(evc), \
                {'numiter': idxiter, 'numhpsi': numhpsi}
     else:
-        return evl.real, evc, {'numiter': idxiter, 'numhpsi': numhpsi}
+        return evl.real, evc, {'numiter': idxiter, 'numhpsi': numhpsi,
+                               'hpsi_time': hpsi_time}

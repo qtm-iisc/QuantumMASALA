@@ -21,7 +21,7 @@ from quantum_masala.dft.eigsolve import solve_wfn
 
 from quantum_masala.dft.occ import fixed, smear
 
-from quantum_masala.dft.mix.genbro import GenBroyden
+from quantum_masala.dft.mix import *
 
 from quantum_masala import config
 
@@ -43,6 +43,15 @@ def scf(crystal: Crystal, kpts: KPoints,
 
     rho_check(rho_start)
     rho = rho_start.copy()
+
+    if config.mixing_method == 'genbroyden':
+        mixmod = GenBroyden(rho, mix_beta, mix_dim)
+    elif config.mixing_method == 'modbroyden':
+        mixmod = ModBroyden(rho, mix_beta, mix_dim)
+    elif config.mixing_method == 'anderson':
+        mixmod = Anderson(rho, mix_beta, mix_dim)
+    else:
+        raise ValueError('abc')
 
     grho = rho.gspc
     gwfn = grho
@@ -112,7 +121,7 @@ def scf(crystal: Crystal, kpts: KPoints,
             en['total'] += en['smear']
             en['hwf'] += en['smear']
 
-    mixmod = GenBroyden(rho, mix_beta, mix_dim)
+
     diago_thr = diago_thr_init
     scf_converged = False
     if symm_rho:

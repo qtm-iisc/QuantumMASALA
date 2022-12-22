@@ -142,10 +142,14 @@ class GSpace:
         self.idxgrid: tuple[np.ndarray, ...] = np.unravel_index(icut, self.grid_shape)
         """Position of G-vectors in the 3D FFT Grid
         """
-        self.idxsort: np.ndarray = np.lexsort((self.cryst[0], self.cryst[1],
-                                               self.cryst[2],
+        self.idxsort: np.ndarray = np.lexsort((self.cryst[2], self.cryst[1],
+                                               self.cryst[0],
                                                np.around(self.norm2, ROUND_PREC)
                                                ))
+        # self.idxgrid = [arr[self.idxsort] for arr in self.idxgrid]
+        # self.cryst = np.array(self.cryst[:, self.idxsort], order='C')
+        # self.norm2 = np.array(self.norm2[self.idxsort], order='C')
+        # self.idxsort = np.arange(self.numg, dtype='i8')
         """(``(self.numg, )``, ``'i8'``) Index to sort G-vectors
         in ascending order of length
         """

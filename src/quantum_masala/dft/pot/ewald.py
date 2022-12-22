@@ -45,9 +45,11 @@ def ewald_compute(crystal: Crystal, gspc: GSpace) -> float:
         (3, 1, -1)
     )
     qij = l_charges.reshape(-1, 1) * l_charges.reshape(1, -1)
-    ni = np.ceil(4 / beta / np.linalg.norm(latvec, axis=1))
+    ni = np.floor(4 / beta / np.linalg.norm(latvec, axis=1))
+
     ni = [int(n) for n in ni]
-    xi = [np.fft.fftfreq(n, 1 / n).astype("i4") for n in ni]
+    xi = [np.fft.fftfreq(n, 1 / n).astype("i4") if n != 0 else [0, ]
+          for n in ni]
     N = np.array(np.meshgrid(*xi, indexing='ij')).reshape((3, -1, 1, 1))
     Rij_cryst = N + np.expand_dims(rij_cryst, axis=1)
     Rij_cart = reallat.cryst2cart(Rij_cryst)
@@ -56,9 +58,9 @@ def ewald_compute(crystal: Crystal, gspc: GSpace) -> float:
     sij = qij / Rij_norm * erfc(beta * Rij_norm)
     E_S = 0.5 * np.sum(sij)
 
-    f = np.exp(-g_norm2[1:] / (2 * beta) ** 2) / g_norm2[1:]
+    f = np.exp(-g_norm2[1:] / (4 * alpha)) / g_norm2[1:]
     E_L = _2pibv * (
-        np.sum(f * np.abs(struct_fac[1:]) ** 2) - np.sum(qij) / (2*beta) ** 2
+        np.sum(f * np.abs(struct_fac[1:]) ** 2) - np.sum(qij) / (4 * alpha)
     )
 
     return E_S + E_L - E_self
