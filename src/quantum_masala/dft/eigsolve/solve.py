@@ -23,10 +23,12 @@ def solve_wfn(wfn: Wavefun, gen_ham: Callable[[Wavefun], KSHam],
 
     if wfn.noncolin:
         evc_gk, evl = wfn.evc_gk, wfn.evl
-        evl[:], evc_gk[:], stat = solver(ham,  diago_thr, evc_gk, **prec_params)
+        evl[:], evc_gk[:], stats = solver(ham,  diago_thr, evc_gk, **prec_params)
     else:
+        stats = 0
         for idxspin in range(wfn.numspin):
             ham.set_idxspin(idxspin)
             evc_gk, evl = wfn.evc_gk[idxspin], wfn.evl[idxspin]
-            evl[:], evc_gk[:], stat = solver(ham, diago_thr, evc_gk, **prec_params)
-            #print(wfn.k_cryst, idxspin, stat)
+            evl[:], evc_gk[:], stats_ = solver(ham, diago_thr, evc_gk, **prec_params)
+            stats = stats_ + stats
+    return stats

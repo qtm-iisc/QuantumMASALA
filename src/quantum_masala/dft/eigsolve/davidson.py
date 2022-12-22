@@ -59,7 +59,7 @@ def solver(ham: KSHam,
     def compute_hpsi(istart: int, istop: int):
         nonlocal numhpsi, hpsi_time
         start_time = perf_counter()
-        numhpsi += max(istop - istart, 0)
+        numhpsi += istop - istart
         sl = kgrp_intracomm.psi_scatter_slice(istart, istop)
         if sl.stop > sl.start:
             ham.h_psi(psi[sl], hpsi[sl])
@@ -149,9 +149,8 @@ def solver(ham: KSHam,
             ovl_red[(range(numeig), range(numeig))] = 1
             evc_red[(range(numeig), range(numeig))] = 1
 
+    stats = np.array([idxiter, numhpsi, hpsi_time])
     if config.use_gpu:
-        return xp.asnumpy(evl.real), xp.asnumpy(evc), \
-               {'numiter': idxiter, 'numhpsi': numhpsi}
+        return xp.asnumpy(evl.real), xp.asnumpy(evc), stats
     else:
-        return evl.real, evc, {'numiter': idxiter, 'numhpsi': numhpsi,
-                               'hpsi_time': hpsi_time}
+        return evl.real, evc, stats

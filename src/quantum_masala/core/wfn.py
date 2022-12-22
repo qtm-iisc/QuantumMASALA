@@ -152,7 +152,10 @@ def wfn_generate(gspc: GSpace, kpts: KPoints,
 
 
 def wfn_gen_rho(l_wfn: list[Wavefun]):
-    rho = sum(wfn.k_weight * wfn.get_rho() for wfn in l_wfn)
+    gspc = l_wfn[0].gspc
+    rho = GField.zeros(gspc, 2)
+    for wfn in l_wfn:
+        rho += wfn.k_weight * wfn.get_rho()
 
     pwcomm = config.pwcomm
     if pwcomm.kgrp_rank == 0:

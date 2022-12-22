@@ -47,12 +47,13 @@ class KSHam:
 
     def h_psi(self, l_psi: np.ndarray, l_hpsi: np.ndarray):
         l_hpsi[:] = self.ke_gk * l_psi
-        l_hpsi += self.fft_mod.r2g(
-            self.vloc_r[self.idxspin]
-            * self.fft_mod.g2r(
-                l_psi,
-            ),
-        )
+        for ipsi in range(l_psi.shape[0]):
+            l_hpsi[ipsi] += self.fft_mod.r2g(
+                self.vloc_r[self.idxspin]
+                * self.fft_mod.g2r(
+                    l_psi[ipsi],
+                ),
+            )
         proj = l_psi @ self.l_vkb_H
         l_hpsi += (proj @ self.dij.T) @ self.l_vkb
 
