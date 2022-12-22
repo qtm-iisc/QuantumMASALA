@@ -1,4 +1,4 @@
-__all__ = ['GenBroyden']
+__all__ = ['ModBroyden']
 
 import numpy as np
 
@@ -6,7 +6,7 @@ from quantum_masala.core import GField
 from .base import MixModBase
 
 
-class GenBroyden(MixModBase):
+class ModBroyden(MixModBase):
     def __init__(self, rho: GField,
                  beta: float, mixdim: int):
         super().__init__(rho, beta, mixdim)
@@ -28,8 +28,9 @@ class GenBroyden(MixModBase):
         res = rho_out - rho_in
 
         numdim = min(self.idxiter, self.mixdim)
+        del_rho = self.beta * res
         if numdim == 0:
-            del_rho = self.beta * res
+            pass
         else:
             isave = (self.idxiter - 1) % self.mixdim
             self.l_del_rho[isave] = rho_in - self.rho_old
@@ -49,14 +50,16 @@ class GenBroyden(MixModBase):
                 )
                 raise np.linalg.LinAlgError(e)
 
-            del_rho = -self.G_1 * res
+            for i in range(numdim):
+                overlap_inv[:i, i] = overlap_inv[i, :i]
+
             l_dot = np.empty(numdim, dtype="c16")
             for i in range(numdim):
-                l_dot[i] = self._dot(self.l_del_res[i], -res)
+                l_dot[i] = self._dot(self.l_del_res[i], res)
 
             comp = overlap_inv @ l_dot
             for i in range(numdim):
-                del_rho += comp[i] * (self.l_del_rho[i] - self.G_1 * self.l_del_res[i])
+                del_rho -= comp[i] * (self.l_del_rho[i] + self.beta * self.l_del_res[i])
 
         self.rho_old[:] = rho_in
         self.res_old[:] = res

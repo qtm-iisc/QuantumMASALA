@@ -81,6 +81,6 @@ def get_symmetry_crystal(crystal: Crystal,
         return reallat_symm, recilat_symm
 
     idx_notrans = np.nonzero(
-        np.linalg.norm(reallat_symm["translations"], axis=1) == 0
+        np.linalg.norm(reallat_symm["translations"], axis=1) <= config.spglib_symprec
     )
     return reallat_symm[idx_notrans], recilat_symm[idx_notrans]

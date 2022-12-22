@@ -38,7 +38,7 @@ class SymmMod:
 
             grot_cryst = np.tensordot(rot_recispc, gshell_cryst, axes=1)
             ix, iy, iz = [grot_cryst[:, i] + grid_shape[i] // 2 for i in range(3)]
-            grot_rank = ix + (nx * iy) + (nx * ny * iz)
+            grot_rank = iz + (nz * iy) + (nz * ny * ix)
             gshell_rank = grot_rank[0]
 
             oob = (ix < 0) + (iy < 0) + (iz < 0) \
@@ -60,7 +60,7 @@ class SymmMod:
 
         self.shell_idx = np.concatenate(l_groupidx, axis=0)
         self.shell_phase = np.concatenate(l_groupphase, axis=0)
-
+        print(self.numsymm)
         g_phase = np.zeros(self.numg, dtype='c16')
         g_count = np.zeros(self.numg, dtype='i8')
         for isymm in range(self.numsymm):
