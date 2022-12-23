@@ -98,16 +98,21 @@ class Wavefun:
         self.evc_gk *= 1 + RANDOMIZE_AMP * (rng.random(shape) + 1j * rng.random(shape))
         self.sync(evc=True, evl=False, occ=False)
 
+    def normalize(self):
+        self.evc_gk /= np.linalg.norm(self.evc_gk, axis=-1, keepdims=True) \
+                       * np.sqrt(self.gspc.reallat_cellvol) \
+                       / np.prod(self.gspc.grid_shape)
+
     def compute_amp_r(self, l_idxbnd) -> np.ndarray:
         if not self.noncolin:
             evc_r = self.gkspc.fft_mod.g2r(self.evc_gk[l_idxbnd])
         else:
             raise NotImplementedError('non-colinear not implemented')
         l_amp_r = evc_r.conj() * evc_r
-        l_amp_r /= np.sum(l_amp_r, axis=(-1, -2, -3), keepdims=True) * self.gspc.reallat_dv
         return l_amp_r
 
     def get_rho(self):
+        self.normalize()
         rho_r = np.zeros((self.numspin, *self.gspc.grid_shape), dtype='c16')
         sl = self.kgrp_intracomm.psi_scatter_slice(0, self.numbnd)
         for ispin in range(self.numspin):
