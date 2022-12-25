@@ -37,7 +37,7 @@ class ModBroyden(MixModBase):
             self.l_del_res[isave] = res - self.res_old
             for i in range(numdim):
                 self.overlap[isave, i] = self._dot(
-                    self.l_del_res[isave], self.l_del_res[i]
+                    self.l_del_res[i], self.l_del_res[isave]
                 )
                 self.overlap[i, isave] = self.overlap[isave, i]
 
@@ -50,8 +50,8 @@ class ModBroyden(MixModBase):
                 )
                 raise np.linalg.LinAlgError(e)
 
-            for i in range(numdim):
-                overlap_inv[:i, i] = overlap_inv[i, :i]
+            # for i in range(numdim):
+            #     overlap_inv[:i, i] = overlap_inv[i, :i]
 
             l_dot = np.empty(numdim, dtype="c16")
             for i in range(numdim):

@@ -129,7 +129,8 @@ def scf(crystal: Crystal, kpts: KPoints,
     rho_normalize(rho_start, numel)
     rho.Bcast()
 
-    for idxiter in range(max_iter):
+    idxiter = 0
+    while idxiter < max_iter:
         v_loc = compute_pot_local()
 
         prec_params = {}
@@ -162,6 +163,8 @@ def scf(crystal: Crystal, kpts: KPoints,
             scf_converged = True
         elif idxiter == 0 and e_error < diago_thr * numel:
             diago_thr = 0.1 * e_error / max(1, numel)
+            iter_printer(idxiter, scf_converged, e_error, en)
+            continue
         else:
             diago_thr = min(diago_thr, 0.1 * e_error / max(1, numel))
             diago_thr = max(diago_thr, 1E-13)
@@ -174,9 +177,10 @@ def scf(crystal: Crystal, kpts: KPoints,
         scf_converged = pwcomm.world_comm.bcast(scf_converged)
         diago_thr = pwcomm.world_comm.bcast(diago_thr)
         pwcomm.world_comm.barrier()
-
         iter_printer(idxiter, scf_converged, e_error, en)
         if scf_converged:
             break
+        else:
+            idxiter += 1
 
     return scf_converged, rho, l_wfn_kgrp, en
