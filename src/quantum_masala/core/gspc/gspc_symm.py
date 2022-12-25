@@ -16,7 +16,6 @@ class SymmMod:
         nx, ny, nz = grid_shape
         g_cryst = gspc.cryst
         g_norm2 = gspc.norm2
-        idxsort = gspc.idxsort
 
         reallat_symm, recilat_symm = get_symmetry_crystal(crystal)
         if reallat_symm is not None:
@@ -28,6 +27,7 @@ class SymmMod:
             rot_recispc = np.eye(3).reshape(1, 3, 3)
             trans_realspc = np.zeros((1, 3))
 
+        idxsort = np.arange(len(g_norm2), dtype='i8')
         gsort_norm2 = g_norm2[idxsort]
         _, isplit = np.unique(np.around(gsort_norm2, ROUND_PREC), return_index=True)
         l_shellidx = np.split(idxsort, isplit)[1:]

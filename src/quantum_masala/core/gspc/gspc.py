@@ -88,7 +88,7 @@ class GSpace:
     """
 
     __slots__ = ['recilat', 'ecut', 'grid_shape', 'grid_mask',
-                 'numg', 'cryst', 'norm2', 'idxgrid', 'idxsort',
+                 'numg', 'cryst', 'norm2', 'idxgrid',
                  'reallat_cellvol', 'reallat_dv', 'fft_mod', 'symm_mod',
                  ]
 
@@ -128,6 +128,11 @@ class GSpace:
                              )
 
         # Storing data of all G-vectors within cutoff
+        idxsort: np.ndarray = np.lexsort((g_cryst[2, icut], g_cryst[1, icut],
+                                          g_cryst[0, icut],
+                                          np.around(g_2[icut], ROUND_PREC)
+                                          ))
+        icut = icut[idxsort]
         self.numg: int = len(icut)
         """Number of G-vectors (`int`)
         """
@@ -141,17 +146,6 @@ class GSpace:
         """
         self.idxgrid: tuple[np.ndarray, ...] = np.unravel_index(icut, self.grid_shape)
         """Position of G-vectors in the 3D FFT Grid
-        """
-        self.idxsort: np.ndarray = np.lexsort((self.cryst[2], self.cryst[1],
-                                               self.cryst[0],
-                                               np.around(self.norm2, ROUND_PREC)
-                                               ))
-        # self.idxgrid = [arr[self.idxsort] for arr in self.idxgrid]
-        # self.cryst = np.array(self.cryst[:, self.idxsort], order='C')
-        # self.norm2 = np.array(self.norm2[self.idxsort], order='C')
-        # self.idxsort = np.arange(self.numg, dtype='i8')
-        """(``(self.numg, )``, ``'i8'``) Index to sort G-vectors
-        in ascending order of length
         """
 
         # Additional quantities required for integrating quantities across the
