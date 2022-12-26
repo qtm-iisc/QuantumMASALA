@@ -20,8 +20,9 @@ def hartree_compute(rho: GField) -> tuple[GField, float]:
     """
     rho_check(rho)
     grho = rho.gspc
-    v_hart = GField(grho, 1)
-    v_hart.g[:, 0] = 0
-    v_hart.g[:, 1:] = 4*np.pi * np.sum(rho.g, axis=0)[1:] / rho.gspc.norm2[1:]
+    v_hart_g = np.empty(grho.numg, dtype='c16')
+    v_hart_g[0] = 0
+    v_hart_g[1:] = 4*np.pi * np.sum(rho.g, axis=0)[1:] / rho.gspc.norm2[1:]
+    v_hart = GField.from_array(grho, v_hart_g)
     en_hart = 0.5 * sum(rho.integrate_r(v_hart))
     return v_hart, en_hart.real

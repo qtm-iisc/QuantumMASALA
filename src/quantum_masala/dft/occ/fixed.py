@@ -23,6 +23,7 @@ def compute_occ(l_wfn: list[Wavefun], numel: int):
         raise ValueError("'numel' must be a positive even integer. "
                          f"Got a {type(numel)} with value {numel}")
 
+    numbnd = l_wfn[0].numbnd
     numfill = numel // 2
     for wfn in l_wfn:
         wfn.occ[:, :numfill] = 1
@@ -31,12 +32,14 @@ def compute_occ(l_wfn: list[Wavefun], numel: int):
     max_filled, min_empty = None, None
     if pwcomm.kgrp_rank == 0:
         max_filled = pwcomm.kgrp_intracomm.allreduce_max(
-            max(wfn.occ[:, numfill - 1] for wfn in l_wfn)
+            max(wfn.evl[:, numfill - 1] for wfn in l_wfn)
         )
-        min_empty = pwcomm.kgrp_intracomm.allreduce_min(
-            min(wfn.occ[:, numfill] for wfn in l_wfn)
-        )
-    max_filled = pwcomm.world_comm.bcast(max_filled)
-    min_empty = pwcomm.world_comm.bcast(min_empty)
+        if numfill < numbnd:
+            min_empty = pwcomm.kgrp_intracomm.allreduce_min(
+                min(wfn.evl[:, numfill] for wfn in l_wfn)
+            )
+    max_filled = pwcomm.world_comm.bcast(max(max_filled))
+    if numfill < numbnd:
+        min_empty = pwcomm.world_comm.bcast(min(min_empty))
 
     return max_filled, min_empty

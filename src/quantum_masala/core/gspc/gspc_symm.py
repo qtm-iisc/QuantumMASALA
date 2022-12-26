@@ -89,3 +89,5 @@ class SymmMod:
         arr_ = arr_g.reshape(-1, self.numg)
         for i in range(arr_.shape[0]):
             arr_[i] = self._symmetrize(arr_[i])
+
+        return arr_g

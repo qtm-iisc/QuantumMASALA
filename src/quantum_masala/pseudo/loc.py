@@ -11,7 +11,7 @@ BLOCK_SIZE = 20
 
 
 def _simpson(f_r: np.ndarray, r_ab: np.ndarray):
-    r12 = 1 / 3
+    r12 = 1. / 3
     f_times_dr = f_r * r_ab
     # NOTE: Number of radial points specified in UPF File is expected to be odd. Will fail otherwise
     if f_r.ndim == 1:
@@ -27,6 +27,12 @@ def _simpson(f_r: np.ndarray, r_ab: np.ndarray):
         )
 
 
+def spherical_j0(x: np.ndarray):
+    out = np.ones_like(x)
+    np.divide(np.sin(x), x, where=np.abs(x) > 1E-8, out=out)
+    return out
+
+
 def _sph2pw(r: np.ndarray, r_ab: np.ndarray, f_times_r2: np.ndarray,
             g: np.ndarray):
     numg = g.shape[0]
@@ -37,12 +43,12 @@ def _sph2pw(r: np.ndarray, r_ab: np.ndarray, f_times_r2: np.ndarray,
     r_ab *= 1./3
     r_ab[1:-1:2] *= 4
     r_ab[2:-1:2] *= 2
-    f_g[:] = spherical_jn(0, g * r[0]) * f_times_r2[..., 0] * r_ab[0]
+    f_g[:] = spherical_j0(g * r[0]) * f_times_r2[..., 0] * r_ab[0]
 
     g = g.reshape(-1, 1)
     f_times_r2 = np.expand_dims(f_times_r2, axis=-2)
     for idxr in range(0, numr, BLOCK_SIZE):
-        f_g[:] += np.sum(spherical_jn(0, g * r[idxr:idxr+BLOCK_SIZE])
+        f_g[:] += np.sum(spherical_j0(g * r[idxr:idxr+BLOCK_SIZE])
                          * f_times_r2[..., idxr:idxr + BLOCK_SIZE]
                          * r_ab[idxr:idxr + BLOCK_SIZE],
                         axis=-1)
@@ -78,19 +84,19 @@ def rho_generate_atomic(sp: AtomBasis, grho: GSpace):
 
     rhoatom = upfdata.rhoatom
 
-    rho_atomic = GField(grho, shape=(1,))
+    rho_g = np.empty(numg, dtype='c16')
 
     f_times_r2 = np.empty((1, len(r)), dtype='f8')
     f_times_r2[0] = _1bv * rhoatom
 
     f_g = _sph2pw(r, r_ab, f_times_r2, g_norm[1:])
-    rho_atomic.g[0, 0] = _1bv * _simpson(rhoatom, r_ab)
-    rho_atomic.g[0, 1:] = f_g
+    rho_g[0] = _1bv * _simpson(rhoatom, r_ab)
+    rho_g[1:] = f_g
 
     N = np.prod(grho.grid_shape)
-    rho_atomic.g *= N * struct_fac
+    rho_g *= N * struct_fac
 
-    return rho_atomic
+    return GField.from_array(grho, rho_g)
 
 
 def loc_generate(sp: AtomBasis, grho: GSpace):
@@ -142,8 +148,8 @@ def loc_generate(sp: AtomBasis, grho: GSpace):
     else:
         rho_atc = None
 
-    v_ion = GField(grho, shape=(1,))
-    rho_core = GField(grho, shape=(1,))
+    v_ion_g = np.zeros(numg, dtype='c16')
+    rho_core_g = np.zeros(numg, dtype='c16')
 
     f_times_r2 = np.empty((1 + upfdata.core_correction, len(r)), dtype='f8')
     erf_by_r = np.divide(erf(r), r, where=(r > EPS6))
@@ -155,18 +161,18 @@ def loc_generate(sp: AtomBasis, grho: GSpace):
 
     f_g = _sph2pw(r, r_ab, f_times_r2, g_norm[1:])
 
-    v_ion.g[0, 0] = _simpson(r * (r * vloc + valence), r_ab)
-    v_ion.g[0, 1:] = f_g[0] \
+    v_ion_g[0] = _simpson(r * (r * vloc + valence), r_ab)
+    v_ion_g[1:] = f_g[0] \
         - valence * np.exp(-g_norm2[1:] / 4) / g_norm2[1:]
 
     if upfdata.core_correction:
-        rho_core.g[0, 0] = _simpson(rho_atc * r**2, r_ab)
-        rho_core.g[0, 1:] = f_g[1]
+        rho_core_g[0] = _simpson(rho_atc * r**2, r_ab)
+        rho_core_g[1:] = f_g[1]
     else:
-        rho_core.g[:] = 0
+        rho_core_g[:] = 0
 
     N = np.prod(grho.grid_shape)
-    v_ion.g *= _4pibv * N * struct_fac
-    rho_core.g *= _4pibv * N * struct_fac
+    v_ion_g *= _4pibv * N * struct_fac
+    rho_core_g *= _4pibv * N * struct_fac
 
-    return v_ion, rho_core
+    return GField.from_array(grho, v_ion_g), GField.from_array(grho, rho_core_g)

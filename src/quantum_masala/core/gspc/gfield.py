@@ -19,8 +19,43 @@ class GField:
         if isinstance(shape, int):
             shape = (shape, )
         self.shape: tuple[int, ...] = shape
+        self._r: np.ndarray = np.empty((*self.shape, *self.gspc.grid_shape), dtype='c16')
 
-        self._g: np.ndarray = np.empty((*self.shape, self.gspc.numg), dtype='c16')
+    def get_r(self, out=None):
+        if out is None:
+            out = np.empty((*self.shape, *self.gspc.grid_shape), dtype='c16')
+
+        out[:] = self._r
+        return out
+
+    def set_r(self, arr):
+        self._r[:] = arr
+
+    @property
+    def r(self):
+        return self._r
+
+    @r.setter
+    def r(self, arr):
+        self.set_r(arr)
+
+    def get_g(self, out=None):
+        if out is None:
+            out = np.empty((*self.shape, self.gspc.numg), dtype='c16')
+
+        self.gspc.fft_mod.r2g(self._r, out)
+        return out
+
+    def set_g(self, arr):
+        self.gspc.fft_mod.g2r(arr, self._r)
+
+    @property
+    def g(self):
+        return self.get_g()
+
+    @g.setter
+    def g(self, arr):
+        self.set_g(arr)
 
     @classmethod
     def empty(cls, gspc: GSpace, shape: Union[int, tuple[int, ...]]) -> GField:
@@ -33,14 +68,12 @@ class GField:
     @classmethod
     def zeros(cls, gspc: GSpace, shape: Union[int, tuple[int, ...]]) -> GField:
         out = cls(gspc, shape)
-        out.g[:] = 0
+        out.r[:] = 0
         return out
 
     @classmethod
     def zeros_like(cls, data: GField) -> GField:
-        out = cls(data.gspc, data.shape)
-        out.g[:] = 0
-        return out
+        return cls.zeros(data.gspc, data.shape)
 
     @classmethod
     def from_array(cls, gspc: GSpace, arr: np.ndarray):
@@ -59,55 +92,19 @@ class GField:
 
         out = cls(gspc, shape)
         if spc == 'g':
-            out.set_g(arr)
+            out.set_g(arr.reshape(*shape, gspc.numg))
         else:
-            out.set_r(arr)
+            out.set_r(arr.reshape(*shape, *gspc.grid_shape))
 
         return out
-
-    def get_g(self, out=None):
-        if out is None:
-            out = np.empty((*self.shape, self.gspc.numg), dtype='c16')
-
-        out[:] = self._g
-        return out
-
-    def set_g(self, arr):
-        self._g[:] = arr
-
-    @property
-    def g(self):
-        return self._g
-
-    @g.setter
-    def g(self, arr):
-        self.set_g(arr)
-
-    def get_r(self, out=None):
-        if out is None:
-            out = np.empty((*self.shape, *self.gspc.grid_shape), dtype='c16')
-
-        self.gspc.fft_mod.g2r(self._g, out)
-        return out
-
-    def set_r(self, arr):
-        self.gspc.fft_mod.r2g(np.array(arr, dtype='c16'), self._g)
-
-    @property
-    def r(self):
-        return self.get_r()
-
-    @r.setter
-    def r(self, arr):
-        self.set_r(arr)
 
     def copy(self):
         out = GField.empty_like(self)
-        out.g[:] = self._g
+        out.r = self._r
         return out
 
     def Bcast(self):
-        self.pwcomm.world_comm.Bcast(self._g)
+        self.pwcomm.world_comm.Bcast(self._r)
 
     def integrate_r(self, other=1):
         if isinstance(other, GField):
@@ -115,18 +112,18 @@ class GField:
                 raise ValueError(f"'gspc' do not match between the operands")
             other = other.r
 
-        f_r = self.r * other
+        f_r = self._r * other
         return self.gspc.reallat_dv * np.sum(f_r, axis=(-1, -2, -3))
 
     def symmetrize(self):
-        self.gspc.symm_mod.symmetrize(self._g)
+        self.g = self.gspc.symm_mod.symmetrize(self.g)
 
     def __pos__(self):
         return self
 
     def __neg__(self):
         out = GField.empty_like(self)
-        out.g[:] = - self._g
+        out.r = - self.r
         return out
 
     def __add__(self, other):
@@ -145,8 +142,8 @@ class GField:
         if isinstance(other, GField):
             if other.gspc != self.gspc:
                 raise ValueError(f"'gspc' do not match between the operands")
-            other = other.g
-        data = self._g + other
+            other = other.r
+        data = self._r + other
         return GField.from_array(self.gspc, data)
 
     def __iadd__(self, other):
@@ -165,10 +162,10 @@ class GField:
         if isinstance(other, GField):
             if other.gspc != self.gspc:
                 raise ValueError(f"'gspc' do not match between the operands")
-            other = other.g
+            other = other.r
 
-        self._g += other
-        self.shape = self._g.shape[:-1]
+        self._r += other
+        self.shape = self._r.shape[:-3]
         return self
 
     def __radd__(self, other):
@@ -178,18 +175,18 @@ class GField:
         if isinstance(other, GField):
             if other.gspc != self.gspc:
                 raise ValueError(f"'gspc' do not match between the operands")
-            other = other.g
-        data = self._g - other
+            other = other.r
+        data = self._r - other
         return GField.from_array(self.gspc, data)
 
     def __isub__(self, other):
         if isinstance(other, GField):
             if other.gspc != self.gspc:
                 raise ValueError(f"'gspc' do not match between the operands")
-            other = other.g
+            other = other.r
 
-        self._g -= other
-        self.shape = self._g.shape[:-1]
+        self._r -= other
+        self.shape = self._r.shape[:-3]
         return self
 
     def __rmul__(self, other):
@@ -203,11 +200,12 @@ class GField:
         -------
 
         """
-        return GField.from_array(self.gspc, np.expand_dims(other, axis=-1) * self._g)
+        return GField.from_array(self.gspc,
+                                 np.expand_dims(other, axis=(-1, -2, -3)) * self._r)
 
     def __imul__(self, other):
-        self._g *= np.expand_dims(other, axis=-1)
-        self.shape = self._g.shape[:-1]
+        self._r *= np.expand_dims(other, axis=(-1, -2, -3))
+        self.shape = self._r.shape[:-3]
         return self
 
     def __getitem__(self, item):
@@ -216,5 +214,5 @@ class GField:
                 raise ValueError("too many indices: "
                                  f"field has {len(self.shape)} dimensions, "
                                  f"but {len(item)} were indexed.")
-        data = self._g[item]
+        data = self._r[item]
         return GField.from_array(self.gspc, data)

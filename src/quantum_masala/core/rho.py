@@ -34,7 +34,7 @@ def rho_normalize(rho: GField, numel: float):
         rho_r = np.abs(rho_r)
         rho.r = rho_r
 
-    rho_int = np.sum(rho_r) * grho.reallat_dv
+    rho_int = sum(rho.integrate_r())
 
     if rho_int < EPS10:
         raise ValueError("values in 'rho.r' too small to normalize.\n"

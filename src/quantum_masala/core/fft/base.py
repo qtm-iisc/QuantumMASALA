@@ -146,8 +146,12 @@ class FFTModule(ABC):
         """
         arr_in_ = arr_in.reshape(-1, self.numgrid)
 
+        shape_out = (*arr_in.shape[:-1], *self.grid_shape)
         if arr_out is None:
-            arr_out = np.empty((*arr_in.shape[:-1], *self.grid_shape), dtype="c16")
+            arr_out = np.empty(shape_out, dtype="c16")
+        elif arr_out.shape != shape_out:
+            raise ValueError(f"'arr_out' must be a NumPy array of shape {shape_out}. "
+                             f"Got {arr_out.shape}")
         arr_out_ = arr_out.reshape(-1, *self.grid_shape)
         self._g2r(arr_in_, arr_out_, overwrite_in)
 
@@ -189,8 +193,12 @@ class FFTModule(ABC):
         """
         arr_in_ = arr_in.reshape((-1, *self.grid_shape))
 
+        shape_out = (*arr_in.shape[:-3], self.numgrid)
         if arr_out is None:
             arr_out = np.empty((*arr_in.shape[:-3], self.numgrid), dtype="c16")
+        elif arr_out.shape != shape_out:
+            raise ValueError(f"'arr_out' must be a NumPy array of shape {shape_out}. "
+                             f"Got {arr_out.shape}")
         arr_out_ = arr_out.reshape(-1, self.numgrid)
         self._r2g(arr_in_, arr_out_, overwrite_in)
 

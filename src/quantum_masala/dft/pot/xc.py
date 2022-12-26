@@ -104,7 +104,7 @@ def xc_compute(rho: GField, rhocore: GField,
         xcfunc_out = xcfunc.compute(xc_inp)
         zk_r = GField.from_array(grho, xcfunc_out['zk'].reshape(grho.grid_shape))
         v_r = np.reshape(xcfunc_out['vrho'].T, (numspin, *grho.grid_shape))
-        v_xc += GField.from_array(grho, v_r)
+        v_xc += v_r
         en_xc += np.sum(rho.integrate_r(zk_r)).real
 
         if need_grad:

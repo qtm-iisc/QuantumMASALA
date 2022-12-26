@@ -56,8 +56,3 @@ class KSHam:
             )
         proj = l_psi @ self.l_vkb_H
         l_hpsi += (proj @ self.dij.T) @ self.l_vkb
-
-    def h_psi_serial(self, l_psi: np.ndarray, l_hpsi: np.ndarray):
-        numpsi = l_psi.shape[0]
-        for ipsi in range(numpsi):
-            self.h_psi(l_psi[ipsi], l_hpsi[ipsi])

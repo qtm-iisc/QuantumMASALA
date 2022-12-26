@@ -18,7 +18,7 @@ class PWConfig:
     fft_threads: int = int(getenv("OMP_NUM_THREADS", "1"))
     pyfftw_planner: Literal['FFTW_ESTIMATE', 'FFTW_MEASURE',
                             'FFTW_PATIENT', 'FFTW_EXHAUSTIVE'] = 'FFTW_PATIENT'
-    pyfftw_flags: tuple[str, ...] = ('FFTW_DESTROY_INPUT', )
+    pyfftw_flags: tuple[str, ...] = ('FFTW_UNALIGNED', )
 
     spglib_symprec: float = 1E-5
 

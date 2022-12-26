@@ -168,7 +168,7 @@ def scf(crystal: Crystal, kpts: KPoints,
         else:
             diago_thr = min(diago_thr, 0.1 * e_error / max(1, numel))
             diago_thr = max(diago_thr, 1E-13)
-            mixmod.mix(rho, rho_out)
+            rho = mixmod.mix(rho, rho_out)
             if symm_rho:
                 rho.symmetrize()
             rho_normalize(rho, numel)
