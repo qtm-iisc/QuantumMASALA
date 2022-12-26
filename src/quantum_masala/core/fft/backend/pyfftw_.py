@@ -12,7 +12,7 @@ class PyFFTWLibWrapper(FFTBackend):
         super().__init__(shape, axes)
         arr = pyfftw.empty_aligned(self.shape, dtype="c16")
 
-        fftw_flags = (config.pyfftw_planner, 'FFTW_DESTROY_INPUT')
+        fftw_flags = (config.pyfftw_planner, *config.pyfftw_flags)
         self.fft_worker = pyfftw.FFTW(arr, arr, self.axes,
                                       direction='FFTW_FORWARD',
                                       flags=fftw_flags, threads=config.fft_threads

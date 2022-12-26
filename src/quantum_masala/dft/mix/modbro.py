@@ -22,19 +22,19 @@ class ModBroyden(MixModBase):
         self.l_del_res = np.empty((self.mixdim, *shape), dtype="c16")
         self.overlap = np.empty((self.mixdim, self.mixdim), dtype="c16")
 
-        self.G_1 = -self.beta * np.ones(shape)
-
     def _mix(self, rho_in: np.ndarray, rho_out: np.ndarray) -> np.ndarray:
         res = rho_out - rho_in
 
         numdim = min(self.idxiter, self.mixdim)
-        del_rho = self.beta * res
         if numdim == 0:
-            pass
+            self.rho_old[:] = rho_in
+            self.res_old[:] = res
         else:
             isave = (self.idxiter - 1) % self.mixdim
-            self.l_del_rho[isave] = rho_in - self.rho_old
-            self.l_del_res[isave] = res - self.res_old
+            self.l_del_rho[isave] = self.rho_old - rho_in
+            self.l_del_res[isave] = self.res_old - res
+            self.rho_old[:] = rho_in
+            self.res_old[:] = res
             for i in range(numdim):
                 self.overlap[isave, i] = self._dot(
                     self.l_del_res[i], self.l_del_res[isave]
@@ -50,20 +50,19 @@ class ModBroyden(MixModBase):
                 )
                 raise np.linalg.LinAlgError(e)
 
-            # for i in range(numdim):
-            #     overlap_inv[:i, i] = overlap_inv[i, :i]
+            for i in range(numdim):
+                overlap_inv[:i, i] = overlap_inv[i, :i]
 
             l_dot = np.empty(numdim, dtype="c16")
             for i in range(numdim):
                 l_dot[i] = self._dot(self.l_del_res[i], res)
 
-            comp = overlap_inv @ l_dot
+            comp = overlap_inv.T @ l_dot
             for i in range(numdim):
-                del_rho -= comp[i] * (self.l_del_rho[i] + self.beta * self.l_del_res[i])
+                rho_in -= comp[i] * self.l_del_rho[i]
+                res -= comp[i] * self.l_del_res[i]
 
-        self.rho_old[:] = rho_in
-        self.res_old[:] = res
         self.idxiter += 1
 
-        rho_in += del_rho
+        rho_in += self.beta * res
         return rho_in

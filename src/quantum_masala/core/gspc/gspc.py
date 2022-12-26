@@ -128,11 +128,11 @@ class GSpace:
                              )
 
         # Storing data of all G-vectors within cutoff
-        idxsort: np.ndarray = np.lexsort((g_cryst[2, icut], g_cryst[1, icut],
-                                          g_cryst[0, icut],
-                                          np.around(g_2[icut], ROUND_PREC)
-                                          ))
+        idxsort = np.lexsort((g_cryst[2, icut], g_cryst[1, icut], g_cryst[0, icut],
+                              np.around(g_2[icut], ROUND_PREC)
+                              ))
         icut = icut[idxsort]
+
         self.numg: int = len(icut)
         """Number of G-vectors (`int`)
         """
