@@ -23,7 +23,7 @@ from quantum_masala.dft.occ import fixed, smear
 
 from quantum_masala.dft.mix import *
 
-from quantum_masala import config
+from quantum_masala import config, pw_counter
 
 
 def scf(crystal: Crystal, kpts: KPoints,
@@ -35,9 +35,10 @@ def scf(crystal: Crystal, kpts: KPoints,
         conv_thr: float = 1E-6, max_iter: int = 100,
         diago_thr_init: float = 1E-2,
         iter_printer: Optional[
-            Callable[[int, bool, float, dict[str, float]], None]] = None,
+            Callable[[int, bool, float, Optional[float], dict[str, float]], None]] = None,
         mix_beta: float = 0.7, mix_dim: int = 8,
         ):
+    pw_counter.start_clock('dft:scf')
     pwcomm = config.pwcomm
     numel = crystal.numel
 
@@ -137,12 +138,10 @@ def scf(crystal: Crystal, kpts: KPoints,
         if config.eigsolve_method == 'davidson':
             prec_params['vbare_g0'] = v_ion.g[0, 0] / np.prod(grho.grid_shape)
 
-        stats = 0
+        diago_avgiter = 0
         for _wfn in l_wfn_kgrp:
-            stats_ = solve_wfn(_wfn, gen_ham, diago_thr, **prec_params)
-            stats = stats_ + stats
-        stats[0] /= numkpts_kgrp * numspin
-        print("STATS: ", stats)
+            diago_avgiter += solve_wfn(_wfn, gen_ham, diago_thr, **prec_params)
+        diago_avgiter /= numkpts_kgrp * numspin
         if occ == 'fixed':
             en['occ_max'], en['unocc_min'] = fixed.compute_occ(
                 l_wfn_kgrp, numel
@@ -163,7 +162,7 @@ def scf(crystal: Crystal, kpts: KPoints,
             scf_converged = True
         elif idxiter == 0 and e_error < diago_thr * numel:
             diago_thr = 0.1 * e_error / max(1, numel)
-            iter_printer(idxiter, scf_converged, e_error, en)
+            iter_printer(idxiter, scf_converged, e_error, diago_avgiter, en)
             continue
         else:
             diago_thr = min(diago_thr, 0.1 * e_error / max(1, numel))
@@ -177,10 +176,11 @@ def scf(crystal: Crystal, kpts: KPoints,
         scf_converged = pwcomm.world_comm.bcast(scf_converged)
         diago_thr = pwcomm.world_comm.bcast(diago_thr)
         pwcomm.world_comm.barrier()
-        iter_printer(idxiter, scf_converged, e_error, en)
+        iter_printer(idxiter, scf_converged, e_error, diago_avgiter, en)
         if scf_converged:
             break
         else:
             idxiter += 1
 
+    pw_counter.stop_clock('dft:scf')
     return scf_converged, rho, l_wfn_kgrp, en

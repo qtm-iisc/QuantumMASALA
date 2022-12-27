@@ -3,6 +3,7 @@ __all__ = ["loc_generate", "rho_generate_atomic"]
 import numpy as np
 from scipy.special import erf, spherical_jn
 
+from quantum_masala import pw_counter
 from quantum_masala.core import AtomBasis, GSpace, GField
 from .upf import UPFv2Data
 
@@ -110,6 +111,7 @@ def loc_generate(sp: AtomBasis, grho: GSpace):
     v_loc : GField
         Local part of the pseudopotenital
     """
+    pw_counter.start_clock('loc_generate')
     if sp.ppdata is None:
         raise ValueError("'sp.ppdata' must not be None.")
     if not isinstance(sp.ppdata, UPFv2Data):
@@ -167,4 +169,5 @@ def loc_generate(sp: AtomBasis, grho: GSpace):
     v_ion_g *= _4pibv * N * struct_fac
     rho_core_g *= _4pibv * N * struct_fac
 
+    pw_counter.stop_clock('loc_generate')
     return GField.from_array(grho, v_ion_g), GField.from_array(grho, rho_core_g)

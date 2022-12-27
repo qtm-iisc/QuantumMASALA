@@ -4,7 +4,7 @@ from pylibxc import LibXCFunctional
 import pylibxc.flags as xc_flags
 
 from quantum_masala.core import GField, rho_check, deloper
-from quantum_masala import config
+from quantum_masala import config, pw_counter
 
 
 def _get_sigma(rhoaux: GField) -> np.ndarray:
@@ -67,6 +67,7 @@ def xc_compute(rho: GField, rhocore: GField,
     en_xc : float
         Contribution of XC Potential to total energy (per unit cell)
     """
+    pw_counter.start_clock('xc_compute')
     rho_check(rho)
     rho_check(rhocore)
     if rho.gspc != rhocore.gspc:
@@ -122,4 +123,5 @@ def xc_compute(rho: GField, rhocore: GField,
 
             v_xc -= div_h
 
+    pw_counter.stop_clock('xc_compute')
     return v_xc, en_xc.real
