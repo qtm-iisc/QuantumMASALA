@@ -27,12 +27,6 @@ def _simpson(f_r: np.ndarray, r_ab: np.ndarray):
         )
 
 
-def spherical_j0(x: np.ndarray):
-    out = np.ones_like(x)
-    np.divide(np.sin(x), x, where=np.abs(x) > 1E-8, out=out)
-    return out
-
-
 def _sph2pw(r: np.ndarray, r_ab: np.ndarray, f_times_r2: np.ndarray,
             g: np.ndarray):
     numg = g.shape[0]
@@ -43,12 +37,12 @@ def _sph2pw(r: np.ndarray, r_ab: np.ndarray, f_times_r2: np.ndarray,
     r_ab *= 1./3
     r_ab[1:-1:2] *= 4
     r_ab[2:-1:2] *= 2
-    f_g[:] = spherical_j0(g * r[0]) * f_times_r2[..., 0] * r_ab[0]
+    f_g[:] = spherical_jn(0, g * r[0]) * f_times_r2[..., 0] * r_ab[0]
 
     g = g.reshape(-1, 1)
     f_times_r2 = np.expand_dims(f_times_r2, axis=-2)
     for idxr in range(0, numr, BLOCK_SIZE):
-        f_g[:] += np.sum(spherical_j0(g * r[idxr:idxr+BLOCK_SIZE])
+        f_g[:] += np.sum(spherical_jn(0, g * r[idxr:idxr+BLOCK_SIZE])
                          * f_times_r2[..., idxr:idxr + BLOCK_SIZE]
                          * r_ab[idxr:idxr + BLOCK_SIZE],
                         axis=-1)
@@ -152,9 +146,7 @@ def loc_generate(sp: AtomBasis, grho: GSpace):
     rho_core_g = np.zeros(numg, dtype='c16')
 
     f_times_r2 = np.empty((1 + upfdata.core_correction, len(r)), dtype='f8')
-    erf_by_r = np.divide(erf(r), r, where=(r > EPS6))
-    erf_by_r[r < EPS6] = 2 / np.pi
-    f_times_r2[0] = (vloc + valence * erf_by_r) * r**2
+    f_times_r2[0] = (vloc * r + valence * erf(r)) * r
 
     if upfdata.core_correction:
         f_times_r2[1] = rho_atc * r**2
