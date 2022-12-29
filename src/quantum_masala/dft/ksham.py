@@ -1,14 +1,15 @@
+
 from warnings import warn
 
 import numpy as np
-from scipy.linalg import block_diag
+from scipy.linalg.blas import zgemm as gemm
 
 from quantum_masala.core import GkSpace, GField, Wavefun
 from quantum_masala.pseudo import NonlocGenerator
 
 
 class KSHam:
-    __slots__ = ["gkspc", "fft_mod", "ke_gk", "l_vkb", "l_vkb_H", "dij",
+    __slots__ = ["gkspc", "fft_mod", "ke_gk", "l_vkb_dij", "vnl_diag",
                  "noncolin", "numspin", "vloc_r", "idxspin"]
 
     def __init__(self, gkspc: GkSpace, numspin: int, noncolin: bool,
@@ -18,10 +19,12 @@ class KSHam:
         self.fft_mod = self.gkspc.fft_mod
         self.ke_gk = 0.5 * self.gkspc.norm2
 
-        l_vkb_dij = [nloc.gen_vkb_dij(self.gkspc) for nloc in l_nloc]
-        self.l_vkb = np.concatenate([vkb for vkb, _ in l_vkb_dij], axis=0)
-        self.l_vkb_H = np.conj(self.l_vkb.T)
-        self.dij = block_diag(*[dij for _, dij in l_vkb_dij])
+        self.l_vkb_dij = []
+        self.vnl_diag = np.zeros(self.gkspc.numgk, dtype='c16')
+        for nloc in l_nloc:
+            vkb, dij, vkb_diag = nloc.gen_vkb_dij(self.gkspc)
+            self.l_vkb_dij.append((vkb, dij))
+            self.vnl_diag += vkb_diag
 
         self.noncolin = noncolin
         self.numspin = numspin
@@ -54,5 +57,11 @@ class KSHam:
                     l_psi[ipsi],
                 ),
             )
-        proj = l_psi @ self.l_vkb_H
-        l_hpsi += (proj @ self.dij.T) @ self.l_vkb
+
+        for vkb, dij in self.l_vkb_dij:
+            # proj = vkb.conj() @ l_psi.T
+            # l_hpsi += (dij @ proj).T @ vkb
+            proj = gemm(alpha=1.0, a=vkb.T, trans_a=2, b=l_psi.T, trans_b=0,
+                        )
+            gemm(alpha=1.0, a=vkb.T, trans_a=0, b=dij@proj, trans_b=0,
+                 beta=1.0, c=l_hpsi.T, overwrite_c=True)

@@ -175,11 +175,14 @@ class NonlocGenerator:
 
         # Generating KB Projectors corresponding to all atoms
         l_vkb_full = np.empty((numatoms * self.numvkb, numgk), dtype="c16")
+        vkb_diag = np.zeros(numgk, dtype='c16')
         for iat, pos_cryst in enumerate(self.species.cryst.T):
             phase = np.exp((-2 * np.pi * 1j) * (pos_cryst @ gk_cryst))
-            l_vkb_full[iat * self.numvkb : (iat + 1) * self.numvkb] = (
+            l_vkb_iat = l_vkb_full[iat*self.numvkb: (iat+1)*self.numvkb]
+            l_vkb_iat[:] = (
                 phase * l_vkb_atom * (-(1j**self.vkb_l)).reshape(-1, 1)
             )
+            vkb_diag += np.sum(l_vkb_iat * (dij_atom @ l_vkb_iat.conj()), axis=0)
         dij_full = block_diag(*[dij_atom for _ in range(numatoms)])
 
-        return l_vkb_full, dij_full
+        return l_vkb_full, dij_full, vkb_diag

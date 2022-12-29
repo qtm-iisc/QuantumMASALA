@@ -1,11 +1,9 @@
 __all__ = ['solver']
 
-from time import perf_counter
 import numpy as np
 
 from quantum_masala import config, pw_counter
 from quantum_masala.dft.ksham import KSHam
-
 
 def solver(ham: KSHam,
            diago_thr: float, evc_gk: np.ndarray,
@@ -18,17 +16,16 @@ def solver(ham: KSHam,
         import numpy as xp
         from scipy.linalg import eigh
     # Setting up preconditioner
-    ham_diag = ham.ke_gk + vbare_g0 \
-        + xp.sum(xp.diag(ham.dij).reshape(-1, 1)
-                 * (ham.l_vkb_H.T * ham.l_vkb), axis=0)
+    ham_diag = ham.ke_gk + vbare_g0 + ham.vnl_diag
 
     def g_psi(psi_: xp.ndarray, l_evl_: xp.ndarray):
         pw_counter.start_clock('david:g_psi')
         nonlocal ham_diag
         scala = 2
-        x = scala * (ham_diag.reshape(1, -1) - l_evl_.reshape(-1, 1))
-        denom = 0.5 * (1 + x + np.sqrt(1 + (x - 1) * (x - 1))) / scala
-        psi_ /= denom
+        for ipsi, evl_ in enumerate(l_evl_):
+            x = scala * (ham_diag - evl_)
+            denom = 0.5 * (1 + x + np.sqrt(1 + (x - 1) ** 2)) / scala
+            psi_[ipsi] /= denom
         pw_counter.stop_clock('david:g_psi')
 
     # Intra k-group Communicator for band parallelization
