@@ -93,8 +93,8 @@ def solver(ham: KSHam,
         sl_bgrp = kgrp_intracomm.psi_scatter_slice(ndim-nunconv, ndim)
         ham_red_[sl_bgrp] = psi[sl_bgrp].conj() @ hpsi[:ndim].T
         ovl_red_[sl_bgrp] = psi[sl_bgrp].conj() @ psi[:ndim].T
-        kgrp_intracomm.psi_Allgather_inplace(ham_red[0:ndim])
-        kgrp_intracomm.psi_Allgather_inplace(ovl_red[0:ndim])
+        kgrp_intracomm.psi_Allgather_inplace(ham_red[ndim-nunconv:ndim])
+        kgrp_intracomm.psi_Allgather_inplace(ovl_red[ndim-nunconv:ndim])
 
         pw_counter.start_clock('david:eigh')
         if kgrp_intracomm.rank == 0:
