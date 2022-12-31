@@ -19,7 +19,7 @@ def hartree_compute(rho: GField) -> tuple[GField, float]:
     en_hart : float
         Hartree contribution to total energy (per unit cell).
     """
-    pw_counter.start_clock('hart_compute')
+    pw_counter.start_timer('hart_compute')
     rho_check(rho)
     grho = rho.gspc
     v_hart_g = np.empty(grho.numg, dtype='c16')
@@ -27,5 +27,5 @@ def hartree_compute(rho: GField) -> tuple[GField, float]:
     v_hart_g[1:] = 4*np.pi * np.sum(rho.g, axis=0)[1:] / rho.gspc.norm2[1:]
     v_hart = GField.from_array(grho, v_hart_g)
     en_hart = 0.5 * sum(rho.integrate_r(v_hart))
-    pw_counter.stop_clock('hart_compute')
+    pw_counter.stop_timer('hart_compute')
     return v_hart, en_hart.real

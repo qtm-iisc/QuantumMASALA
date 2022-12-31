@@ -95,7 +95,7 @@ class GSpace:
 
     def __init__(self, crystal: Crystal, ecut: float,
                  grid_shape: tuple[int, int, int] = None):
-        pw_counter.start_clock('gspc:init')
+        pw_counter.start_timer('gspc:init')
         self.recilat: ReciprocalLattice = crystal.recilat
         """Reciprocal Latiice of the crystal.
         """
@@ -168,7 +168,7 @@ class GSpace:
         self.symm_mod = SymmMod(crystal, self)
         """Symmetrization Module to ensure values have same symmetry as crystal
         """
-        pw_counter.stop_clock('gspc:init')
+        pw_counter.stop_timer('gspc:init')
 
     @property
     def cart(self) -> np.ndarray:

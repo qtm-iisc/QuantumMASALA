@@ -51,6 +51,7 @@ def _sph2pw(r: np.ndarray, r_ab: np.ndarray, f_times_r2: np.ndarray,
 
 
 def rho_generate_atomic(sp: AtomBasis, grho: GSpace):
+    pw_counter.start_timer('rho_generate_atomic')
     if sp.ppdata is None:
         raise ValueError("'sp.ppdata' must not be None.")
     if not isinstance(sp.ppdata, UPFv2Data):
@@ -91,6 +92,7 @@ def rho_generate_atomic(sp: AtomBasis, grho: GSpace):
     N = np.prod(grho.grid_shape)
     rho_g *= N * struct_fac
 
+    pw_counter.stop_timer('rho_generate_atomic')
     return GField.from_array(grho, rho_g)
 
 
@@ -111,7 +113,7 @@ def loc_generate(sp: AtomBasis, grho: GSpace):
     v_loc : GField
         Local part of the pseudopotenital
     """
-    pw_counter.start_clock('loc_generate')
+    pw_counter.start_timer('loc_generate')
     if sp.ppdata is None:
         raise ValueError("'sp.ppdata' must not be None.")
     if not isinstance(sp.ppdata, UPFv2Data):
@@ -169,5 +171,5 @@ def loc_generate(sp: AtomBasis, grho: GSpace):
     v_ion_g *= _4pibv * N * struct_fac
     rho_core_g *= _4pibv * N * struct_fac
 
-    pw_counter.stop_clock('loc_generate')
+    pw_counter.stop_timer('loc_generate')
     return GField.from_array(grho, v_ion_g), GField.from_array(grho, rho_core_g)

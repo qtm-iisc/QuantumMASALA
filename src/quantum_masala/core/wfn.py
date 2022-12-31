@@ -5,7 +5,7 @@ import numpy as np
 
 from quantum_masala.core import GSpace, GkSpace, GField, KPoints
 from quantum_masala.core.pwcomm import KgrpIntracomm
-from quantum_masala import config
+from quantum_masala import config, pw_counter
 
 
 RANDOMIZE_AMP = 0.05
@@ -32,6 +32,7 @@ class Wavefun:
     """
     def __init__(self, gspc: GSpace, k_cryst: tuple[float, float, float],
                  k_weight: float, numspin: int, numbnd: int, noncolin: bool):
+        pw_counter.start_timer('wfn:init')
         self.kgrp_intracomm: KgrpIntracomm = config.pwcomm.kgrp_intracomm
         """PW Communicator object
         """
@@ -75,6 +76,7 @@ class Wavefun:
         numbers
         """
         self.sync()
+        pw_counter.stop_timer('wfn:init')
 
     def sync(self, evc: bool = True, evl: bool = True, occ: bool = True):
         if evc:
@@ -112,6 +114,7 @@ class Wavefun:
         return l_amp_r
 
     def get_rho(self):
+        pw_counter.start_timer('wfn:gen_rho')
         self.normalize()
         rho_r = np.zeros((self.numspin, *self.gspc.grid_shape), dtype='c16')
         sl = self.kgrp_intracomm.psi_scatter_slice(0, self.numbnd)
@@ -122,6 +125,7 @@ class Wavefun:
         if self.numspin == 1:
             rho_r *= 2
         self.kgrp_intracomm.Allreduce_sum_inplace(rho_r)
+        pw_counter.stop_timer('wfn:gen_rho')
         return GField.from_array(self.gspc, rho_r)
 
 
@@ -143,6 +147,7 @@ def wfn_generate(gspc: GSpace, kpts: KPoints,
     -------
     l_wfn : list[Wavefun]
     """
+    pw_counter.start_timer('wfn_generate')
     if numspin not in [1, 2]:
         raise ValueError(f"'numspin' must be either 1 or 2. Got {numspin}")
     if not isinstance(numbnd, int) or numbnd < 0:
@@ -156,10 +161,12 @@ def wfn_generate(gspc: GSpace, kpts: KPoints,
     for idxk in idxkpts:
         l_wfn.append(Wavefun(gspc, *kpts[idxk], numspin, numbnd, noncolin))
 
+    pw_counter.stop_timer('wfn_generate')
     return l_wfn
 
 
 def wfn_gen_rho(l_wfn: list[Wavefun]):
+    pw_counter.start_timer('wfn_gen_rho')
     gspc = l_wfn[0].gspc
     numspin = l_wfn[0].numspin
     rho = GField.zeros(gspc, numspin)
@@ -171,4 +178,5 @@ def wfn_gen_rho(l_wfn: list[Wavefun]):
         pwcomm.kgrp_intercomm.Allreduce_sum_inplace(rho.g)
     pwcomm.world_comm.Bcast(rho.g)
 
+    pw_counter.stop_timer('wfn_gen_rho')
     return rho

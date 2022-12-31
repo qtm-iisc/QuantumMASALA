@@ -4,6 +4,7 @@ import numpy as np
 from scipy.special import spherical_jn, sph_harm
 from scipy.linalg import block_diag
 
+from quantum_masala import pw_counter
 from quantum_masala.core import AtomBasis, GSpace, GkSpace
 from .upf import UPFv2Data
 
@@ -24,6 +25,7 @@ class NonlocGenerator:
     """
 
     def __init__(self, sp: AtomBasis, gspc: GSpace):
+        pw_counter.start_timer('nloc:init')
         # Setting Up
         if sp.ppdata is None:
             raise ValueError("'sp.ppdata' must not be None.")
@@ -81,6 +83,7 @@ class NonlocGenerator:
         self.numvkb = len(self.vkb_l)
 
         self.dij_beta = ppdata.dij
+        pw_counter.stop_timer('nloc:init')
 
     def gen_vkb_dij(self, gwfc: GkSpace):
         r"""Computes the Nonlocal Operator as a set of Beta Projectors and a
@@ -99,6 +102,7 @@ class NonlocGenerator:
             dij matrix. Expanded for all atoms of the species
         """
         # Setting Up: Computing spherical coordinates for all :math:`\mathbf{G}+\mathbf{k}`
+        pw_counter.start_timer('nloc:generate')
         numgk = gwfc.numgk
         gk_cryst = gwfc.cryst
         gk_x, gk_y, gk_z = gwfc.cart
@@ -185,4 +189,5 @@ class NonlocGenerator:
             vkb_diag += np.sum(l_vkb_iat * (dij_atom @ l_vkb_iat.conj()), axis=0)
         dij_full = block_diag(*[dij_atom for _ in range(numatoms)])
 
+        pw_counter.stop_timer('nloc:generate')
         return l_vkb_full, dij_full, vkb_diag

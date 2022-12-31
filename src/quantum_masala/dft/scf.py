@@ -38,7 +38,7 @@ def scf(crystal: Crystal, kpts: KPoints,
             Callable[[int, bool, float, Optional[float], dict[str, float]], None]] = None,
         mix_beta: float = 0.7, mix_dim: int = 8,
         ):
-    pw_counter.start_clock('dft:scf')
+    pw_counter.start_timer('dft:scf')
     pwcomm = config.pwcomm
     numel = crystal.numel
 
@@ -182,5 +182,5 @@ def scf(crystal: Crystal, kpts: KPoints,
         else:
             idxiter += 1
 
-    pw_counter.stop_clock('dft:scf')
+    pw_counter.stop_timer('dft:scf')
     return scf_converged, rho, l_wfn_kgrp, en

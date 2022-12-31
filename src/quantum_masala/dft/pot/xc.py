@@ -67,7 +67,7 @@ def xc_compute(rho: GField, rhocore: GField,
     en_xc : float
         Contribution of XC Potential to total energy (per unit cell)
     """
-    pw_counter.start_clock('xc_compute')
+    pw_counter.start_timer('xc_compute')
     rho_check(rho)
     rho_check(rhocore)
     if rho.gspc != rhocore.gspc:
@@ -123,5 +123,5 @@ def xc_compute(rho: GField, rhocore: GField,
 
             v_xc -= div_h
 
-    pw_counter.stop_clock('xc_compute')
+    pw_counter.stop_timer('xc_compute')
     return v_xc, en_xc.real

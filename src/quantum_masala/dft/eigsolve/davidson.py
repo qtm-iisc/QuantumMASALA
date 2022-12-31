@@ -8,7 +8,7 @@ from quantum_masala.dft.ksham import KSHam
 def solver(ham: KSHam,
            diago_thr: float, evc_gk: np.ndarray,
            vbare_g0: float):
-    pw_counter.start_clock('david')
+    pw_counter.start_timer('david')
     # Choosing backend
     if config.use_gpu:
         import cupy as xp
@@ -19,14 +19,14 @@ def solver(ham: KSHam,
     ham_diag = ham.ke_gk + vbare_g0 + ham.vnl_diag
 
     def g_psi(psi_: xp.ndarray, l_evl_: xp.ndarray):
-        pw_counter.start_clock('david:g_psi')
+        pw_counter.start_timer('david:g_psi')
         nonlocal ham_diag
         scala = 2
         for ipsi, evl_ in enumerate(l_evl_):
             x = scala * (ham_diag - evl_)
             denom = 0.5 * (1 + x + np.sqrt(1 + (x - 1) ** 2)) / scala
             psi_[ipsi] /= denom
-        pw_counter.stop_clock('david:g_psi')
+        pw_counter.stop_timer('david:g_psi')
 
     # Intra k-group Communicator for band parallelization
     kgrp_intracomm = config.pwcomm.kgrp_intracomm
@@ -55,20 +55,20 @@ def solver(ham: KSHam,
     psi[:ndim] = evc
 
     def compute_hpsi(istart: int, istop: int):
-        pw_counter.start_clock('david:h_psi')
+        pw_counter.start_timer('david:h_psi')
         sl = kgrp_intracomm.psi_scatter_slice(istart, istop)
         if sl.stop > sl.start:
             ham.h_psi(psi[sl], hpsi[sl])
         kgrp_intracomm.barrier()
         kgrp_intracomm.psi_Allgather_inplace(hpsi[istart:istop])
-        pw_counter.stop_clock('david:h_psi')
+        pw_counter.stop_timer('david:h_psi')
 
     def move_unconv():
         evc_red[:nunconv] = evc_red[:numeig][unconv_flag]
         evl_red[:nunconv] = evl_red[:numeig][unconv_flag]
 
     def expand_psi():
-        pw_counter.start_clock('david:update')
+        pw_counter.start_timer('david:update')
         nonlocal ndim
         sl = slice(ndim, ndim + nunconv)
         sl_bgrp = kgrp_intracomm.psi_scatter_slice(0, ndim)
@@ -83,9 +83,10 @@ def solver(ham: KSHam,
         psi[sl] /= xp.linalg.norm(psi[sl], axis=1, keepdims=True)
         kgrp_intracomm.barrier()
         ndim += nunconv
-        pw_counter.stop_clock('david:update')
+        pw_counter.stop_timer('david:update')
 
     def solve_red():
+        pw_counter.start_timer('david:solve_red')
         ham_red_ = ham_red[:ndim, :ndim]
         ovl_red_ = ovl_red[:ndim, :ndim]
         evc_red_ = evc_red[:, :ndim].T
@@ -96,7 +97,7 @@ def solver(ham: KSHam,
         kgrp_intracomm.psi_Allgather_inplace(ham_red[ndim-nunconv:ndim])
         kgrp_intracomm.psi_Allgather_inplace(ovl_red[ndim-nunconv:ndim])
 
-        pw_counter.start_clock('david:eigh')
+        pw_counter.start_timer('david:eigh')
         if kgrp_intracomm.rank == 0:
             if config.use_gpu:
                 # Generalized Eigenvalue Problem Ax = eBx
@@ -115,7 +116,8 @@ def solver(ham: KSHam,
                 )
         kgrp_intracomm.Bcast(evl_red)
         kgrp_intracomm.Bcast(evc_red[:, :ndim])
-        pw_counter.stop_clock('david:eigh')
+        pw_counter.stop_timer('david:eigh')
+        pw_counter.stop_timer('david:solve_red')
 
     compute_hpsi(0, ndim)
     solve_red()
@@ -149,7 +151,7 @@ def solver(ham: KSHam,
             xp.fill_diagonal(ovl_red, 1)
             xp.fill_diagonal(evc_red, 1)
 
-    pw_counter.stop_clock('david')
+    pw_counter.stop_timer('david')
     if config.use_gpu:
         return xp.asnumpy(evl.real), xp.asnumpy(evc), idxiter
     else:

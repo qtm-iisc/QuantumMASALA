@@ -12,7 +12,7 @@ ROUND_PREC: int = 6
 
 class SymmMod:
     def __init__(self, crystal: Crystal, gspc: 'GSpace'):
-        pw_counter.start_clock('gspc_symm:init')
+        pw_counter.start_timer('gspc_symm:init')
         self.numg = gspc.numg
         grid_shape = gspc.grid_shape
         nx, ny, nz = grid_shape
@@ -60,7 +60,7 @@ class SymmMod:
             ).T
             l_groupphase.append(groupphase)
 
-        pw_counter.stop_clock('gspc_symm:init')
+        pw_counter.stop_timer('gspc_symm:init')
 
         self.shell_idx = np.concatenate(l_groupidx, axis=0)
         self.shell_phase = np.concatenate(l_groupphase, axis=0)
