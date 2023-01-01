@@ -9,6 +9,7 @@ def solver(ham: KSHam,
            diago_thr: float, evc_gk: np.ndarray,
            vbare_g0: float):
     pw_counter.start_timer('david')
+    pw_counter.start_timer('david:init')
     # Choosing backend
     if config.use_gpu:
         import cupy as xp
@@ -124,7 +125,9 @@ def solver(ham: KSHam,
     evl[:] = evl_red[:numeig]
 
     idxiter = 0
+    pw_counter.start_timer('david:init')
     while idxiter < config.davidson_maxiter:
+        pw_counter.start_timer('david:iter')
         idxiter += 1
         move_unconv()
         expand_psi()
@@ -133,15 +136,17 @@ def solver(ham: KSHam,
         unconv_flag[:] = xp.abs(evl_red - evl) > diago_thr
         nunconv = xp.sum(unconv_flag)
         evl[:] = evl_red[:numeig]
+        pw_counter.stop_timer('david:iter')
 
         if nunconv == 0 or ndim + nunconv > ndim_max:
-            evc[:] = evc_red[:numeig, :ndim] @ psi[:ndim]
+            sl_bgrp = kgrp_intracomm.psi_scatter_slice(0, ndim)
+            evc[:] = evc_red[:numeig, sl_bgrp] @ psi[sl_bgrp]
+            kgrp_intracomm.Allreduce_sum_inplace(evc)
             if nunconv == 0:
                 break
-
+            pw_counter.start_timer('restart')
             psi[:numeig] = evc[:]
 
-            sl_bgrp = kgrp_intracomm.psi_scatter_slice(0, ndim)
             hpsi[:numeig] = evc_red[:numeig, sl_bgrp] @ hpsi[sl_bgrp]
             kgrp_intracomm.Allreduce_sum_inplace(hpsi[:numeig])
 
@@ -150,6 +155,7 @@ def solver(ham: KSHam,
             xp.fill_diagonal(ham_red, evl)
             xp.fill_diagonal(ovl_red, 1)
             xp.fill_diagonal(evc_red, 1)
+            pw_counter.stop_timer('restart')
 
     pw_counter.stop_timer('david')
     if config.use_gpu:
