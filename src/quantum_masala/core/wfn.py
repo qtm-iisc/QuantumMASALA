@@ -3,7 +3,7 @@ __all__ = ['Wavefun', 'wfn_generate', 'wfn_gen_rho']
 from typing import Optional
 import numpy as np
 
-from quantum_masala.core import GSpace, GkSpace, GField, KPoints
+from quantum_masala.core import GSpace, GkSpace, GField, RField, KPoints
 from quantum_masala.core.pwcomm import KgrpIntracomm
 from quantum_masala import config, pw_counter
 
@@ -113,20 +113,19 @@ class Wavefun:
         l_amp_r = evc_r.conj() * evc_r
         return l_amp_r
 
-    def get_rho(self):
+    def get_rho(self) -> GField:
         pw_counter.start_timer('wfn:gen_rho')
         self.normalize()
-        rho_r = np.zeros((self.numspin, *self.gspc.grid_shape), dtype='c16')
+        rho = RField.zeros(self.gspc, self.numspin)
         sl = self.kgrp_intracomm.psi_scatter_slice(0, self.numbnd)
+        fac = (2 if self.numspin == 1 else 1)
         for ispin in range(self.numspin):
             for ipsi in range(sl.start, sl.stop):
-                rho_r[ispin] += self.occ[ispin, ipsi] * \
+                rho.r[ispin] += fac * self.occ[ispin, ipsi] * \
                                 self.compute_amp_r((ispin, ipsi))
-        if self.numspin == 1:
-            rho_r *= 2
-        self.kgrp_intracomm.Allreduce_sum_inplace(rho_r)
+        self.kgrp_intracomm.Allreduce_sum_inplace(rho.r)
         pw_counter.stop_timer('wfn:gen_rho')
-        return GField.from_array(self.gspc, rho_r)
+        return rho.to_gfield()
 
 
 def wfn_generate(gspc: GSpace, kpts: KPoints,
@@ -165,7 +164,7 @@ def wfn_generate(gspc: GSpace, kpts: KPoints,
     return l_wfn
 
 
-def wfn_gen_rho(l_wfn: list[Wavefun]):
+def wfn_gen_rho(l_wfn: list[Wavefun]) -> RField:
     pw_counter.start_timer('wfn_gen_rho')
     gspc = l_wfn[0].gspc
     numspin = l_wfn[0].numspin

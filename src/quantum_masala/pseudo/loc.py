@@ -72,28 +72,26 @@ def rho_generate_atomic(sp: AtomBasis, grho: GSpace):
     g_norm2 = grho.norm2
     g_norm = np.sqrt(g_norm2)
 
-    valence = upfdata.z_valence
-
     struct_fac = np.sum(
         np.exp((-2 * np.pi * 1j) * (sp.cryst.T @ g_cryst)), axis=0
     )
 
     rhoatom = upfdata.rhoatom
 
-    rho_g = np.empty(numg, dtype='c16')
+    rho = GField.empty(grho, 1)
 
     f_times_r2 = np.empty((1, len(r)), dtype='f8')
     f_times_r2[0] = _1bv * rhoatom
 
     f_g = _sph2pw(r, r_ab, f_times_r2, g_norm[1:])
-    rho_g[0] = _1bv * _simpson(rhoatom, r_ab)
-    rho_g[1:] = f_g
+    rho.g[0, 0] = _1bv * _simpson(rhoatom, r_ab)
+    rho.g[0, 1:] = f_g
 
     N = np.prod(grho.grid_shape)
-    rho_g *= N * struct_fac
+    rho.g[:] *= N * struct_fac
 
     pw_counter.stop_timer('rho_generate_atomic')
-    return GField.from_array(grho, rho_g)
+    return rho
 
 
 def loc_generate(sp: AtomBasis, grho: GSpace):
@@ -146,8 +144,8 @@ def loc_generate(sp: AtomBasis, grho: GSpace):
     else:
         rho_atc = None
 
-    v_ion_g = np.zeros(numg, dtype='c16')
-    rho_core_g = np.zeros(numg, dtype='c16')
+    v_ion = GField.empty(grho, 1)
+    rho_core = GField.empty(grho, 1)
 
     f_times_r2 = np.empty((1 + upfdata.core_correction, len(r)), dtype='f8')
     f_times_r2[0] = (vloc * r + valence * erf(r)) * r
@@ -157,19 +155,19 @@ def loc_generate(sp: AtomBasis, grho: GSpace):
 
     f_g = _sph2pw(r, r_ab, f_times_r2, g_norm[1:])
 
-    v_ion_g[0] = _simpson(r * (r * vloc + valence), r_ab)
-    v_ion_g[1:] = f_g[0] \
+    v_ion.g[0, 0] = _simpson(r * (r * vloc + valence), r_ab)
+    v_ion.g[0, 1:] = f_g[0] \
         - valence * np.exp(-g_norm2[1:] / 4) / g_norm2[1:]
 
     if upfdata.core_correction:
-        rho_core_g[0] = _simpson(rho_atc * r**2, r_ab)
-        rho_core_g[1:] = f_g[1]
+        rho_core.g[0, 0] = _simpson(rho_atc * r**2, r_ab)
+        rho_core.g[0, 1:] = f_g[1]
     else:
-        rho_core_g[:] = 0
+        rho_core.g[:] = 0
 
     N = np.prod(grho.grid_shape)
-    v_ion_g *= _4pibv * N * struct_fac
-    rho_core_g *= _4pibv * N * struct_fac
+    v_ion.g[:] *= _4pibv * N * struct_fac
+    rho_core.g[:] *= _4pibv * N * struct_fac
 
     pw_counter.stop_timer('loc_generate')
-    return GField.from_array(grho, v_ion_g), GField.from_array(grho, rho_core_g)
+    return v_ion, rho_core

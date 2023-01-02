@@ -6,7 +6,7 @@ import numpy as np
 
 from quantum_masala.core import GField
 
-EPS5 = 1E-5
+EPS5 = 1E-4
 EPS10 = 1E-10
 
 
@@ -23,18 +23,16 @@ def rho_normalize(rho: GField, numel: float):
 
     rho_check(rho)
     grho = rho.gspc
-    rho_r = rho.r
-    numspin = rho.shape[0]
+    rho_r = rho.to_rfield()
 
-    idx_neg_r = np.nonzero(rho_r.real < 0)
+    idx_neg_r = np.nonzero(rho_r.r.real < 0)
     if len(idx_neg_r[0]) != 0:
         del_rho = -np.sum(rho_r[idx_neg_r]) * grho.reallat_dv
         warn("negative values found in `rho.r`.\n"
              f"Error: {del_rho}")
-        rho_r = np.abs(rho_r)
-        rho.r = rho_r
+        rho_r.r[:] = np.abs(rho_r.r)
 
-    rho_int = sum(rho.integrate_r())
+    rho_int = rho_r.integrate()
 
     if rho_int < EPS10:
         raise ValueError("values in 'rho.r' too small to normalize.\n"
@@ -42,7 +40,8 @@ def rho_normalize(rho: GField, numel: float):
     if np.abs(rho_int - numel) > EPS5:
         warn(f"total charge renormalized from {rho_int} to {numel}")
     fac = numel / rho_int
-    rho *= fac
+    rho_r *= fac
 
+    rho = rho_r.to_gfield()
     rho.Bcast()
     return rho

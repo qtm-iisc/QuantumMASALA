@@ -5,7 +5,7 @@ import numpy as np
 from quantum_masala.core import (
     Crystal,
     KPoints, kpts_distribute,
-    GSpace, GField,
+    GSpace, GField, RField,
     Wavefun, wfn_generate, wfn_gen_rho,
     rho_check, rho_normalize,
 )
@@ -43,6 +43,7 @@ def scf(crystal: Crystal, kpts: KPoints,
     numel = crystal.numel
 
     rho_check(rho_start)
+    rho_start = rho_normalize(rho_start, numel)
     rho = rho_start.copy()
 
     if config.mixing_method == 'genbroyden':
@@ -74,11 +75,12 @@ def scf(crystal: Crystal, kpts: KPoints,
         v_ion += v_ion_typ
         rho_core += rho_core_typ
         l_nloc.append(NonlocGenerator(sp, gwfn))
+    v_ion = v_ion.to_rfield()
 
     rho_out: GField
-    v_hart: GField
-    v_xc: GField
-    v_loc: GField
+    v_hart: RField
+    v_xc: RField
+    v_loc: RField
 
     en = {'total': 0, 'hwf': 0, 'one_el': 0,
           'hart': 0, 'xc': 0, 'ewald': 0}
@@ -107,15 +109,17 @@ def scf(crystal: Crystal, kpts: KPoints,
     en['ewald'] = ewald_compute(crystal, grho)
 
     def compute_energies():
-        nonlocal rho_out
+        rho_r = rho.to_rfield()
+        rho_out_r = rho_out.to_rfield()
         e_eigen = sum(wfn.k_weight * np.sum(wfn.evl * wfn.occ)
                       for wfn in l_wfn_kgrp)
         if pwcomm.kgrp_rank == 0:
             e_eigen = pwcomm.kgrp_intercomm.allreduce_sum(e_eigen)
+        vhxc = v_hart + v_xc
         e_eigen = pwcomm.world_comm.bcast(e_eigen) * (2 if numspin == 1 else 1)
-        en['one_el'] = e_eigen - np.sum(rho_out.integrate_r(v_hart + v_xc)).real
+        en['one_el'] = e_eigen - rho_out_r.integrate(vhxc).real
         en['total'] = en['one_el'] + en['ewald'] + en['hart'] + en['xc']
-        en['hwf'] = e_eigen - np.sum(rho.integrate_r(v_hart + v_xc)).real \
+        en['hwf'] = e_eigen - rho_r.integrate(vhxc).real \
             + en['ewald'] + en['hart'] + en['xc']
         if occ == 'smear':
             en['int'] = en['total']
@@ -127,7 +131,7 @@ def scf(crystal: Crystal, kpts: KPoints,
     scf_converged = False
     if symm_rho:
         rho.symmetrize()
-    rho_normalize(rho_start, numel)
+    rho = rho_normalize(rho, numel)
     rho.Bcast()
 
     idxiter = 0
@@ -136,7 +140,7 @@ def scf(crystal: Crystal, kpts: KPoints,
 
         prec_params = {}
         if config.eigsolve_method == 'davidson':
-            prec_params['vbare_g0'] = v_ion.g[0, 0] / np.prod(grho.grid_shape)
+            prec_params['vbare_g0'] = np.sum(v_ion.r) / np.prod(grho.grid_shape)
 
         diago_avgiter = 0
         for _wfn in l_wfn_kgrp:
@@ -152,10 +156,10 @@ def scf(crystal: Crystal, kpts: KPoints,
             )
 
         rho_out = wfn_gen_rho(l_wfn_kgrp)
-        compute_energies()
         if symm_rho:
             rho_out.symmetrize()
-        rho_normalize(rho_out, numel)
+        rho_out = rho_normalize(rho_out, numel)
+        compute_energies()
 
         e_error = mixmod.compute_error(rho, rho_out)
         if e_error < conv_thr:
@@ -170,7 +174,7 @@ def scf(crystal: Crystal, kpts: KPoints,
             rho = mixmod.mix(rho, rho_out)
             if symm_rho:
                 rho.symmetrize()
-            rho_normalize(rho, numel)
+            rho = rho_normalize(rho, numel)
 
         rho.Bcast()
         scf_converged = pwcomm.world_comm.bcast(scf_converged)

@@ -3,7 +3,8 @@ from .ppfile import *
 from .cryst import *
 
 from . import fft
-from .gspc import GSpace, GkSpace, GField
+from .gspc import *
+from .field import GField, RField
 
 from .pwcomm import PWComm
 from .rho import *

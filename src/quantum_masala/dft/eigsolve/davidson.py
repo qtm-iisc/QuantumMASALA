@@ -123,9 +123,9 @@ def solver(ham: KSHam,
     compute_hpsi(0, ndim)
     solve_red()
     evl[:] = evl_red[:numeig]
+    pw_counter.stop_timer('david:init')
 
     idxiter = 0
-    pw_counter.start_timer('david:init')
     while idxiter < config.davidson_maxiter:
         pw_counter.start_timer('david:iter')
         idxiter += 1
