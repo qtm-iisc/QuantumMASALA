@@ -64,7 +64,7 @@ class SymmMod:
 
         self.shell_idx = np.concatenate(l_groupidx, axis=0)
         self.shell_phase = np.concatenate(l_groupphase, axis=0)
-        print(self.numsymm)
+
         g_phase = np.zeros(self.numg, dtype='c16')
         g_count = np.zeros(self.numg, dtype='i8')
         for isymm in range(self.numsymm):

@@ -26,7 +26,7 @@ logger_fmt = logging.Formatter(f'%(asctime)s - '
                                f'%(message)s')
 
 logger_file.setFormatter(logger_fmt)
-logger.addHandler(logger_file)
+# logger.addHandler(logger_file)
 logger.setLevel(logging.INFO)
 
 
