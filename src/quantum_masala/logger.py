@@ -2,9 +2,11 @@
 import logging
 from time import perf_counter, strftime
 from typing import Optional
+from importlib.util import find_spec
+
 import numpy as np
 
-from importlib.util import find_spec
+from quantum_masala import config
 
 MPI_WORLD_SIZE, MPI_WORLD_RANK = 1, 0
 if find_spec('mpi4py') is not None:
@@ -18,23 +20,29 @@ timer_type = np.dtype([('label', 'U30'), ('call', 'i8'), ('time', 'f8'),
 counter_type = np.dtype([('label', 'U30'), ('count', 'i8')])
 MAX_ENTRIES = 100
 
-logger = logging.getLogger('QTMPy')
-logger_file = logging.FileHandler(f'QTMPy_{strftime("%Y%m%d-%H%M%S")}.log')
-logger_file.setLevel(logging.INFO)
-logger_fmt = logging.Formatter(f'%(asctime)s - '
-                               f'proc {MPI_WORLD_RANK}/{MPI_WORLD_SIZE} - '
-                               f'%(message)s')
 
-logger_file.setFormatter(logger_fmt)
-# logger.addHandler(logger_file)
-logger.setLevel(logging.INFO)
+def _get_logger():
+    logger = logging.getLogger('QTMPy')
+    logger.setLevel(logging.INFO)
+    if config.log_file:
+        logger_file = logging.FileHandler(f'QTMPy_{strftime("%Y%m%d-%H%M%S")}.log')
+        logger_file.setLevel(logging.INFO)
+        logger_fmt = logging.Formatter(f'%(asctime)s - '
+                                       f'proc {MPI_WORLD_RANK}/{MPI_WORLD_SIZE} - '
+                                       f'%(message)s')
+        logger_file.setFormatter(logger_fmt)
+        logger.addHandler(logger_file)
+    return logger
 
 
 class PWTimer:
 
     def __init__(self):
+        self.logger = _get_logger()
         self.l_timer = np.zeros(MAX_ENTRIES, dtype=timer_type)
         self.numtimer = 0
+        import sys
+        self.enabled = not hasattr(sys, 'ps1')
 
     def _find_timer(self, label: str) -> Optional[bool]:
         idx = np.nonzero(self.l_timer['label'][:self.numtimer] == label)[0]
@@ -51,7 +59,7 @@ class PWTimer:
             self.l_timer[self.numtimer] = (label, 0, 0., False, 0.)
             itimer = self.numtimer
             self.numtimer += 1
-            logger.debug("timer '%s' created." % (label, ))
+            self.logger.debug("timer '%s' created." % (label, ))
 
         timer = self.l_timer[itimer]
         if timer['status']:
@@ -59,7 +67,7 @@ class PWTimer:
         timer['status'] = True
         timer['call'] += 1
         timer['start_time'] = perf_counter()
-        logger.debug("timer '%s' started." % (label, ))
+        self.logger.debug("timer '%s' started." % (label, ))
 
     def stop_timer(self, label: str) -> None:
         iclock = self._find_timer(label)
@@ -72,8 +80,28 @@ class PWTimer:
         timer['status'] = False
         delta = perf_counter() - timer['start_time']
         timer['time'] += delta
-        logger.debug("timer '%s' stopped. delta: %8.3f sec." % (label, delta))
+        self.logger.debug("timer '%s' stopped. delta: %8.3f sec." % (label, delta))
         timer['start_time'] = 0
+
+    def time(self, label: str):
+        if self.enabled:
+            def timer(func):
+                def call_func(*args, **kwargs):
+                    self.start_timer(label)
+                    try:
+                        out = func(*args, **kwargs)
+                    except BaseException as e:
+                        self.stop_timer(label)
+                        raise e
+                    self.stop_timer(label)
+                    return out
+                return call_func
+        else:
+            def timer(func):
+                def call_func(*args, **kwargs):
+                    return func(*args, **kwargs)
+                return call_func
+        return timer
 
     def clear_timer(self, label: str) -> None:
         iclock = self._find_timer(label)
@@ -83,7 +111,7 @@ class PWTimer:
         timer = self.l_timer[iclock]
         timer['status'] = False
         timer['call'], timer['time'] = 0, 0
-        logger.debug("timer '%s' cleared." % (label, ))
+        self.logger.debug("timer '%s' cleared." % (label, ))
 
     def delete_timer(self, label: str) -> None:
         iclock = self._find_timer(label)
@@ -91,7 +119,7 @@ class PWTimer:
             raise ValueError(f"timer '{label}' does not exist.")
         self.l_timer[iclock] = self.l_timer[self.numtimer - 1]
         self.numtimer -= 1
-        logger.debug("timer '%s' deleted." % (label, ))
+        self.logger.debug("timer '%s' deleted." % (label, ))
 
     def __str__(self):
         out = f"{'TIMERS':^59}\n" + "-" * 59 + '\n' \
@@ -109,6 +137,7 @@ class PWTimer:
 class PWCounter:
 
     def __init__(self):
+        self.logger = _get_logger()
         self.l_counter = np.zeros(MAX_ENTRIES, dtype=counter_type)
         self.numcounter = 0
 
@@ -127,12 +156,12 @@ class PWCounter:
             self.l_counter[self.numcounter] = (label, 0)
             icount = self.numcounter
             self.numcounter += 1
-            logger.debug("counter '%s' created." % (label, ))
+            self.logger.debug("counter '%s' created." % (label, ))
 
         counter = self.l_counter[icount]
         counter['count'] += val
-        logger.debug("counter '%s' updated: %7d -> %7d." %
-                    (label, counter['count'] - val, counter['count']))
+        self.logger.debug("counter '%s' updated: %7d -> %7d." %
+                         (label, counter['count'] - val, counter['count']))
 
     def clear_counter(self, label: str) -> None:
         icount = self._find_counter(label)
@@ -141,7 +170,7 @@ class PWCounter:
 
         counter = self.l_counter[icount]
         counter['count'] = 0
-        logger.debug("counter '%s' cleared." % (label, ))
+        self.logger.debug("counter '%s' cleared." % (label, ))
 
     def delete_counter(self, label: str) -> None:
         icount = self._find_counter(label)
@@ -150,7 +179,7 @@ class PWCounter:
 
         self.l_counter[icount] = self.l_counter[self.numcounter - 1]
         self.numcounter -= 1
-        logger.debug("counter '%s' deleted." % (label, ))
+        self.logger.debug("counter '%s' deleted." % (label, ))
 
     def __str__(self):
         out = f"{'COUNTERS':^41}\n" + "-" * 41 + '\n' \
@@ -170,9 +199,12 @@ class PWLogger(PWTimer, PWCounter):
         PWCounter.__init__(self)
         PWTimer.__init__(self)
 
+    def log_message(self, msg: str):
+        self.logger.info(msg)
+
     def __str__(self):
         return PWTimer.__str__(self) + '\n' \
                + PWCounter.__str__(self)
 
 
-pw_counter = PWLogger()
+pw_logger = PWLogger()
