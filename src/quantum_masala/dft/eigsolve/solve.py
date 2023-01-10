@@ -26,8 +26,9 @@ def solve_wfn(wfn: KSWavefun, gen_ham: Callable[[KSWavefun], KSHam],
         evl[:], evc_gk[:], stats = solver(ham,  diago_thr, evc_gk, **prec_params)
     else:
         stats = 0
-        for idxspin in range(wfn.numspin):
-            ham.set_idxspin(idxspin)
+        for idxspin in range(1 + wfn.is_spin):
+            if wfn.is_spin:
+                ham.set_idxspin(idxspin)
             evc_gk, evl = wfn.evc_gk[idxspin], wfn.evl[idxspin]
             evl[:], evc_gk[:], stats_ = solver(ham, diago_thr, evc_gk, **prec_params)
             stats = stats_ + stats

@@ -36,8 +36,8 @@ class WavefunBgrp(Wavefun):
         wfn_bgrp.occ[:] = kswfn.occ[:, wfn_bgrp.l_ibnd]
         return wfn_bgrp
 
+    @pw_logger.time('wfn:gen_rho')
     def get_rho(self) -> GField:
-        pw_logger.start_timer('wfn:gen_rho')
         self.normalize()
         rho = RField.zeros(self.gspc, self.numspin)
         fac = 2 - self.is_spin
@@ -47,5 +47,4 @@ class WavefunBgrp(Wavefun):
                                 self.get_amp2_r((ispin, ipsi))
         rho = rho.to_gfield()
         self.kgrp_intracomm.Allreduce_sum_inplace(rho.g)
-        pw_logger.stop_timer('wfn:gen_rho')
         return rho

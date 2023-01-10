@@ -34,7 +34,7 @@ class KSHam:
 
         self._check_vloc(vloc)
         self.vloc_r = vloc.r
-        self.idxspin = None
+        self.idxspin = 0
 
     def _check_vloc(self, vloc: RField):
         if not isinstance(vloc, RField):
