@@ -206,7 +206,7 @@ class RField(Field):
         self._data = data.astype(dtype='c16', order='C', copy=False)
 
     @property
-    def r(self):
+    def r(self) -> np.ndarray:
         return self._data
 
     @classmethod
@@ -224,8 +224,9 @@ class RField(Field):
         data_g = self.gspc.fft_mod.r2g(self._data)
         return GField.from_array(self.gspc, data_g, copy_arr=False)
 
-    def integrate(self, other = 1):
+    def integrate(self, other=1, axis=None):
         if isinstance(other, Field):
             self._check_other(other)
             other = other.r
-        return np.sum(self._data * other) * self.gspc.reallat_dv
+        out = np.sum(self._data * other, axis=(-1, -2, -3)) * self.gspc.reallat_dv
+        return np.sum(out, axis=None)

@@ -1,9 +1,9 @@
 
 from ._config import config
-from .counter import pw_counter
+from .logger import pw_logger
 from . import core
 
 __all__ = ['core',
-           'config', 'pw_counter',
+           'config', 'pw_logger',
            'constants'
            ]

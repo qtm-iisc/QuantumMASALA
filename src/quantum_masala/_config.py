@@ -33,9 +33,11 @@ class PWConfig:
     mixing_method: Literal['genbroyden', 'modbroyden',
                            'anderson'] = 'modbroyden'
 
-    tddft_exp_method: Literal['taylor', 'splitoperator'] = 'taylor'
+    tddft_exp_method: Literal['taylor', 'splitoper'] = 'taylor'
     taylor_order: int = 4
     tddft_prop_method: Literal['etrs', 'splitoperator'] = 'etrs'
+
+    log_file: bool = False
 
     @property
     def numkgrp(self):

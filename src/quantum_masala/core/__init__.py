@@ -11,5 +11,5 @@ from .rho import *
 from . import deloper
 
 from .kpts import *
-from .wfn import *
+from .wavefun import *
 

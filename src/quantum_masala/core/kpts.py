@@ -22,9 +22,9 @@ class KPoints:
     def __init__(self, recilat: ReciprocalLattice, numkpts: int, cryst: np.ndarray,
                  weights: np.ndarray):
         self.recilat = recilat
-        self.numkpts = numkpts
-        self.cryst = np.empty((3, self.numkpts), dtype='f8')
-        self.weights = np.empty(self.numkpts, dtype='f8')
+        self.numk = numkpts
+        self.cryst = np.empty((3, self.numk), dtype='f8')
+        self.weights = np.empty(self.numk, dtype='f8')
         self.cryst[:] = cryst
         self.weights[:] = weights
 
@@ -128,7 +128,7 @@ def kpts_distribute(kpts: KPoints, round_robin: bool = True,
                     return_indices: bool = True) -> Union[KPoints,
                                                           (KPoints, list[int])]:
     pwcomm = config.pwcomm
-    numkpts = kpts.numkpts
+    numkpts = kpts.numk
 
     numkgrp, idxkgrp = pwcomm.numkgrp, pwcomm.idxkgrp
     if numkpts < pwcomm.numkgrp:

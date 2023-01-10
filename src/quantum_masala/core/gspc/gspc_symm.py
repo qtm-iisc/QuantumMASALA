@@ -2,7 +2,7 @@ __all__ = ['SymmMod']
 
 import numpy as np
 
-from quantum_masala import pw_counter
+from quantum_masala import pw_logger
 from quantum_masala.core import Crystal
 from quantum_masala.constants import TPIJ
 from quantum_masala.core.spglib_utils import get_symmetry_crystal
@@ -11,8 +11,8 @@ ROUND_PREC: int = 6
 
 
 class SymmMod:
+    @pw_logger.time('gspc_symm:init')
     def __init__(self, crystal: Crystal, gspc: 'GSpace'):
-        pw_counter.start_timer('gspc_symm:init')
         self.numg = gspc.numg
         grid_shape = gspc.grid_shape
         nx, ny, nz = grid_shape
@@ -59,8 +59,6 @@ class SymmMod:
                               * grot_cryst[:, :, gstar_idx], axis=1)
             ).T
             l_groupphase.append(groupphase)
-
-        pw_counter.stop_timer('gspc_symm:init')
 
         self.shell_idx = np.concatenate(l_groupidx, axis=0)
         self.shell_phase = np.concatenate(l_groupphase, axis=0)

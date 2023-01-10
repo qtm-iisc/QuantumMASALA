@@ -4,7 +4,7 @@ import numpy as np
 from scipy.special import spherical_jn, sph_harm
 from scipy.linalg import block_diag
 
-from quantum_masala import pw_counter
+from quantum_masala import pw_logger
 from quantum_masala.core import AtomBasis, GSpace, GkSpace
 from .upf import UPFv2Data
 
@@ -24,8 +24,8 @@ class NonlocGenerator:
         G-Space representing the smooth grid for wavefunctions
     """
 
+    @pw_logger.time('nloc:init')
     def __init__(self, sp: AtomBasis, gspc: GSpace):
-        pw_counter.start_timer('nloc:init')
         # Setting Up
         if sp.ppdata is None:
             raise ValueError("'sp.ppdata' must not be None.")
@@ -83,9 +83,9 @@ class NonlocGenerator:
         self.numvkb = len(self.vkb_l)
 
         self.dij_beta = ppdata.dij
-        pw_counter.stop_timer('nloc:init')
 
-    def gen_vkb_dij(self, gwfc: GkSpace):
+    @pw_logger.time('nloc:gen_vkb_dij')
+    def gen_vkb_dij(self, gwfc: GkSpace) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         r"""Computes the Nonlocal Operator as a set of Beta Projectors and a
         transformation matrix
 
@@ -97,12 +97,13 @@ class NonlocGenerator:
         Returns
         -------
         l_vkb_full : np.ndarray
-            List of all beta projectors spanning across all atoms of the species
-        dij_full :
+            list of all beta projectors spanning across all atoms of the species
+        dij_full : np.ndarray
             dij matrix. Expanded for all atoms of the species
+        vkb_diag : np.ndarray
+            list of diagonal elements of the non-local operator
         """
         # Setting Up: Computing spherical coordinates for all :math:`\mathbf{G}+\mathbf{k}`
-        pw_counter.start_timer('nloc:generate')
         numgk = gwfc.numgk
         gk_cryst = gwfc.cryst
         gk_x, gk_y, gk_z = gwfc.cart
@@ -189,5 +190,4 @@ class NonlocGenerator:
             vkb_diag += np.sum(l_vkb_iat * (dij_atom @ l_vkb_iat.conj()), axis=0)
         dij_full = block_diag(*[dij_atom for _ in range(numatoms)])
 
-        pw_counter.stop_timer('nloc:generate')
         return l_vkb_full, dij_full, vkb_diag

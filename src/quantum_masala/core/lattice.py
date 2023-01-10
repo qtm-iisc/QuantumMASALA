@@ -505,6 +505,22 @@ class RealLattice(Lattice):
             raise ValueError("'coords' must be one of 'cryst', 'cart' or 'alat'. "
                              f"Got {coords}")
 
+    def get_mesh_coords(self, n1: int = 1, n2: int = 1, n3: int = 1,
+                        coords: str = 'cryst'):
+        xi = []
+        for i, n in enumerate([n1, n2, n3]):
+            if not isinstance(n, int) or n < 1:
+                raise ValueError(f"'n{i+1}' must be a positive integer. "
+                                 f"got {n} (type {type(n)})")
+            xi.append(np.arange(n, dtype='f8') / n)
+        r_cryst = np.array(np.meshgrid(*xi, indexing='ij'))
+        if coords == 'cryst':
+            return r_cryst
+        elif coords == 'cart':
+            return self.cryst2cart(r_cryst)
+        elif coords == 'alat':
+            return self.cryst2alat(r_cryst)
+
 
 class ReciprocalLattice(Lattice):
     """Represents Reciprocal-Space Lattice of a Crystal.

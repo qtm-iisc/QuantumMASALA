@@ -1,5 +1,6 @@
 
 __all__ = ["rho_check", "rho_normalize"]
+from typing import Optional
 from warnings import warn
 
 import numpy as np
@@ -10,14 +11,62 @@ EPS5 = 1E-4
 EPS10 = 1E-10
 
 
-def rho_check(rho: GField):
+def rho_check(rho: GField, is_spin: Optional[bool] = None):
+    """Checks if input ``rho`` matches the expected type and shape for
+    an electron density object.
+
+    Parameters
+    ----------
+    rho : GField
+        Represents the charge density of system
+    is_spin : Optional[bool]
+        Spin-polarized if True
+
+    Raises
+    -------
+    TypeError
+        If either ``rho`` is not an instance of ``GField`` or ``is_spin`` is
+        neither None nor boolean
+    ValueError
+        If ``rho.shape`` is not ``(1, )`` nor ``(2, )``.
+    """
     if not isinstance(rho, GField):
-        raise ValueError(f"'rho' must be an instance of 'GField'. Got {type(rho)}")
-    if rho.shape not in [(1, ), (2, )]:
-        raise ValueError(f"shape of 'rho' must be (1,) or  (2,). Got {rho.shape}")
+        raise TypeError("'rho' must be an instance of 'GField'. "
+                        f"got {type(rho)}.")
+    if is_spin is not None and not isinstance(is_spin, bool):
+        raise TypeError("'is_spin' must be either None or a boolean. "
+                        f"got {type(is_spin)}.")
+
+    if is_spin is None:
+        if rho.shape not in [(1, ), (2, )]:
+            raise ValueError(f"'rho.shape' must be (1,) or  (2,); got {rho.shape}")
+    elif rho.shape != (1 + is_spin, ):
+        raise ValueError(f"'rho.shape' must be ({1 + is_spin}, ). got {rho.shape}")
 
 
 def rho_normalize(rho: GField, numel: float):
+    """Normalizes the electron density represented by ``rho`` to match the
+    number of electrons per unit cell ``numel``
+
+    Parameters
+    ----------
+    rho : GField
+        Input electron density
+    numel : float
+        Number of electrons per unit cell. Must be positive.
+
+    Returns
+    -------
+    rho : GField
+        Input electron density that is normalized to contain ``numel`` number
+        of electrons per unit cell
+
+    Raises
+    ------
+    ValueError
+        If ``numel`` is not positive or net charge in unit cell given by ``rho``
+        is too small
+    """
     if numel < EPS5:
         raise ValueError(f"'numel' must be positive. Got{numel}")
 
@@ -27,7 +76,7 @@ def rho_normalize(rho: GField, numel: float):
 
     idx_neg_r = np.nonzero(rho_r.r.real < 0)
     if len(idx_neg_r[0]) != 0:
-        del_rho = -np.sum(rho_r[idx_neg_r]) * grho.reallat_dv
+        del_rho = -np.sum(rho_r.r[idx_neg_r]) * grho.reallat_dv
         warn("negative values found in `rho.r`.\n"
              f"Error: {del_rho}")
         rho_r.r[:] = np.abs(rho_r.r)

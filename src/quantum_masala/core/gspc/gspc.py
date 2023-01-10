@@ -10,7 +10,7 @@ __all__ = ["GSpace"]
 
 import numpy as np
 
-from quantum_masala import pw_counter
+from quantum_masala import pw_logger
 from quantum_masala.core import Crystal, ReciprocalLattice, fft
 from quantum_masala.constants import TPI
 from .gspc_symm import SymmMod
@@ -93,9 +93,9 @@ class GSpace:
                  'reallat_cellvol', 'reallat_dv', 'fft_mod', 'symm_mod',
                  ]
 
+    @pw_logger.time('gspc:init')
     def __init__(self, crystal: Crystal, ecut: float,
                  grid_shape: tuple[int, int, int] = None):
-        pw_counter.start_timer('gspc:init')
         self.recilat: ReciprocalLattice = crystal.recilat
         """Reciprocal Latiice of the crystal.
         """
@@ -168,7 +168,6 @@ class GSpace:
         self.symm_mod = SymmMod(crystal, self)
         """Symmetrization Module to ensure values have same symmetry as crystal
         """
-        pw_counter.stop_timer('gspc:init')
 
     @property
     def cart(self) -> np.ndarray:

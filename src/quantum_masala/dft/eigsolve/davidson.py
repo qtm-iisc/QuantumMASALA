@@ -2,14 +2,14 @@ __all__ = ['solver']
 
 import numpy as np
 
-from quantum_masala import config, pw_counter
+from quantum_masala import config, pw_logger
 from quantum_masala.dft.ksham import KSHam
 
+
+@pw_logger.time('david')
 def solver(ham: KSHam,
            diago_thr: float, evc_gk: np.ndarray,
            vbare_g0: float):
-    pw_counter.start_timer('david')
-    pw_counter.start_timer('david:init')
     # Choosing backend
     if config.use_gpu:
         import cupy as xp
@@ -19,15 +19,14 @@ def solver(ham: KSHam,
     # Setting up preconditioner
     ham_diag = ham.ke_gk + vbare_g0 + ham.vnl_diag
 
+    @pw_logger.time('david:g_psi')
     def g_psi(psi_: xp.ndarray, l_evl_: xp.ndarray):
-        pw_counter.start_timer('david:g_psi')
         nonlocal ham_diag
         scala = 2
         for ipsi, evl_ in enumerate(l_evl_):
             x = scala * (ham_diag - evl_)
             denom = 0.5 * (1 + x + np.sqrt(1 + (x - 1) ** 2)) / scala
             psi_[ipsi] /= denom
-        pw_counter.stop_timer('david:g_psi')
 
     # Intra k-group Communicator for band parallelization
     kgrp_intracomm = config.pwcomm.kgrp_intracomm
@@ -55,21 +54,20 @@ def solver(ham: KSHam,
     ndim = numeig
     psi[:ndim] = evc
 
+    @pw_logger.time('david:compute_hpsi')
     def compute_hpsi(istart: int, istop: int):
-        pw_counter.start_timer('david:h_psi')
         sl = kgrp_intracomm.psi_scatter_slice(istart, istop)
         if sl.stop > sl.start:
             ham.h_psi(psi[sl], hpsi[sl])
         kgrp_intracomm.barrier()
         kgrp_intracomm.psi_Allgather_inplace(hpsi[istart:istop])
-        pw_counter.stop_timer('david:h_psi')
 
     def move_unconv():
         evc_red[:nunconv] = evc_red[:numeig][unconv_flag]
         evl_red[:nunconv] = evl_red[:numeig][unconv_flag]
 
+    @pw_logger.time('david:expand_psi')
     def expand_psi():
-        pw_counter.start_timer('david:update')
         nonlocal ndim
         sl = slice(ndim, ndim + nunconv)
         sl_bgrp = kgrp_intracomm.psi_scatter_slice(0, ndim)
@@ -84,10 +82,9 @@ def solver(ham: KSHam,
         psi[sl] /= xp.linalg.norm(psi[sl], axis=1, keepdims=True)
         kgrp_intracomm.barrier()
         ndim += nunconv
-        pw_counter.stop_timer('david:update')
 
+    @pw_logger.time('david:solve_red')
     def solve_red():
-        pw_counter.start_timer('david:solve_red')
         ham_red_ = ham_red[:ndim, :ndim]
         ovl_red_ = ovl_red[:ndim, :ndim]
         evc_red_ = evc_red[:, :ndim].T
@@ -98,7 +95,6 @@ def solver(ham: KSHam,
         kgrp_intracomm.psi_Allgather_inplace(ham_red[ndim-nunconv:ndim])
         kgrp_intracomm.psi_Allgather_inplace(ovl_red[ndim-nunconv:ndim])
 
-        pw_counter.start_timer('david:eigh')
         if kgrp_intracomm.rank == 0:
             if config.use_gpu:
                 # Generalized Eigenvalue Problem Ax = eBx
@@ -117,17 +113,14 @@ def solver(ham: KSHam,
                 )
         kgrp_intracomm.Bcast(evl_red)
         kgrp_intracomm.Bcast(evc_red[:, :ndim])
-        pw_counter.stop_timer('david:eigh')
-        pw_counter.stop_timer('david:solve_red')
+
 
     compute_hpsi(0, ndim)
     solve_red()
     evl[:] = evl_red[:numeig]
-    pw_counter.stop_timer('david:init')
 
     idxiter = 0
     while idxiter < config.davidson_maxiter:
-        pw_counter.start_timer('david:iter')
         idxiter += 1
         move_unconv()
         expand_psi()
@@ -136,7 +129,6 @@ def solver(ham: KSHam,
         unconv_flag[:] = xp.abs(evl_red - evl) > diago_thr
         nunconv = xp.sum(unconv_flag)
         evl[:] = evl_red[:numeig]
-        pw_counter.stop_timer('david:iter')
 
         if nunconv == 0 or ndim + nunconv > ndim_max:
             sl_bgrp = kgrp_intracomm.psi_scatter_slice(0, ndim)
@@ -144,20 +136,21 @@ def solver(ham: KSHam,
             kgrp_intracomm.Allreduce_sum_inplace(evc)
             if nunconv == 0:
                 break
-            pw_counter.start_timer('restart')
             psi[:numeig] = evc[:]
 
             hpsi[:numeig] = evc_red[:numeig, sl_bgrp] @ hpsi[sl_bgrp]
             kgrp_intracomm.Allreduce_sum_inplace(hpsi[:numeig])
 
             ndim = numeig
-            ham_red[:], ovl_red[:], evc_red[:, :] = 0, 0, 0
-            xp.fill_diagonal(ham_red, evl)
-            xp.fill_diagonal(ovl_red, 1)
-            xp.fill_diagonal(evc_red, 1)
-            pw_counter.stop_timer('restart')
+            ham_red[sl_bgrp, :ndim] = psi[sl_bgrp].conj() @ hpsi[:ndim].T
+            ovl_red[sl_bgrp, :ndim] = psi[sl_bgrp].conj() @ psi[:ndim].T
+            kgrp_intracomm.psi_Allgather_inplace(ham_red[:ndim])
+            kgrp_intracomm.psi_Allgather_inplace(ovl_red[:ndim])
+            # ham_red[:], ovl_red[:], evc_red[:, :] = 0, 0, 0
+            # xp.fill_diagonal(ham_red[:ndim, :ndim], evl)
+            # xp.fill_diagonal(ovl_red[:ndim, :ndim], 1)
+            xp.fill_diagonal(evc_red[:ndim, :ndim], 1)
 
-    pw_counter.stop_timer('david')
     if config.use_gpu:
         return xp.asnumpy(evl.real), xp.asnumpy(evc), idxiter
     else:
