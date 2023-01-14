@@ -1,11 +1,11 @@
 
 __all__ = ["rho_check", "rho_normalize"]
 from typing import Optional
-from warnings import warn
 
 import numpy as np
 
 from quantum_masala.core import GField
+from quantum_masala import pw_logger
 
 EPS5 = 1E-4
 EPS10 = 1E-10
@@ -77,17 +77,17 @@ def rho_normalize(rho: GField, numel: float):
     idx_neg_r = np.nonzero(rho_r.r.real < 0)
     if len(idx_neg_r[0]) != 0:
         del_rho = -np.sum(rho_r.r[idx_neg_r]) * grho.reallat_dv
-        warn("negative values found in `rho.r`.\n"
-             f"Error: {del_rho}")
+        pw_logger.warn("negative values found in `rho.r`.\n"
+                       f"error: {del_rho}.")
         rho_r.r[:] = np.abs(rho_r.r)
 
-    rho_int = rho_r.integrate()
+    rho_int = rho_r.integrate(axis=0)
 
     if rho_int < EPS10:
         raise ValueError("values in 'rho.r' too small to normalize.\n"
                          f"computed total charge = {rho_int}")
     if np.abs(rho_int - numel) > EPS5:
-        warn(f"total charge renormalized from {rho_int} to {numel}")
+        pw_logger.warn(f"total charge renormalized from {rho_int} to {numel}")
     fac = numel / rho_int
     rho_r *= fac
 

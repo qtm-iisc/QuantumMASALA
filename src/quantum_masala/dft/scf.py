@@ -119,9 +119,9 @@ def scf(crystal: Crystal, kpts: KPoints,
             e_eigen = pwcomm.kgrp_intercomm.allreduce_sum(e_eigen)
         vhxc = v_hart + v_xc
         e_eigen = pwcomm.world_comm.bcast(e_eigen) * (2 if not is_spin else 1)
-        en['one_el'] = e_eigen - rho_out_r.integrate(vhxc).real
+        en['one_el'] = e_eigen - rho_out_r.integrate(vhxc, axis=0).real
         en['total'] = en['one_el'] + en['ewald'] + en['hart'] + en['xc']
-        en['hwf'] = e_eigen - rho_r.integrate(vhxc).real \
+        en['hwf'] = e_eigen - rho_r.integrate(vhxc, axis=0).real \
             + en['ewald'] + en['hart'] + en['xc']
         if occ == 'smear':
             en['int'] = en['total']

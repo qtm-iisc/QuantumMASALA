@@ -1,11 +1,10 @@
 
-from warnings import warn
-
 import numpy as np
 from scipy.linalg.blas import zgemm as gemm
 
 from quantum_masala.core import GkSpace, RField
 from quantum_masala.pseudo import NonlocGenerator
+from quantum_masala import pw_logger
 
 
 class KSHam:
@@ -48,9 +47,9 @@ class KSHam:
 
     def set_idxspin(self, idxspin: int):
         if self.is_noncolin:
-            warn("for non-collinear calculation, 'idxspin' has no effect.")
+            pw_logger.warn("for non-collinear calculation, 'idxspin' has no effect.")
         elif not self.is_spin:
-            warn("for spin-unpolarized calculation, 'idxspin' has no effect.")
+            pw_logger.warn("for spin-unpolarized calculation, 'idxspin' has no effect.")
         elif idxspin not in [0, 1]:
             raise ValueError(f"'idxspin' must be 0 or 1 for numspin=2. Got {idxspin}")
         self.idxspin = idxspin
