@@ -7,25 +7,16 @@ from quantum_masala import pw_logger
 from quantum_masala.core import AtomBasis, GSpace, GField
 from .upf import UPFv2Data
 
-EPS6 = 1e-6
-BLOCK_SIZE = 20
+EPS6 = 1E-6
 
 
 def _simpson(f_r: np.ndarray, r_ab: np.ndarray):
-    r12 = 1. / 3
     f_times_dr = f_r * r_ab
     # NOTE: Number of radial points specified in UPF File is expected to be odd. Will fail otherwise
-    if f_r.ndim == 1:
-        return r12 * np.sum(
-            f_times_dr[0:-2:2] + 4 * f_times_dr[1:-1:2] + f_times_dr[2::2]
-        )
-    else:
-        return r12 * np.sum(
-            f_times_dr[..., 0:-2:2]
-            + 4 * f_times_dr[..., 1:-1:2]
-            + f_times_dr[..., 2::2],
-            axis=1
-        )
+    f_times_dr[:] *= 1./3
+    f_times_dr[..., 1:-1:2] *= 4
+    f_times_dr[..., 2:-1:2] *= 2
+    return np.sum(f_times_dr, axis=-1)
 
 
 def _sph2pw(r: np.ndarray, r_ab: np.ndarray, f_times_r2: np.ndarray,
@@ -42,11 +33,10 @@ def _sph2pw(r: np.ndarray, r_ab: np.ndarray, f_times_r2: np.ndarray,
 
     g = g.reshape(-1, 1)
     f_times_r2 = np.expand_dims(f_times_r2, axis=-2)
-    for idxr in range(0, numr, BLOCK_SIZE):
-        f_g[:] += np.sum(spherical_jn(0, g * r[idxr:idxr+BLOCK_SIZE])
-                         * f_times_r2[..., idxr:idxr + BLOCK_SIZE]
-                         * r_ab[idxr:idxr + BLOCK_SIZE],
-                        axis=-1)
+    for idxr in range(numr):
+        f_g[:] += np.sum(spherical_jn(0, g * r[idxr])
+                         * f_times_r2[..., idxr] * r_ab[idxr],
+                         axis=-1)
     return f_g
 
 
