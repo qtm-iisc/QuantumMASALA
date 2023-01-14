@@ -111,7 +111,7 @@ def xc_compute(rho: GField, rhocore: GField,
         zk_r = xcfunc_out['zk'].reshape(grho.grid_shape)
         v_r = np.reshape(xcfunc_out['vrho'].T, (numspin, *grho.grid_shape))
         v_xc.r[:] += v_r
-        en_xc += rho.integrate(zk_r).real
+        en_xc += rho.integrate(zk_r, axis=0).real
 
         if need_grad:
             vsig_r = np.reshape(xcfunc_out['vsigma'].T, (-1, *grho.grid_shape))

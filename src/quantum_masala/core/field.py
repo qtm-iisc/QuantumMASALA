@@ -229,4 +229,7 @@ class RField(Field):
             self._check_other(other)
             other = other.r
         out = np.sum(self._data * other, axis=(-1, -2, -3)) * self.gspc.reallat_dv
-        return np.sum(out, axis=None)
+        if axis is None:
+            return out
+        else:
+            return np.sum(out, axis=axis)
