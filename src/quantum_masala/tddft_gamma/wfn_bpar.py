@@ -1,10 +1,14 @@
 from __future__ import annotations
-__all__ = ['WavefunBgrp']
+__all__ = ['WavefunBgrp', 'wfn_gamma_check']
+
+import numpy as np
 
 from quantum_masala.core import GSpace, Wavefun, RField, GField
 from quantum_masala.core.pwcomm import KgrpIntracomm
 from quantum_masala.dft import KSWavefun
 from quantum_masala import config, pw_logger
+
+EPS8 = 1E-8
 
 
 class WavefunBgrp(Wavefun):
@@ -23,7 +27,7 @@ class WavefunBgrp(Wavefun):
         sl = self.kgrp_intracomm.psi_scatter_slice(0, numbnd)
         self.l_ibnd = tuple(range(sl.start, sl.stop))
 
-        super().__init__(gspc, k_cryst, numbnd, is_spin, is_noncolin)
+        super().__init__(gspc, k_cryst, len(self.l_ibnd), is_spin, is_noncolin)
         self.k_weight: float = k_weight
         """Weight of k-point; For evaluating integral across all k-points
         """
@@ -48,3 +52,11 @@ class WavefunBgrp(Wavefun):
         rho = rho.to_gfield()
         self.kgrp_intracomm.Allreduce_sum_inplace(rho.g)
         return rho
+
+
+def wfn_gamma_check(wfn_gamma: WavefunBgrp):
+    if abs(wfn_gamma.k_weight - 1) > EPS8:
+        pw_logger.warn("'wfn_gamma.k_weight' is not 1. Setting it to 1.")
+    if abs(np.linalg.norm(wfn_gamma.k_cryst)) > EPS8:
+        pw_logger.warn(f"'wfn_gamma.k_cryst' must be a gamma point. "
+                       f"got {wfn_gamma.k_cryst}")

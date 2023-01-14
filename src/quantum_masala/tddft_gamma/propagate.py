@@ -14,7 +14,7 @@ from quantum_masala.dft.pot import (
     ewald_compute
 )
 
-from .wfn_bpar import WavefunBgrp
+from .wfn_bpar import WavefunBgrp, wfn_gamma_check
 
 from quantum_masala import config
 
@@ -25,16 +25,17 @@ def propagate(crystal: Crystal, rho_start: GField,
               time_step: float, numstep: int,
               callback: Callable[[int, GField, WavefunBgrp], None],
               ):
-
     pwcomm = config.pwcomm
     numel = crystal.numel
 
+    wfn_gamma_check(wfn_gamma)
+    is_spin = wfn_gamma.is_spin
+    is_noncolin = wfn_gamma.is_noncolin
+
+    rho_check(rho_start, is_spin)
     grho = rho_start.gspc
     gwfn = wfn_gamma.gspc
     gkspc = wfn_gamma.gkspc
-
-    is_spin = wfn_gamma.is_spin
-    is_noncolin = wfn_gamma.is_noncolin
 
     v_ion, rho_core = GField.zeros(grho, 1), GField.zeros(grho, 1)
 
@@ -68,13 +69,13 @@ def propagate(crystal: Crystal, rho_start: GField,
                          f"got {config.tddft_exp_method}.")
 
     if config.tddft_prop_method == 'etrs':
-        from .prop_algo.etrs import prop_step
+        from .prop.etrs import prop_step
     elif config.tddft_prop_method == 'splitoper':
         if config.tddft_exp_method != 'splitoper':
             raise ValueError("'config.tddft_exp_method' must be 'splitoper' when "
                              "'config.tddft_prop_method' is set to 'splitoper. "
                              f"got {config.tddft_exp_method} instead.")
-        from .prop_algo.splitoper import prop_step
+        from .prop.splitoper import prop_step
     else:
         raise ValueError("'config.tddft_prop_method' not recognized. "
                          f"got {config.tddft_prop_method}.")
@@ -89,4 +90,3 @@ def propagate(crystal: Crystal, rho_start: GField,
         rho = wfn_gamma.get_rho()
         rho_normalize(rho, numel)
         callback(istep, rho, wfn_gamma)
-
