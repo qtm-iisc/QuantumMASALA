@@ -13,9 +13,11 @@ def solver(ham: KSHam,
     # Choosing backend
     if config.use_gpu:
         import cupy as xp
+        from cupy.cublas import gemm
     else:
         import numpy as xp
         from scipy.linalg import eigh
+        from scipy.linalg.blas import zgemm as gemm
     # Setting up preconditioner
     ham_diag = ham.ke_gk + vbare_g0 + ham.vnl_diag
 
@@ -90,8 +92,12 @@ def solver(ham: KSHam,
         evc_red_ = evc_red[:, :ndim].T
 
         sl_bgrp = kgrp_intracomm.psi_scatter_slice(ndim-nunconv, ndim)
-        ham_red_[sl_bgrp] = psi[sl_bgrp].conj() @ hpsi[:ndim].T
-        ovl_red_[sl_bgrp] = psi[sl_bgrp].conj() @ psi[:ndim].T
+        # ham_red_[sl_bgrp] = psi[sl_bgrp].conj() @ hpsi[:ndim].T
+        # ovl_red_[sl_bgrp] = psi[sl_bgrp].conj() @ psi[:ndim].T
+        ham_red_[sl_bgrp] = gemm(alpha=1.0, a=psi[sl_bgrp].T, trans_a=2,
+                                 b=hpsi[:ndim].T, trans_b=0)
+        ovl_red_[sl_bgrp] = gemm(alpha=1.0, a=psi[sl_bgrp].T, trans_a=2,
+                                 b=psi[:ndim].T, trans_b=0)
         kgrp_intracomm.psi_Allgather_inplace(ham_red[ndim-nunconv:ndim])
         kgrp_intracomm.psi_Allgather_inplace(ovl_red[ndim-nunconv:ndim])
 
@@ -142,8 +148,12 @@ def solver(ham: KSHam,
             kgrp_intracomm.Allreduce_sum_inplace(hpsi[:numeig])
 
             ndim = numeig
-            ham_red[sl_bgrp, :ndim] = psi[sl_bgrp].conj() @ hpsi[:ndim].T
-            ovl_red[sl_bgrp, :ndim] = psi[sl_bgrp].conj() @ psi[:ndim].T
+            # ham_red[sl_bgrp, :ndim] = psi[sl_bgrp].conj() @ hpsi[:ndim].T
+            # ovl_red[sl_bgrp, :ndim] = psi[sl_bgrp].conj() @ psi[:ndim].T
+            ham_red[sl_bgrp, :ndim] = gemm(alpha=1.0, a=psi[sl_bgrp].T, trans_a=2,
+                                           b=hpsi[:ndim].T, trans_b=0)
+            ovl_red[sl_bgrp, :ndim] = gemm(alpha=1.0, a=psi[sl_bgrp].T, trans_a=2,
+                                           b=psi[:ndim].T, trans_b=0)
             kgrp_intracomm.psi_Allgather_inplace(ham_red[:ndim])
             kgrp_intracomm.psi_Allgather_inplace(ovl_red[:ndim])
             # ham_red[:], ovl_red[:], evc_red[:, :] = 0, 0, 0
