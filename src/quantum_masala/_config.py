@@ -37,7 +37,8 @@ class PWConfig:
     taylor_order: int = 4
     tddft_prop_method: Literal['etrs', 'splitoperator'] = 'etrs'
 
-    log_file: bool = False
+    logfile: bool = False
+    logfile_name: Optional[str] = 'QTMPy.log'
 
     @property
     def numkgrp(self):
@@ -64,6 +65,15 @@ class PWConfig:
 
         from .core.pwcomm import PWComm
         self._pwcomm = PWComm(self._numkgrp)
+
+        from quantum_masala import pw_logger
+        from quantum_masala.logger import logger_set_filehandle
+        if self.logfile:
+            logger_set_filehandle(self.logfile_name)
+
+        pw_logger.log_message('world_rank/world_size - kgrp_rank/kgrp_size: '
+                              f'{self.pwcomm.world_rank}/{self._pwcomm.world_size} - '
+                              f'{self.pwcomm.kgrp_rank}/{self._pwcomm.kgrp_size}')
 
     @property
     def use_gpu(self):

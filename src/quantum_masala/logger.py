@@ -1,12 +1,14 @@
+__all__ = ['pw_logger', 'logger_set_filehandle']
 
 import logging
+from pathlib import Path
+import warnings
 from time import perf_counter, strftime
 from typing import Optional
 from importlib.util import find_spec
 
 import numpy as np
 
-from quantum_masala import config
 
 MPI_WORLD_SIZE, MPI_WORLD_RANK = 1, 0
 if find_spec('mpi4py') is not None:
@@ -20,19 +22,38 @@ timer_type = np.dtype([('label', 'U30'), ('call', 'i8'), ('time', 'f8'),
 counter_type = np.dtype([('label', 'U30'), ('count', 'i8')])
 MAX_ENTRIES = 100
 
+LOG_FMT = '%(asctime)s - proc {world_rank}/{world_size}: %(message)s'
+
 
 def _get_logger():
     logger = logging.getLogger('QTMPy')
     logger.setLevel(logging.INFO)
-    if config.log_file:
-        logger_file = logging.FileHandler(f'QTMPy_{strftime("%Y%m%d-%H%M%S")}.log')
-        logger_file.setLevel(logging.INFO)
-        logger_fmt = logging.Formatter(f'%(asctime)s - '
-                                       f'proc {MPI_WORLD_RANK}/{MPI_WORLD_SIZE} - '
-                                       f'%(message)s')
-        logger_file.setFormatter(logger_fmt)
-        logger.addHandler(logger_file)
     return logger
+
+
+def logger_set_filehandle(file_name: str):
+    logger = logging.getLogger('QTMPy')
+    if logger.hasHandlers():
+        pw_logger.warn("'pw_logger' has handlers already initialized.")
+    if file_name is not None:
+        if MPI_WORLD_RANK == 0:
+            logfile_path = Path(file_name)
+            if logfile_path.is_file():
+                logfile_path.rename(
+                    logfile_path.with_suffix(logfile_path.suffix + '.old')
+                )
+    else:
+        file_name = f'QTMPy_{strftime("%Y%m%d-%H%M%S")}.log'
+    if MPI_WORLD_SIZE > 1:
+        file_name = COMM_WORLD.bcast(file_name)
+
+    logger_file = logging.FileHandler(file_name)
+    logger_file.setLevel(logging.DEBUG)
+    logger_fmt = logging.Formatter(
+        LOG_FMT.format(world_rank=MPI_WORLD_RANK, world_size=MPI_WORLD_SIZE)
+    )
+    logger_file.setFormatter(logger_fmt)
+    logger.addHandler(logger_file)
 
 
 class PWTimer:
@@ -59,7 +80,7 @@ class PWTimer:
             self.l_timer[self.numtimer] = (label, 0, 0., False, 0.)
             itimer = self.numtimer
             self.numtimer += 1
-            self.logger.debug("timer '%s' created." % (label, ))
+            self.logger.info("timer '%s' created." % (label, ))
 
         timer = self.l_timer[itimer]
         if timer['status']:
@@ -67,7 +88,7 @@ class PWTimer:
         timer['status'] = True
         timer['call'] += 1
         timer['start_time'] = perf_counter()
-        self.logger.debug("timer '%s' started." % (label, ))
+        self.logger.info("timer '%s' started." % (label, ))
 
     def stop_timer(self, label: str) -> None:
         iclock = self._find_timer(label)
@@ -80,7 +101,7 @@ class PWTimer:
         timer['status'] = False
         delta = perf_counter() - timer['start_time']
         timer['time'] += delta
-        self.logger.debug("timer '%s' stopped. delta: %8.3f sec." % (label, delta))
+        self.logger.info("timer '%s' stopped. delta: %8.3f sec." % (label, delta))
         timer['start_time'] = 0
 
     def time(self, label: str):
@@ -111,7 +132,7 @@ class PWTimer:
         timer = self.l_timer[iclock]
         timer['status'] = False
         timer['call'], timer['time'] = 0, 0
-        self.logger.debug("timer '%s' cleared." % (label, ))
+        self.logger.info("timer '%s' cleared." % (label, ))
 
     def delete_timer(self, label: str) -> None:
         iclock = self._find_timer(label)
@@ -119,7 +140,7 @@ class PWTimer:
             raise ValueError(f"timer '{label}' does not exist.")
         self.l_timer[iclock] = self.l_timer[self.numtimer - 1]
         self.numtimer -= 1
-        self.logger.debug("timer '%s' deleted." % (label, ))
+        self.logger.info("timer '%s' deleted." % (label, ))
 
     def __str__(self):
         out = f"{'TIMERS':^59}\n" + "-" * 59 + '\n' \
@@ -156,12 +177,12 @@ class PWCounter:
             self.l_counter[self.numcounter] = (label, 0)
             icount = self.numcounter
             self.numcounter += 1
-            self.logger.debug("counter '%s' created." % (label, ))
+            self.logger.info("counter '%s' created." % (label, ))
 
         counter = self.l_counter[icount]
         counter['count'] += val
-        self.logger.debug("counter '%s' updated: %7d -> %7d." %
-                         (label, counter['count'] - val, counter['count']))
+        self.logger.info("counter '%s' updated: %7d -> %7d." %
+                        (label, counter['count'] - val, counter['count']))
 
     def clear_counter(self, label: str) -> None:
         icount = self._find_counter(label)
@@ -170,7 +191,7 @@ class PWCounter:
 
         counter = self.l_counter[icount]
         counter['count'] = 0
-        self.logger.debug("counter '%s' cleared." % (label, ))
+        self.logger.info("counter '%s' cleared." % (label, ))
 
     def delete_counter(self, label: str) -> None:
         icount = self._find_counter(label)
@@ -179,7 +200,7 @@ class PWCounter:
 
         self.l_counter[icount] = self.l_counter[self.numcounter - 1]
         self.numcounter -= 1
-        self.logger.debug("counter '%s' deleted." % (label, ))
+        self.logger.info("counter '%s' deleted." % (label, ))
 
     def __str__(self):
         out = f"{'COUNTERS':^41}\n" + "-" * 41 + '\n' \
@@ -193,11 +214,16 @@ class PWCounter:
 
 
 class PWLogger(PWTimer, PWCounter):
-    __slots__ = ['l_timer', 'numtimer', 'l_counter', 'numcounter']
+    __slots__ = ['pwcomm', 'l_timer', 'numtimer', 'l_counter', 'numcounter']
 
     def __init__(self):
         PWCounter.__init__(self)
         PWTimer.__init__(self)
+
+    def warn(self, msg: str):
+        if MPI_WORLD_RANK == 0:
+            warnings.warn(msg)
+        self.log_message(msg)
 
     def log_message(self, msg: str):
         self.logger.info(msg)
