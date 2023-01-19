@@ -11,6 +11,7 @@ TODO : Complete docs for ``ReciprocalLattice``
 __all__ = ["Lattice", "RealLattice", "ReciprocalLattice"]
 
 import numpy as np
+from spglib import get_symmetry
 
 from quantum_masala.constants import TPI, ANGSTROM_BOHR
 
@@ -208,6 +209,15 @@ class Lattice:
             Raised if value of ``coords`` is invalid.
         """
         return np.sqrt(self.norm2(l_vec, coords))
+
+    def get_symmetry(self):
+        lattice = np.transpose(self.primvec)
+        positions = np.zeros((1, 3))
+        numbers = np.zeros(1, dtype='i8')
+
+        symm = get_symmetry((lattice, positions, numbers))
+        del symm['equivalent_atoms']
+        return symm
 
 
 class RealLattice(Lattice):

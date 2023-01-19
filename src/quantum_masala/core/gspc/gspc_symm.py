@@ -5,7 +5,6 @@ import numpy as np
 from quantum_masala import pw_logger
 from quantum_masala.core import Crystal
 from quantum_masala.constants import TPIJ
-from quantum_masala.core.spglib_utils import get_symmetry_crystal
 
 ROUND_PREC: int = 6
 
@@ -19,15 +18,10 @@ class SymmMod:
         g_cryst = gspc.cryst
         g_norm2 = gspc.norm2
 
-        reallat_symm, recilat_symm = get_symmetry_crystal(crystal)
-        if reallat_symm is not None:
-            self.numsymm = len(reallat_symm)
-            rot_recispc = recilat_symm
-            trans_realspc = reallat_symm["translations"]
-        else:
-            self.numsymm = 1
-            rot_recispc = np.eye(3).reshape(1, 3, 3)
-            trans_realspc = np.zeros((1, 3))
+        crystal_symm = crystal.get_symmetry(grid_shape=gspc.grid_shape)
+        self.numsymm = len(crystal_symm)
+        recilat_rot = crystal_symm['recilat_rot']
+        reallat_trans = crystal_symm['reallat_trans']
 
         idxsort = np.arange(len(g_norm2), dtype='i8')
         gsort_norm2 = g_norm2[idxsort]
@@ -38,7 +32,7 @@ class SymmMod:
         for shellidx in l_shellidx:
             gshell_cryst = g_cryst[:, shellidx]
 
-            grot_cryst = np.tensordot(rot_recispc, gshell_cryst, axes=1)
+            grot_cryst = np.tensordot(recilat_rot, gshell_cryst, axes=1)
             ix, iy, iz = [grot_cryst[:, i] + grid_shape[i] // 2 for i in range(3)]
             grot_rank = iz + (nz * iy) + (nz * ny * ix)
             gshell_rank = grot_rank[0]
@@ -55,7 +49,7 @@ class SymmMod:
 
             l_groupidx.append(shellidx[groupidx.T])
             groupphase = np.exp(
-                TPIJ * np.sum(trans_realspc.reshape(-1, 3, 1)
+                TPIJ * np.sum(reallat_trans.reshape(-1, 3, 1)
                               * grot_cryst[:, :, gstar_idx], axis=1)
             ).T
             l_groupphase.append(groupphase)
