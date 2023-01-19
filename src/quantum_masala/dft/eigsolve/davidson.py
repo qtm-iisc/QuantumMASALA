@@ -13,7 +13,14 @@ def solver(ham: KSHam,
     # Choosing backend
     if config.use_gpu:
         import cupy as xp
-        from cupy.cublas import gemm
+        from cupy.cublas import gemm as _gemm
+
+        def gemm(alpha, a, b, trans_a, trans_b, c=None, beta=1.0, overwrite_c=None):
+            transmap = ['N', 'T', 'H']
+            if overwrite_c:
+                return _gemm(transmap[trans_a], transmap[trans_b], a, b, c, alpha, beta)
+            else:
+                return _gemm(transmap[trans_a], transmap[trans_b], a, b, None, alpha)
     else:
         import numpy as xp
         from scipy.linalg import eigh
@@ -100,17 +107,16 @@ def solver(ham: KSHam,
                                  b=psi[:ndim].T, trans_b=0)
         kgrp_intracomm.psi_Allgather_inplace(ham_red[ndim-nunconv:ndim])
         kgrp_intracomm.psi_Allgather_inplace(ovl_red[ndim-nunconv:ndim])
-
         if kgrp_intracomm.rank == 0:
             if config.use_gpu:
                 # Generalized Eigenvalue Problem Ax = eBx
                 A, B = ham_red_, ovl_red_
                 L = xp.linalg.cholesky(B)
                 L_inv = xp.linalg.inv(L)
+                A = xp.tril(A, -1) + xp.tril(A, -1).T.conj() + xp.diag(xp.diag(A).real)
                 A_ = L_inv @ A @ L_inv.conj().T
 
                 A_evl, A_evc = xp.linalg.eigh(A_, 'L')
-
                 evl_red[:numeig] = A_evl[:numeig]
                 evc_red[:, :ndim] = xp.linalg.solve(L.conj().T, A_evc[:, :numeig]).T
             else:
@@ -148,17 +154,9 @@ def solver(ham: KSHam,
             kgrp_intracomm.Allreduce_sum_inplace(hpsi[:numeig])
 
             ndim = numeig
-            # ham_red[sl_bgrp, :ndim] = psi[sl_bgrp].conj() @ hpsi[:ndim].T
-            # ovl_red[sl_bgrp, :ndim] = psi[sl_bgrp].conj() @ psi[:ndim].T
-            ham_red[sl_bgrp, :ndim] = gemm(alpha=1.0, a=psi[sl_bgrp].T, trans_a=2,
-                                           b=hpsi[:ndim].T, trans_b=0)
-            ovl_red[sl_bgrp, :ndim] = gemm(alpha=1.0, a=psi[sl_bgrp].T, trans_a=2,
-                                           b=psi[:ndim].T, trans_b=0)
-            kgrp_intracomm.psi_Allgather_inplace(ham_red[:ndim])
-            kgrp_intracomm.psi_Allgather_inplace(ovl_red[:ndim])
-            # ham_red[:], ovl_red[:], evc_red[:, :] = 0, 0, 0
-            # xp.fill_diagonal(ham_red[:ndim, :ndim], evl)
-            # xp.fill_diagonal(ovl_red[:ndim, :ndim], 1)
+            ham_red[:], ovl_red[:], evc_red[:, :] = 0, 0, 0
+            xp.fill_diagonal(ham_red[:ndim, :ndim], evl)
+            xp.fill_diagonal(ovl_red[:ndim, :ndim], 1)
             xp.fill_diagonal(evc_red[:ndim, :ndim], 1)
 
     if config.use_gpu:

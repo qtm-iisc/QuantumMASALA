@@ -1,6 +1,6 @@
 
 import numpy as np
-from scipy.linalg.blas import zgemm as gemm
+from scipy.linalg.blas import zgemm
 
 from quantum_masala.core import GkSpace, RField
 from quantum_masala.pseudo import NonlocGenerator
@@ -67,7 +67,7 @@ class KSHam:
         for vkb, dij in self.l_vkb_dij:
             # proj = vkb.conj() @ l_psi.T
             # l_hpsi += (dij @ proj).T @ vkb
-            proj = gemm(alpha=1.0, a=vkb.T, trans_a=2, b=l_psi.T, trans_b=0,
-                        )
-            gemm(alpha=1.0, a=vkb.T, trans_a=0, b=dij@proj, trans_b=0,
-                 beta=1.0, c=l_hpsi.T, overwrite_c=True)
+            proj = zgemm(alpha=1.0, a=vkb.T, trans_a=2, b=l_psi.T, trans_b=0,
+                         )
+            zgemm(alpha=1.0, a=vkb.T, trans_a=0, b=dij@proj, trans_b=0,
+                  beta=1.0, c=l_hpsi.T, overwrite_c=True)

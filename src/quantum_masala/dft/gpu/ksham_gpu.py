@@ -1,4 +1,5 @@
 import cupy as cp
+from cupy.cublas import gemm
 
 from quantum_masala.core import GkSpace, RField
 from quantum_masala.pseudo import NonlocGenerator
@@ -15,11 +16,29 @@ class KSHamGPU(KSHam):
         super().__init__(gkspc, is_spin, is_noncolin, vloc, l_nloc)
 
         self.ke_gk = cp.asarray(self.ke_gk)
-
-        self.l_vkb = cp.asarray(self.l_vkb)
-        self.l_vkb_H = cp.asarray(self.l_vkb_H)
-        self.dij = cp.asarray(self.dij)
-
+        for i, vkb_dij in enumerate(self.l_vkb_dij):
+            self.l_vkb_dij[i] = tuple(cp.asarray(arr) for arr in vkb_dij)
+        self.vnl_diag = cp.asarray(self.vnl_diag)
         self.vloc_r = cp.asarray(self.vloc_r)
 
         self.fft_mod = CpFFTSlab.from_gkspc(self.gkspc)
+
+    def h_psi(self, l_psi: cp.ndarray, l_hpsi: cp.ndarray):
+        l_hpsi[:] = self.ke_gk * l_psi
+        for ipsi in range(l_psi.shape[0]):
+            l_hpsi[ipsi] += self.fft_mod.r2g(
+                self.vloc_r[self.idxspin]
+                * self.fft_mod.g2r(
+                    l_psi[ipsi],
+                ),
+            )
+
+        for vkb, dij in self.l_vkb_dij:
+            # proj = vkb.conj() @ l_psi.T
+            # l_hpsi += (dij @ proj).T @ vkb
+            # proj = gemm(alpha=1.0, a=vkb.T, trans_a=2, b=l_psi.T, trans_b=0,
+            #             )
+            # gemm(alpha=1.0, a=vkb.T, trans_a=0, b=dij@proj, trans_b=0,
+            #      beta=1.0, c=l_hpsi.T, overwrite_c=True)
+            proj = gemm('H', 'N', vkb.T, l_psi.T)
+            gemm('N', 'N', vkb.T, dij@proj, l_hpsi.T, 1.0, 1.0)
