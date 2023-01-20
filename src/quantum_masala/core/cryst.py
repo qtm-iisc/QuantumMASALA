@@ -4,11 +4,11 @@ __all__ = ['AtomBasis', 'Crystal', 'crystal_gen_supercell']
 
 from typing import Optional
 import numpy as np
-from spglib import get_symmetry
 
-from quantum_masala import config
 from quantum_masala.core import RealLattice, ReciprocalLattice, PseudoPotFile
 from quantum_masala.constants import ANGSTROM_BOHR
+
+from .cryst_symm import CrystalSymm
 
 
 class AtomBasis:
@@ -89,6 +89,7 @@ class Crystal:
         self.recilat: ReciprocalLattice = ReciprocalLattice.from_reallat(self.reallat)
 
         self.l_atoms: list[AtomBasis] = l_atoms
+        self.symm: CrystalSymm = CrystalSymm(self)
 
     @property
     def numel(self) -> int:
@@ -99,56 +100,6 @@ class Crystal:
                                  "specified for all atoms")
             numel += sp.ppdata.valence * sp.numatoms
         return round(numel)
-
-    def get_symmetry(self, check_supercell: bool = True,
-                     grid_shape: Optional[tuple[int, int, int]] = None):
-        lattice = self.reallat.latvec.T
-        positions = [sp.cryst.T for sp in self.l_atoms]
-        numbers = np.repeat(range(len(positions)),
-                            [len(pos) for pos in positions])
-        positions = np.concatenate(positions, axis=0)
-        reallat_symm = get_symmetry((lattice, positions, numbers),
-                                    symprec=config.spglib_symprec)
-        del reallat_symm['equivalent_atoms']
-        if reallat_symm is None:
-            reallat_symm = {
-                'rotations': np.eye(3, dtype="i4").reshape((1, 3, 3)),
-                'translations': np.zeros(3, dtype="f8"),
-            }
-
-        if check_supercell:
-            idx_identity = np.nonzero(
-                np.all(reallat_symm['rotations'] - np.eye(3, dtype='i8'), axis=(1, 2))
-            )[0]
-            if len(idx_identity) != 1:
-                idx_notrans = np.nonzero(
-                    np.linalg.norm(reallat_symm['translations'], axis=1) <= config.spglib_symprec
-                )[0]
-
-        if grid_shape is not None:
-            fac = np.multiply(reallat_symm['translations'], grid_shape)
-            idx_comm = np.nonzero(
-                np.linalg.norm(np.remainder(fac, 1), axis=1) <= config.spglib_symprec
-            )[0]
-            for k, v in reallat_symm.items():
-                print(k)
-                print(idx_comm)
-                reallat_symm[k] = v[idx_comm]
-
-        recilat_symm = np.linalg.inv(
-            reallat_symm['rotations'].transpose((0, 2, 1))
-        ).astype('i4')
-
-        numsymm = len(reallat_symm['rotations'])
-        symm = np.array(
-            [
-                (reallat_symm['rotations'][i], reallat_symm['translations'][i],
-                 recilat_symm[i]) for i in range(numsymm)
-            ],
-            dtype=[('reallat_rot', 'i4', (3, 3)), ('reallat_trans', 'f8', (3, )),
-                   ('recilat_rot', 'i4', (3, 3))]
-        )
-        return symm
 
 
 def crystal_gen_supercell(crystal: Crystal, numrepeat: tuple[int, int, int]):

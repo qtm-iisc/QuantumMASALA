@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 __all__ = ["KPoints", "kpts_distribute"]
-from typing import Union
+from typing import Union, Optional
 import numpy as np
-from spglib import get_ir_reciprocal_mesh
+from spglib import get_stabilized_reciprocal_mesh
 
 from quantum_masala import config
 from quantum_masala.core import ReciprocalLattice, Crystal
@@ -86,18 +86,19 @@ class KPoints:
         return cls(recilat, 1, np.zeros((3, 1), dtype='f8'), np.ones(1, dtype='f8'))
 
     @classmethod
-    def mpgrid(cls, cryst: Crystal,
+    def mpgrid(cls, crystal: Crystal,
                grid_shape: tuple[int, int, int],
                shifts: tuple[bool, bool, bool],
                use_symm: bool = True,
-               is_time_reversal: bool = True):
+               is_time_reversal: bool = True,
+               ):
         if use_symm:
-            ir_reciprocal_mesh = get_ir_reciprocal_mesh(
+
+            ir_reciprocal_mesh = get_stabilized_reciprocal_mesh(
                 grid_shape,
-                cryst.spglib_cell,
+                crystal.symm.reallat_rot,
                 shifts,
                 is_time_reversal,
-                symprec=config.spglib_symprec,
             )
             mapping, grid = ir_reciprocal_mesh
             iarr_irred, weights = np.unique(mapping, return_counts=True)
@@ -121,7 +122,7 @@ class KPoints:
             weights = np.ones(numk) / numk
 
         weights = _sanitize_weights(weights)
-        return cls(cryst.recilat, len(k_cryst), k_cryst.T, weights)
+        return cls(crystal.recilat, len(k_cryst), k_cryst.T, weights)
 
 
 def kpts_distribute(kpts: KPoints, round_robin: bool = True,

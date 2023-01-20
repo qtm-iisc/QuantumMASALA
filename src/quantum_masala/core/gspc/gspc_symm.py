@@ -2,7 +2,7 @@ __all__ = ['SymmMod']
 
 import numpy as np
 
-from quantum_masala import pw_logger
+from quantum_masala import config, pw_logger
 from quantum_masala.core import Crystal
 from quantum_masala.constants import TPIJ
 
@@ -18,10 +18,11 @@ class SymmMod:
         g_cryst = gspc.cryst
         g_norm2 = gspc.norm2
 
-        crystal_symm = crystal.get_symmetry(grid_shape=gspc.grid_shape)
-        self.numsymm = len(crystal_symm)
-        recilat_rot = crystal_symm['recilat_rot']
-        reallat_trans = crystal_symm['reallat_trans']
+        crystal_symm = crystal.symm
+        crystal_symm.filter_frac_trans(gspc.grid_shape)
+        self.numsymm = crystal_symm.numsymm
+        recilat_rot = crystal_symm.recilat_rot
+        reallat_trans = crystal_symm.reallat_trans
 
         idxsort = np.arange(len(g_norm2), dtype='i8')
         gsort_norm2 = g_norm2[idxsort]
