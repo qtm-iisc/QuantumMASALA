@@ -19,8 +19,8 @@ class PWConfig:
                                   'scipy', 'numpy']] = 'pyfftw'
     fft_threads: int = int(getenv("OMP_NUM_THREADS", "1"))
     pyfftw_planner: Literal['FFTW_ESTIMATE', 'FFTW_MEASURE',
-                            'FFTW_PATIENT', 'FFTW_EXHAUSTIVE'] = 'FFTW_PATIENT'
-    pyfftw_flags: tuple[str, ...] = ('FFTW_UNALIGNED', )
+                            'FFTW_PATIENT', 'FFTW_EXHAUSTIVE'] = 'FFTW_MEASURE'
+    pyfftw_flags: tuple[str, ...] = ('FFTW_DESTROY_INPUT', )
 
     symm_check_supercell: bool = True
     symm_use_all_frac: bool = False
