@@ -9,7 +9,7 @@ from typing import Optional
 import numpy as np
 
 from quantum_masala.core.ppfile import PseudoPotFile
-from quantum_masala.constants import ELECTRON_RYD, RYDBERG_HART
+from quantum_masala.constants import RYDBERG_HART
 
 _LIBXC_FUNCNAME_MAP = {
     "pbe": "gga_x_pbe gga_c_pbe"

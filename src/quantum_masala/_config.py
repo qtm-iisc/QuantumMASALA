@@ -5,6 +5,8 @@ from importlib.util import find_spec
 from dataclasses import dataclass
 from typing import Optional, Literal
 
+import numpy as np
+
 
 @dataclass
 class PWConfig:
@@ -20,6 +22,8 @@ class PWConfig:
                             'FFTW_PATIENT', 'FFTW_EXHAUSTIVE'] = 'FFTW_PATIENT'
     pyfftw_flags: tuple[str, ...] = ('FFTW_UNALIGNED', )
 
+    symm_check_supercell: bool = True
+    symm_use_all_frac: bool = False
     spglib_symprec: float = 1E-5
 
     libxc_thr_lda_rho: float = 1E-10
@@ -39,6 +43,22 @@ class PWConfig:
 
     logfile: bool = False
     logfile_name: Optional[str] = 'QTMPy.log'
+
+    _rng_seed: int = 489
+    _rng: np.random.Generator = np.random.default_rng(_rng_seed)
+
+    @property
+    def rng_seed(self):
+        return self._rng_seed
+
+    @rng_seed.setter
+    def rng_seed(self, seed):
+        self._rng_seed = seed
+        self._rng = np.random.default_rng(self._rng_seed)
+
+    @property
+    def rng(self):
+        return self._rng
 
     @property
     def numkgrp(self):
@@ -83,7 +103,7 @@ class PWConfig:
     def use_gpu(self, use_gpu: bool):
         if not isinstance(use_gpu, bool):
             raise TypeError(f"'use_gpu' must be a boolean. Got '{type(use_gpu)}'")
-        if use_gpu and find_spec('cupy') is not None:
+        if use_gpu and find_spec('cupy') is None:
             raise ModuleNotFoundError(
                 "'CuPy' cannot be located. 'use_gpu' can be set to 'True' only "
                 "when 'CuPy' is installed."

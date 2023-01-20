@@ -77,7 +77,6 @@ def scf(crystal: Crystal, kpts: KPoints,
         v_ion += v_ion_typ
         rho_core += rho_core_typ
         l_nloc.append(NonlocGenerator(sp, gwfn))
-    v_ion.symmetrize()
     v_ion = v_ion.to_rfield()
 
     rho_out: GField
