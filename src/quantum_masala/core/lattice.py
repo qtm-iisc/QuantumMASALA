@@ -176,7 +176,7 @@ class Lattice:
         if l_vec.shape[0] != 3:
             raise ValueError("Leading dimension of input array must be 3. "
                              f"Got {l_vec.shape}")
-
+        l_vec = l_vec.reshape(3, -1)
         shape_ = l_vec.shape[1:]
         if coords == 'cryst':
             return np.sum(l_vec * (self.metric @ l_vec), axis=0).reshape(shape_)
