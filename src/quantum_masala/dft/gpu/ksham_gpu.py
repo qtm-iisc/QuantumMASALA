@@ -25,13 +25,10 @@ class KSHamGPU(KSHam):
 
     def h_psi(self, l_psi: cp.ndarray, l_hpsi: cp.ndarray):
         l_hpsi[:] = self.ke_gk * l_psi
-        for ipsi in range(l_psi.shape[0]):
-            l_hpsi[ipsi] += self.fft_mod.r2g(
-                self.vloc_r[self.idxspin]
-                * self.fft_mod.g2r(
-                    l_psi[ipsi],
-                ),
-            )
+        for psi, hpsi in zip(l_psi, l_hpsi):
+            psi_r = self.fft_mod.g2r(psi)
+            cp.multiply(self.vloc_r[self.idxspin], psi_r, out=psi_r)
+            hpsi += self.fft_mod.r2g(psi_r)
 
         for vkb, dij in self.l_vkb_dij:
             # proj = vkb.conj() @ l_psi.T

@@ -1,63 +1,71 @@
 __all__ = ['FFTStick']
 import numpy as np
+import pyfftw
 from .base import FFTModule
 from .backend import get_fft_backend
+
+from quantum_masala import pw_logger
 
 
 class FFTStick(FFTModule):
 
-    __slots__ = ['numxy', 'xy_shape', 'xy_map', 'xyz_map',
-                 'fft_z', 'fft_xy', 'work']
+    __slots__ = ['num_xsticks', 'num_yplanes',
+                 'fftx_map', 'fftx_shape', 'fftx', 'work_x',
+                 'ffty_map', 'ffty_shape', 'ffty', 'work_y',
+                 'fftz_map', 'fftz_shape', 'fftz']
 
     def __init__(self, grid_shape, idxgrid):
         super().__init__(grid_shape, idxgrid)
 
-        idxgrid_xy = self.idxgrid[0] * grid_shape[1] + self.idxgrid[1]
-        l_idx_xy = np.unique(idxgrid_xy)
-        xy_map = np.searchsorted(l_idx_xy, idxgrid_xy)
-        self.numxy = len(l_idx_xy)
-        self.xy_shape = (self.numxy, self.grid_shape[2])
+        nx, ny, nz = self.grid_shape
+        ix, iy, iz = self.idxgrid
+        iyz = iy * nz + iz
+        isticks_yz = np.unique(iyz)
+        self.num_xsticks = len(isticks_yz)
 
-        self.xy_map = (xy_map, self.idxgrid[2])
-        self.xy_map = np.ravel_multi_index(self.xy_map, self.xy_shape, 'C')
+        self.fftx_shape = (nx, self.num_xsticks)
+        self.fftx_map = (ix, np.searchsorted(isticks_yz, iyz))
+        self.fftx_map = np.ravel_multi_index(self.fftx_map, self.fftx_shape, 'C')
+        self.fftx = get_fft_backend()(self.fftx_shape, (0, ))
 
-        self.xyz_map = np.unravel_index(
-            np.arange(np.prod(self.xy_shape), dtype='i8'), self.xy_shape, 'C'
-        )
+        isticks_y, isticks_z = isticks_yz // nz, isticks_yz % nz
+        iplanes_z = np.unique(isticks_z)
+        self.ffty_map = (isticks_y, np.searchsorted(iplanes_z, isticks_z))
+        self.num_yplanes = len(iplanes_z)
+        self.ffty_shape = (nx, ny, self.num_yplanes)
+        self.ffty = get_fft_backend()(self.ffty_shape, (1, ))
 
-        self.xyz_map = (l_idx_xy[self.xyz_map[0]], self.xyz_map[1])
-        self.xyz_map = (self.xyz_map[0] // self.grid_shape[1],
-                        self.xyz_map[0] % self.grid_shape[1],
-                        self.xyz_map[1])
-        self.xyz_map = np.ravel_multi_index(self.xyz_map, self.grid_shape, 'C')
+        self.fftz_map = iplanes_z
+        self.fftz_shape = self.grid_shape
+        self.fftz = get_fft_backend()(self.fftz_shape, (2, ))
 
-        self.fft_z = get_fft_backend()(self.xy_shape, (1,))
-        self.fft_xy = get_fft_backend()(self.grid_shape, (0, 1))
-        self.work = np.empty(self.xy_shape, dtype='c16', order='C')
+        self.work_x = pyfftw.empty_aligned(self.fftx_shape, dtype='c16')
+        self.work_y = pyfftw.empty_aligned(self.ffty_shape, dtype='c16')
 
     def _g2r(self, arr_in, arr_out, overwrite_in):
-        numarr = arr_in.shape[0]
         arr_out[:] = 0
 
-        for idxarr in range(numarr):
-            self.work[:] = 0
-            self.work.put(self.xy_map, arr_in[idxarr])
-            self.fft_z.do_ifft(self.work)
-            arr_out[idxarr].put(self.xyz_map, self.work, 'raise')
-            self.fft_xy.do_ifft(arr_out[idxarr])
+        for inp, out in zip(arr_in, arr_out):
+            self.work_x[:], self.work_y[:] = 0, 0
+            self.work_x.flat[self.fftx_map] = inp
+            self.fftx.do_ifft(self.work_x)
+            self.work_y[(slice(None), *self.ffty_map)] = self.work_x
+            self.ffty.do_ifft(self.work_y)
+            out[(slice(None), slice(None), self.fftz_map)] = self.work_y
+            self.fftz.do_ifft(out)
 
         return arr_out
 
     def _r2g(self, arr_in, arr_out, overwrite_in):
-        numarr = arr_in.shape[0]
         if not overwrite_in:
-            arr_in = arr_in.copy()  # Copy needed to prevent input from being overwritten
+            arr_in = arr_in.copy()
 
-        for idxarr in range(numarr):
-            self.fft_xy.do_fft(arr_in[idxarr])
-            arr_in[idxarr].reshape(-1).take(
-                self.xyz_map, None, self.work.reshape(-1))
-            self.fft_z.do_fft(self.work)
-            self.work.take(self.xy_map, None, arr_out[idxarr])
+        for inp, out in zip(arr_in, arr_out):
+            self.fftz.do_fft(inp)
+            self.work_y[:] = inp[(slice(None), slice(None), self.fftz_map)]
+            self.ffty.do_fft(self.work_y)
+            self.work_x[:] = self.work_y[(slice(None), *self.ffty_map)]
+            self.fftx.do_fft(self.work_x)
+            out[:] = self.work_x.flat[self.fftx_map]
 
         return arr_out
