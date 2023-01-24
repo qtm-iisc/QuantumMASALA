@@ -11,7 +11,8 @@ __all__ = ["GSpace"]
 import numpy as np
 
 from quantum_masala import pw_logger
-from quantum_masala.core import Crystal, ReciprocalLattice, fft
+from quantum_masala.core import Crystal, ReciprocalLattice
+from quantum_masala.core.fft import FFTDriver, FFT3D
 from quantum_masala.constants import TPI
 from .gspc_symm import SymmMod
 
@@ -161,7 +162,7 @@ class GSpace:
         lattice corresponding to ``self.recilat``
         """
 
-        self.fft_mod: fft.base.FFTModule = fft.get_fft_module()(self.grid_shape, self.idxgrid)
+        self.fft_mod: FFTDriver = FFT3D(self.grid_shape, self.idxgrid)
         """FFT Module to perform Fourier Transform between 'r'eal and 'g'-space
         """
 

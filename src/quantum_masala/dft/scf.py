@@ -96,6 +96,7 @@ def scf(crystal: Crystal, kpts: KPoints,
         v_hart, en['hart'] = hartree_compute(rho)
         v_xc, en['xc'] = xc_compute(rho, rho_core, **xc_params)
         v_loc = v_ion + v_hart + v_xc
+        v_loc *= 1 / np.prod(gwfn.grid_shape)
         v_loc.Bcast()
         return v_loc
 
@@ -163,9 +164,11 @@ def scf(crystal: Crystal, kpts: KPoints,
         compute_energies()
 
         e_error = mixmod.compute_error(rho, rho_out)
+        print(e_error)
         if e_error < conv_thr:
             scf_converged = True
         elif idxiter == 0 and e_error < diago_thr * numel:
+            print('large threshold')
             diago_thr = 0.1 * e_error / max(1, numel)
             iter_printer(idxiter, scf_converged, e_error, diago_avgiter, en)
             continue

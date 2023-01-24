@@ -4,6 +4,7 @@ Written to support different backends (``numpy``, ``scipy``, ``pyfftw``, etc.)
 and driver methods (``slab``, ``sticks``)
 
 """
+from typing import Any, Optional
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -22,85 +23,41 @@ class FFTBackend(ABC):
     axes : `tuple` of `int
         Tuple of axes to perform FFT
     """
-    __slots__ = ['shape', 'ndim', 'n_axes', 'axes']
+    __slots__ = ['shape', 'strides', 'axes', 'normalise_idft',
+                 'plan_fw', 'plan_bw']
 
-    def __init__(self, shape, axes):
-        self.shape = shape
-        """Shape of FFT Arrays (`tuple` of `int`).
+    def __init__(self, arr: np.ndarray, axes: tuple[int, ...], normalise_idft: bool):
+        self.shape: tuple[int, ...] = arr.shape
+        """Shape of FFT Arrays.
         """
-        self.ndim = len(self.shape)
-        """Dimension of FFT Arrays (`int`).
+        self.strides: tuple[int, ...] = arr.strides
+        """Dimension of FFT Arrays.
         """
-        self.axes = axes
-        """Tuple of axes to perform FFT Along (`tuple` of `int`).
+        self.axes: tuple[int, ...] = axes
+        """Tuple of axes to perform FFT Along.
         """
-        self.n_axes = len(axes)
-        """Number of axes FFT Operations is performed (`int`).
+        self.normalise_idft: bool = normalise_idft
+        """`True` if Inverse DFT is scaled by 1/N where N is 
+        the product of axis lengths
         """
+        self.plan_fw: Any = None
+        self.plan_bw: Any = None
 
-    def do_fft(self, arr):
-        """Performs **in-place** FFT on input array. Calls ``self._execute``
-        to actually call the backend to perform the operation.
-
-        Parameters
-        ----------
-        arr : `numpy.ndarray`
-            Array to perform FFT, can have any shape as long as the last
-            ``self.ndim`` dims have shape ``self.shape``.
-
-        Returns
-        -------
-        arr : `numpy.ndarray`
-            Input array containing the Fourier Transform values present on
-            its entry.
-        """
-        arr_in_ = arr.reshape((-1, *self.shape))
-        numfft = arr_in_.shape[0]
-        for i in range(numfft):
-            self._execute(arr_in_[i], "forward")
-        return arr
-
-    def do_ifft(self, arr):
-        """Performs **in-place** inverse FFT on input array. Calls
-        ``self._execute`` to actually call the backend to perform the operation.
-
-        Parameters
-        ----------
-        arr : `numpy.ndarray`
-            Array to perform inverse FFT, can have any shape as long as the
-            last ``self.ndim`` dims have shape ``self.shape``.
-
-        Returns
-        -------
-        arr : `numpy.ndarray`
-            Input array containing the inverse Fourier Transform values present
-            on its entry.
-        """
-        arr_in_ = arr.reshape((-1, *self.shape))
-        numfft = arr_in_.shape[0]
-        for i in range(numfft):
-            self._execute(arr_in_[i], "backward")
-        return arr
+    @classmethod
+    @abstractmethod
+    def create_buffer(cls, shape: tuple[int, ...]):
+        pass
 
     @abstractmethod
-    def _execute(self, arr, direction):
-        """Performs the FFT operation by calling the backend
+    def fft(self, arr: np.ndarray):
+        pass
 
-        Parameters
-        ----------
-        arr : `numpy.ndarray`
-            On entry, contains the input array
-        direction : {'forward', 'backward'}
-            Direction of FFT to perform
-        Returns
-        -------
-        No object returned. On exit, ``arr`` contains the result of the FFT
-        operation
-        """
+    @abstractmethod
+    def ifft(self, arr: np.ndarray):
         pass
 
 
-class FFTModule(ABC):
+class FFTDriver(ABC):
     """Class Specification for FFT Drivers
 
     FFT Drivers must inherit this Abstract Base Class and implement required
@@ -114,27 +71,33 @@ class FFTModule(ABC):
         List of indices that are within the truncated Fourier Space
     """
 
-    __slots__ = ["grid_shape", "idxgrid", "numgrid"]
+    __slots__ = ["grid_shape", "idxgrid", "numgrid", "normalise_idft"]
 
     @abstractmethod
-    def __init__(self, grid_shape, idxgrid):
-        self.grid_shape = grid_shape
-        """Shape of FFT Grid (`tuple` of `int`)
+    def __init__(self, grid_shape: tuple[int, int, int],
+                 idxgrid: tuple[list[int], ...],
+                 normalise_idft: bool = True):
+        self.grid_shape: tuple[int, int, int] = grid_shape
+        """Shape of FFT Grid.
         """
-        self.idxgrid = idxgrid
-        """Position of G-vectors in the 3D FFT Grid
-        (`tuple` [`list` of `int`, ...])
+        self.idxgrid: tuple[list[int], ...] = idxgrid
+        """Position of G-vectors in the 3D FFT Grid.
         """
-        self.numgrid = len(self.idxgrid[0])
-        """Number of G-vectors (`int`)
+        self.numgrid: int = len(self.idxgrid[0])
+        """Number of G-vectors.
+        """
+        self.normalise_idft: bool = normalise_idft
+        """`True` if Inverse DFT is scaled by 1/N where N is 
+        the product of axis lengths
         """
 
-    def g2r(self, arr_in, arr_out=None, overwrite_in=False):
+    def g2r(self, arr_inp: np.ndarray, arr_out: Optional[np.ndarray] = None,
+            overwrite_in: bool = False):
         """Computes Backwards FFT where input Fourier Transform is 'truncated'
 
         Parameters
         ----------
-        arr_in : `numpy.ndarray`, (..., ``self.numgrid``)
+        arr_inp : `numpy.ndarray`, (..., ``self.numgrid``)
             Input data in G-Space
         arr_out : `numpy.ndarray`, (..., ``*self.grid_shape``), optional
             Array to store the output
@@ -144,27 +107,30 @@ class FFTModule(ABC):
         arr_out : `numpy.ndarray`, (..., ``*self.grid_shape``)
             Contains the input data transformed to real-space
         """
-        arr_in_ = arr_in.reshape(-1, self.numgrid)
+        if not overwrite_in:
+            arr_inp = arr_inp.copy()
+        arr_inp_ = arr_inp.reshape(-1, self.numgrid)
 
-        shape_out = (*arr_in.shape[:-1], *self.grid_shape)
+        shape_out = (*arr_inp.shape[:-1], *self.grid_shape)
         if arr_out is None:
             arr_out = np.empty(shape_out, dtype="c16")
         elif arr_out.shape != shape_out:
             raise ValueError(f"'arr_out' must be a NumPy array of shape {shape_out}. "
                              f"Got {arr_out.shape}")
         arr_out_ = arr_out.reshape(-1, *self.grid_shape)
-        self._g2r(arr_in_, arr_out_, overwrite_in)
+        for inp, out in zip(arr_inp_, arr_out_):
+            self._g2r(inp, out)
 
         return arr_out
 
     @abstractmethod
-    def _g2r(self, arr_in, arr_out, overwrite_in):
+    def _g2r(self, arr_inp: np.ndarray, arr_out: np.ndarray):
         """Abstract method where the Backwards FFT is perfomed by calling the
         Backend
 
         Parameters
         ----------
-        arr_in : `numpy.ndarray`, (:, ``self.numgrid``)
+        arr_inp : `numpy.ndarray`, (:, ``self.numgrid``)
             Input data in G-Space
         arr_out : `numpy.ndarray`, (:, ``*self.grid_shape``)
             Array to store the output
@@ -176,12 +142,13 @@ class FFTModule(ABC):
         """
         pass
 
-    def r2g(self, arr_in, arr_out=None, overwrite_in=False):
+    def r2g(self, arr_inp: np.ndarray, arr_out: Optional[np.ndarray] = None,
+            overwrite_in: bool = False):
         """Computes Forward FFT where output Fourier Transform is 'truncated'
 
         Parameters
         ----------
-        arr_in : `numpy.ndarray`, (..., ``*self.grid_shape``)
+        arr_inp : `numpy.ndarray`, (..., ``*self.grid_shape``)
             Input data in Real-Space
         arr_out : `numpy.ndarray`, (..., ``self.numgrid``), optional
             Array to store the output
@@ -191,27 +158,30 @@ class FFTModule(ABC):
         arr_out : `numpy.ndarray`, (..., ``self.numgrid``)
             Contains the input data transformed to G-space
         """
-        arr_in_ = arr_in.reshape((-1, *self.grid_shape))
+        if not overwrite_in:
+            arr_inp = arr_inp.copy()
+        arr_inp_ = arr_inp.reshape((-1, *self.grid_shape))
 
-        shape_out = (*arr_in.shape[:-3], self.numgrid)
+        shape_out = (*arr_inp.shape[:-3], self.numgrid)
         if arr_out is None:
-            arr_out = np.empty((*arr_in.shape[:-3], self.numgrid), dtype="c16")
+            arr_out = np.empty((*arr_inp.shape[:-3], self.numgrid), dtype="c16")
         elif arr_out.shape != shape_out:
             raise ValueError(f"'arr_out' must be a NumPy array of shape {shape_out}. "
                              f"Got {arr_out.shape}")
         arr_out_ = arr_out.reshape(-1, self.numgrid)
-        self._r2g(arr_in_, arr_out_, overwrite_in)
+        for inp, out in zip(arr_inp_, arr_out_):
+            self._r2g(inp, out)
 
         return arr_out
 
     @abstractmethod
-    def _r2g(self, arr_in, arr_out, overwrite_in):
+    def _r2g(self, arr_inp: np.ndarray, arr_out: np.ndarray):
         """Abstract method where the Forward FFT is perfomed by calling the
         Backend
 
         Parameters
         ----------
-        arr_in : `numpy.ndarray`, (:, ``*self.grid_shape``)
+        arr_inp : `numpy.ndarray`, (:, ``*self.grid_shape``)
             Input data in Real-Space
         arr_out : `numpy.ndarray`, (:, ``self.numgrid``)
             Array to store the output

@@ -14,13 +14,13 @@ class PWConfig:
     _use_gpu: bool = False
     _pwcomm = None
 
-    fft_type: Literal['slab', 'sticks'] = "slab"
+    fft_use_sticks: bool = False
     fft_backend: Optional[Literal['mkl_fft', 'pyfftw',
                                   'scipy', 'numpy']] = 'pyfftw'
     fft_threads: int = int(getenv("OMP_NUM_THREADS", "1"))
     pyfftw_planner: Literal['FFTW_ESTIMATE', 'FFTW_MEASURE',
                             'FFTW_PATIENT', 'FFTW_EXHAUSTIVE'] = 'FFTW_MEASURE'
-    pyfftw_flags: tuple[str, ...] = ('FFTW_DESTROY_INPUT', )
+    pyfftw_flags: tuple[str, ...] = ()
 
     symm_check_supercell: bool = True
     symm_use_all_frac: bool = False

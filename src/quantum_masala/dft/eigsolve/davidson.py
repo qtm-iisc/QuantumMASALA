@@ -29,13 +29,16 @@ def solver(ham: KSHam,
     ham_diag = ham.ke_gk + vbare_g0 + ham.vnl_diag
 
     @pw_logger.time('david:g_psi')
-    def g_psi(psi_: xp.ndarray, l_evl_: xp.ndarray):
+    def g_psi(l_psi_: xp.ndarray, l_evl_: xp.ndarray):
         nonlocal ham_diag
         scala = 2
-        for ipsi, evl_ in enumerate(l_evl_):
+        # x = scala * (ham_diag - l_evl_.reshape(-1, 1))
+        # denom = 0.5 * (1 + x + np.sqrt(1 + (x - 1) ** 2)) / scala
+        # l_psi_ /= denom
+        for psi_, evl_ in zip(l_psi_, l_evl_):
             x = scala * (ham_diag - evl_)
             denom = 0.5 * (1 + x + np.sqrt(1 + (x - 1) ** 2)) / scala
-            psi_[ipsi] /= denom
+            psi_ /= denom
 
     # Intra k-group Communicator for band parallelization
     kgrp_intracomm = config.pwcomm.kgrp_intracomm
@@ -80,8 +83,10 @@ def solver(ham: KSHam,
         nonlocal ndim
         sl = slice(ndim, ndim + nunconv)
         sl_bgrp = kgrp_intracomm.psi_scatter_slice(0, ndim)
-        psi[sl] = evc_red[:nunconv][(slice(None), sl_bgrp)] @ psi[sl_bgrp]
-        hpsi[sl] = evc_red[:nunconv][(slice(None), sl_bgrp)] @ hpsi[sl_bgrp]
+        # psi[sl] = evc_red[:nunconv][(slice(None), sl_bgrp)] @ psi[sl_bgrp]
+        # hpsi[sl] = evc_red[:nunconv][(slice(None), sl_bgrp)] @ hpsi[sl_bgrp]
+        xp.matmul(evc_red[:nunconv][(slice(None), sl_bgrp)], psi[sl_bgrp], out=psi[sl])
+        xp.matmul(evc_red[:nunconv][(slice(None), sl_bgrp)], hpsi[sl_bgrp], out=hpsi[sl])
         kgrp_intracomm.Allreduce_sum_inplace(psi[sl])
         kgrp_intracomm.Allreduce_sum_inplace(hpsi[sl])
 

@@ -1,17 +1,15 @@
-from .base import FFTModule, FFTBackend
-from .fftslab import FFTSlab
-from .fftstick import FFTStick
+from typing import Type
+from .base import FFTDriver, FFTBackend
+from .drivers import FFT3D, FFT3DSticks
 
 from quantum_masala import config
 
 
-def get_fft_module():
-    if config.fft_type == 'slab':
-        return FFTSlab
-    elif config.fft_type == 'stick':
-        return FFTStick
+def get_fft_driver() -> Type[FFTDriver]:
+    if config.fft_use_sticks:
+        return FFT3DSticks
     else:
-        raise ValueError(f"'fft_type' not recognized. Got {config.fft_type}")
+        return FFT3D
 
 
-__all__ = ["FFTSlab", "FFTStick", "get_fft_module"]
+__all__ = ["FFT3D", "FFT3DSticks", "get_fft_driver"]

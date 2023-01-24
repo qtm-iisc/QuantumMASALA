@@ -12,8 +12,8 @@ __all__ = ['GkSpace']
 
 import numpy as np
 
-from quantum_masala.core import ReciprocalLattice, fft
-from quantum_masala.core.fft.fftstick import FFTStick
+from quantum_masala.core import ReciprocalLattice
+from quantum_masala.core.fft import get_fft_driver
 from .gspc import GSpace
 
 
@@ -47,6 +47,7 @@ class GkSpace:
         """
         self.k_cryst[:] = k_cryst
 
+        self.grid_shape = self.gspc.grid_shape
         self.reclat: ReciprocalLattice = self.gspc.recilat
         """Re
         """
@@ -64,10 +65,11 @@ class GkSpace:
                              f"'ecut'={self.ecutwfc}"
                              )
 
-        self.fft_mod = FFTStick(self.gspc.grid_shape,
-                                            tuple(arr[self.idxg]
-                                                  for arr in self.gspc.idxgrid)
-                                            )
+        self.fft_mod = get_fft_driver()(self.gspc.grid_shape,
+                                        tuple(arr[self.idxg] for arr in
+                                              self.gspc.idxgrid),
+                                        normalise_idft=False
+                                        )
 
     @property
     def idxgrid(self):

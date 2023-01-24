@@ -50,7 +50,7 @@ class KSWavefun(Wavefun):
         self.sync(evc=True, evl=False, occ=False)
 
     @pw_logger.time('wfn:get_rho')
-    def get_rho(self) -> GField:
+    def get_rho(self, normalise: bool = True) -> GField:
         self.normalize()
         rho = RField.zeros(self.gspc, self.numspin)
         sl = self.kgrp_intracomm.psi_scatter_slice(0, self.numbnd)
@@ -61,6 +61,8 @@ class KSWavefun(Wavefun):
                                 self.get_amp2_r((ispin, ipsi))
         self.kgrp_intracomm.Allreduce_sum_inplace(rho.r)
         rho = rho.to_gfield()
+        if normalise:
+            rho *= 1 / np.prod(self.gspc.grid_shape)**2
         return rho
 
 
@@ -103,8 +105,8 @@ def wfn_gen_rho(l_wfn: list[KSWavefun]) -> GField:
     numspin = l_wfn[0].numspin
     rho = GField.zeros(gspc, numspin)
     for wfn in l_wfn:
-        rho += wfn.k_weight * wfn.get_rho()
-
+        rho += wfn.k_weight * wfn.get_rho(normalise=False)
+    rho *= 1 / np.prod(gspc.grid_shape)**2
     pwcomm = config.pwcomm
     if pwcomm.kgrp_rank == 0:
         pwcomm.kgrp_intercomm.Allreduce_sum_inplace(rho.g)
