@@ -55,6 +55,7 @@ def propagate(crystal: Crystal, rho_start: GField,
         v_xc, en['xc'] = xc_compute(rho, rho_core, **xc_params)
         v_loc = v_ion + v_hart + v_xc
         v_loc.Bcast()
+        v_loc *= 1 / np.prod(gwfn.grid_shape)
         return v_loc
     en['ewald'] = ewald_compute(crystal, grho)
 

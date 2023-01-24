@@ -58,10 +58,7 @@ class SplitOper(TDExpOperBase):
         l_prop_psi += (self.exp_dij_all @ proj).transpose((0, 2, 1)) @ self.vkb_all
 
     def oper_vloc(self, l_prop_psi: np.ndarray):
-        self.gkspc.fft_mod.r2g(
-            self.oper_vloc_r * self.gkspc.fft_mod.g2r(l_prop_psi),
-            l_prop_psi
-        )
+        self.gkspc.fft_mod.r2g(self.oper_vloc_r * self.gkspc.fft_mod.g2r(l_prop_psi), l_prop_psi)
 
     def prop_psi(self, l_psi: np.ndarray, l_prop_psi: np.ndarray):
         l_prop_psi[:] = l_psi

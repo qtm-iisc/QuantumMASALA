@@ -91,8 +91,7 @@ class FFTDriver(ABC):
         the product of axis lengths
         """
 
-    def g2r(self, arr_inp: np.ndarray, arr_out: Optional[np.ndarray] = None,
-            overwrite_in: bool = False):
+    def g2r(self, arr_inp: np.ndarray, arr_out: Optional[np.ndarray] = None):
         """Computes Backwards FFT where input Fourier Transform is 'truncated'
 
         Parameters
@@ -107,8 +106,6 @@ class FFTDriver(ABC):
         arr_out : `numpy.ndarray`, (..., ``*self.grid_shape``)
             Contains the input data transformed to real-space
         """
-        if not overwrite_in:
-            arr_inp = arr_inp.copy()
         arr_inp_ = arr_inp.reshape(-1, self.numgrid)
 
         shape_out = (*arr_inp.shape[:-1], *self.grid_shape)
@@ -142,8 +139,7 @@ class FFTDriver(ABC):
         """
         pass
 
-    def r2g(self, arr_inp: np.ndarray, arr_out: Optional[np.ndarray] = None,
-            overwrite_in: bool = False):
+    def r2g(self, arr_inp: np.ndarray, arr_out: Optional[np.ndarray] = None):
         """Computes Forward FFT where output Fourier Transform is 'truncated'
 
         Parameters
@@ -158,8 +154,6 @@ class FFTDriver(ABC):
         arr_out : `numpy.ndarray`, (..., ``self.numgrid``)
             Contains the input data transformed to G-space
         """
-        if not overwrite_in:
-            arr_inp = arr_inp.copy()
         arr_inp_ = arr_inp.reshape((-1, *self.grid_shape))
 
         shape_out = (*arr_inp.shape[:-3], self.numgrid)
