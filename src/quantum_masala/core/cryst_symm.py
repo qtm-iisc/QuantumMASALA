@@ -67,7 +67,7 @@ class CrystalSymm:
 
         fac = np.multiply(self.symm['reallat_trans'], grid_shape)
         idx_comm = np.nonzero(
-            np.linalg.norm(np.remainder(fac, 1), axis=1) <= config.spglib_symprec
+            np.linalg.norm(fac - np.rint(fac), axis=1) <= config.spglib_symprec
         )[0]
         self.symm = self.symm[idx_comm].copy()
         self.numsymm = len(self.symm)
