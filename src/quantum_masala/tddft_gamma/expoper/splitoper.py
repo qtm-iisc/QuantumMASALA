@@ -40,7 +40,10 @@ class SplitOper(TDExpOperBase):
 
     def update_vloc(self, vloc: RField):
         self._check_vloc(vloc)
-        self.oper_vloc_r = np.exp(-1j * self.time_step * vloc.r)
+        fac = -1j * self.time_step * np.prod(self.gkspc.grid_shape)
+        # The line below must contain a factor 1/ np.prod(self.gkspc.grid_shape)
+        # But since the wfn's are normalized at each step it is skipped
+        self.oper_vloc_r = np.exp(fac * vloc.r)
 
     def oper_ke(self, l_prop_psi: np.ndarray):
         np.multiply(l_prop_psi, self.oper_ke_gk, out=l_prop_psi)
