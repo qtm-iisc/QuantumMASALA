@@ -20,7 +20,7 @@ class PWConfig:
     fft_threads: int = int(getenv("OMP_NUM_THREADS", "1"))
     pyfftw_planner: Literal['FFTW_ESTIMATE', 'FFTW_MEASURE',
                             'FFTW_PATIENT', 'FFTW_EXHAUSTIVE'] = 'FFTW_MEASURE'
-    pyfftw_flags: tuple[str, ...] = ()
+    pyfftw_flags: tuple[str, ...] = ('FFTW_DESTROY_INPUT', )
 
     symm_check_supercell: bool = True
     symm_use_all_frac: bool = False
@@ -113,8 +113,22 @@ class PWConfig:
     @property
     def pwcomm(self):
         if self._numkgrp is None:
-            raise ValueError("'numkgrp' must be assigned with a valid value before "
-                             "getting 'pwcomm'.")
+            from quantum_masala import pw_logger
+            from quantum_masala.logger import logger_set_filehandle
+            if self.logfile:
+                logger_set_filehandle(self.logfile_name)
+
+            numproc = 1
+            if find_spec("mpi4py") is not None:
+                from mpi4py.MPI import COMM_WORLD
+                numproc = COMM_WORLD.Get_size()
+
+            pw_logger.warn("'numkgrp' has not bee initialized. Setting it to "
+                           f"{numproc} (# of processes in COMM_WORLD).\n"
+                           "If you want to enable band distribution, please specify "
+                           "the appropriate # of k-groups by setting "
+                           "'quantum_masala.config.numkgrp'")
+
         return self._pwcomm
 
 

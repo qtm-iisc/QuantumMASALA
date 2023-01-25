@@ -130,7 +130,7 @@ class KPoints:
         return cls(crystal.recilat, len(k_cryst), k_cryst.T, weights)
 
 
-def kpts_distribute(kpts: KPoints, round_robin: bool = True,
+def kpts_distribute(kpts: KPoints, round_robin: bool = False,
                     return_indices: bool = True) -> Union[KPoints,
                                                           (KPoints, list[int])]:
     pwcomm = config.pwcomm
