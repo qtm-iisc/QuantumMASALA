@@ -1,5 +1,5 @@
 __all__ = ["scf"]
-from typing import Optional, Callable, Any
+from typing import Optional, Callable, Any, Protocol
 import numpy as np
 
 from quantum_masala.core import (
@@ -29,17 +29,23 @@ from quantum_masala.dft.mix import *
 
 from quantum_masala import config, pw_logger
 
+
+class IterPrinter(Protocol):
+    def __call__(self, idxiter: int, scf_converged: bool,
+                 e_error: float, diago_thr: float, diago_avgiter: float,
+                 en: dict[str, float]) -> None: ...
+
+
 @pw_logger.time('dft:scf')
 def scf(crystal: Crystal, kpts: KPoints,
         rho_start: GField, symm_rho: bool,
         numbnd: int, is_spin: bool, is_noncolin: bool,
-        wfn_init: Callable[[KSWavefun, int], None],
+        wfn_init: Optional[Callable[[KSWavefun, int], None]],
         xc_params: dict[str, Any],
         occ: str = 'smear', smear_typ: str = 'gauss', e_temp: float = 1E-3,
         conv_thr: float = 1E-6, max_iter: int = 100,
         diago_thr_init: float = 1E-2,
-        iter_printer: Optional[
-            Callable[[int, bool, float, Optional[float], dict[str, float]], None]] = None,
+        iter_printer: Optional[IterPrinter] = None,
         mix_beta: float = 0.7, mix_dim: int = 8,
         ):
     pwcomm = config.pwcomm
@@ -66,6 +72,10 @@ def scf(crystal: Crystal, kpts: KPoints,
 
     l_wfn_kgrp = wfn_generate(gwfn, kpts, numbnd, is_spin, is_noncolin,
                               idxkpts_kgrp)
+    if wfn_init is None:
+        def wfn_init(wfn_, ikpt_):
+            wfn_.init_random()
+
     for ikpt in range(numkpts_kgrp):
         wfn_init(l_wfn_kgrp[ikpt], idxkpts_kgrp[ikpt])
 
@@ -96,6 +106,7 @@ def scf(crystal: Crystal, kpts: KPoints,
         v_hart, en['hart'] = hartree_compute(rho)
         v_xc, en['xc'] = xc_compute(rho, rho_core, **xc_params)
         v_loc = v_ion + v_hart + v_xc
+        # if grho != gwfn, then transformation to fine grid (gwfn) must be done here
         v_loc *= 1 / np.prod(gwfn.grid_shape)
         v_loc.Bcast()
         return v_loc
@@ -164,13 +175,15 @@ def scf(crystal: Crystal, kpts: KPoints,
         compute_energies()
 
         e_error = mixmod.compute_error(rho, rho_out)
-        print(e_error)
         if e_error < conv_thr:
             scf_converged = True
         elif idxiter == 0 and e_error < diago_thr * numel:
-            print('large threshold')
             diago_thr = 0.1 * e_error / max(1, numel)
-            iter_printer(idxiter, scf_converged, e_error, diago_avgiter, en)
+            if iter_printer is not None:
+                iter_printer(idxiter=idxiter, scf_converged=scf_converged,
+                             e_error=e_error, diago_thr=diago_thr,
+                             diago_avgiter=diago_avgiter,
+                             en=en)
             continue
         else:
             diago_thr = min(diago_thr, 0.1 * e_error / max(1, numel))
@@ -184,7 +197,11 @@ def scf(crystal: Crystal, kpts: KPoints,
         scf_converged = pwcomm.world_comm.bcast(scf_converged)
         diago_thr = pwcomm.world_comm.bcast(diago_thr)
         pwcomm.world_comm.barrier()
-        iter_printer(idxiter, scf_converged, e_error, diago_avgiter, en)
+        if iter_printer is not None:
+            iter_printer(idxiter=idxiter, scf_converged=scf_converged,
+                         e_error=e_error, diago_thr=diago_thr,
+                         diago_avgiter=diago_avgiter,
+                         en=en)
         if scf_converged:
             break
         else:
