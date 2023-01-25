@@ -43,9 +43,9 @@ class FFT3DSticks(FFTDriver):
 
         FFT = get_fft_backend()
         self.buffer = FFT.create_buffer(self.grid_shape)
-        self.fftx = FFT(self.buffer[:, 0, 0], (0, ))
-        self.ffty = FFT(self.buffer[:, :, 0], (1, ))
-        self.fftz = FFT(self.buffer[:, :, :], (2, ))
+        self.fftx = FFT(self.buffer[:, 0, 0], (0, ), False)
+        self.ffty = FFT(self.buffer[:, :, 0], (1, ), False)
+        self.fftz = FFT(self.buffer[:, :, :], (2, ), False)
 
         self.idxgrid = np.ravel_multi_index(self.idxgrid, self.grid_shape)
 
@@ -57,6 +57,7 @@ class FFT3DSticks(FFTDriver):
         for iz in self.ffty_map:
             self.ffty.ifft(self.buffer[:, :, iz])
         self.fftz.ifft(self.buffer[:, :, :])
+        np.copyto(arr_out, self.buffer)
 
     def _r2g(self, arr_inp: np.ndarray, arr_out: np.ndarray):
         np.copyto(self.buffer, arr_inp)
