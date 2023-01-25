@@ -34,6 +34,7 @@ class AtomBasis:
         self.label: str = label
         self.mass: Optional[float] = mass
         self.ppdata: PseudoPotFile = ppdata
+        self.valence: float = self.ppdata.valence
 
         self.reallat: RealLattice = reallat
         if cryst.ndim != 2 or cryst.shape[0] != 3:

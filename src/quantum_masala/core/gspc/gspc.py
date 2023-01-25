@@ -52,7 +52,7 @@ def _gen_grid_shape(recilat, ecut) -> tuple[int, ...]:
     # Computing 2 \pi / |a_i| where a_i are the basis vectors of the bravais lattice
     ai = np.linalg.norm(recilat.recvec_inv, axis=1) * TPI
     tpibai = TPI / ai
-    ni = [int(n) for n in np.floor(2 * omega / tpibai)]
+    ni = [int(n) for n in np.ceil(2 * omega / tpibai)]
 
     # Finding 'good' values of `grid_shape`
     grid_shape = []

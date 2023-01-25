@@ -49,41 +49,46 @@ class KPoints:
             raise TypeError(f"indices must be integers or slices, not {type(item)}")
 
     @classmethod
-    def from_cart(cls, recilat, *l_kpts_cart):
+    def from_cart(cls, crystal, *l_kpts_cart):
         weights, cart = [], []
         for k_cart, k_weight, in l_kpts_cart:
             cart.append(k_cart)
             weights.append(k_weight)
 
+        recilat = crystal.recilat
         cryst = recilat.cart2cryst(cart, axis=1)
         weights = _sanitize_weights(weights)
         return cls(recilat, len(cryst), cryst.T, weights)
 
     @classmethod
-    def from_cryst(cls, recilat, *l_kpts_cryst):
+    def from_cryst(cls, crystal, *l_kpts_cryst):
         weights, cryst = [], []
         for k_cart, k_weight in l_kpts_cryst:
             cryst.append(k_cart)
             weights.append(k_weight)
 
+        recilat = crystal.recilat
         cryst = np.array(cryst)
         weights = _sanitize_weights(weights)
         return cls(recilat, len(cryst), cryst.T, weights)
 
     @classmethod
-    def from_tpiba(cls, recilat, *l_kpts_tpiba):
+    def from_tpiba(cls, crystal, *l_kpts_tpiba):
         weights, tpiba = [], []
         for k_cart, k_weight in l_kpts_tpiba:
             tpiba.append(k_cart)
             weights.append(k_weight)
 
+        recilat = crystal.recilat
         cryst = recilat.tpiba2cryst(tpiba, axis=1)
         weights = _sanitize_weights(weights)
         return cls(recilat, len(cryst), cryst.T, weights)
 
     @classmethod
-    def gamma(cls, recilat):
-        return cls(recilat, 1, np.zeros((3, 1), dtype='f8'), np.ones(1, dtype='f8'))
+    def gamma(cls, crystal: Crystal):
+        return cls(crystal.recilat, 1,
+                   np.zeros((3, 1), dtype='f8'),
+                   np.ones(1, dtype='f8'))
 
     @classmethod
     def mpgrid(cls, crystal: Crystal,
