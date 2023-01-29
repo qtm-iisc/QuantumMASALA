@@ -45,7 +45,6 @@ def propagate(crystal: Crystal, rho_start: GField,
         v_ion += v_ion_typ
         rho_core += rho_core_typ
         l_nloc.append(NonlocGenerator(sp, gwfn))
-    v_ion.symmetrize()
     v_ion = v_ion.to_rfield()
 
     en = {}

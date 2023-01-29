@@ -17,7 +17,6 @@ def prop_step(wfn_gamma: WavefunBgrp, rho: GField,
     prop_gamma.prop_psi(evc_gk_0, wfn_gamma.evc_gk)
 
     rho_pred = 0.5 * (rho + wfn_gamma.get_rho())
-    rho_pred.symmetrize()
     v_loc = compute_pot_local(rho_pred)
 
     prop_gamma.update_vloc(v_loc)
