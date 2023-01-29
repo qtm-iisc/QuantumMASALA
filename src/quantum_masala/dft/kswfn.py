@@ -37,7 +37,8 @@ class KSWavefun(Wavefun):
             self.occ = self.kgrp_intracomm.Bcast(self.occ)
 
     def init_random(self):
-        rng = config.rng
+        rng_seed_k = self.k_cryst.view('uint64')
+        rng = np.random.default_rng([*rng_seed_k, config.rng_seed])
         rng.random(out=self.evc_gk.view('f8'))
         np.multiply(self.evc_gk.real, np.exp(2 * np.pi * 1j * self.evc_gk.imag),
                     out=self.evc_gk)

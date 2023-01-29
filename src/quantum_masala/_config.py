@@ -5,7 +5,7 @@ from importlib.util import find_spec
 from dataclasses import dataclass
 from typing import Optional, Literal
 
-import numpy as np
+RNG_DEFAULT_SEED = 489
 
 
 @dataclass
@@ -44,8 +44,7 @@ class PWConfig:
     logfile: bool = False
     logfile_name: Optional[str] = 'QTMPy.log'
 
-    _rng_seed: int = 489
-    _rng: np.random.Generator = np.random.default_rng(_rng_seed)
+    _rng_seed: int = RNG_DEFAULT_SEED
 
     @property
     def rng_seed(self):
@@ -54,11 +53,9 @@ class PWConfig:
     @rng_seed.setter
     def rng_seed(self, seed):
         self._rng_seed = seed
-        self._rng = np.random.default_rng(self._rng_seed)
-
-    @property
-    def rng(self):
-        return self._rng
+        if find_spec("mpi4py") is not None:
+            from mpi4py.MPI import COMM_WORLD
+            self._rng_seed = COMM_WORLD.bcast(self._rng_seed)
 
     @property
     def numkgrp(self):
