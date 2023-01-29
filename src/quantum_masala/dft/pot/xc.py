@@ -91,15 +91,15 @@ def xc_compute(rho: GField, rhocore: GField,
     if need_grad:
         grad_rho = deloper.compute_grad(rho).to_rfield()
 
-    for xcfunc in [exch_func, corr_func]:
-        if xcfunc.get_family() == xc_flags.XC_FAMILY_LDA:
-            xcfunc.set_dens_threshold(config.libxc_thr_lda_rho)
-        elif xcfunc.get_family() == xc_flags.XC_FAMILY_GGA:
-            xcfunc.set_dens_threshold(config.libxc_thr_gga_rho)
-            xcfunc.set_sigma_threshold(config.libxc_thr_gga_sig)
+    # for xcfunc in [exch_func, corr_func]:
+    #     if xcfunc.get_family() == xc_flags.XC_FAMILY_LDA:
+    #         xcfunc.set_dens_threshold(config.libxc_thr_lda_rho)
+    #     elif xcfunc.get_family() == xc_flags.XC_FAMILY_GGA:
+    #         xcfunc.set_dens_threshold(config.libxc_thr_gga_rho)
+    #         xcfunc.set_sigma_threshold(config.libxc_thr_gga_sig)
 
     rho = rho.to_rfield()
-    xc_inp = {"rho": np.copy(np.transpose(rho.r.real.reshape(numspin, -1)), "C")}
+    xc_inp = {"rho": np.copy(np.transpose(np.abs(rho.r).reshape(numspin, -1)), "C")}
     if need_grad:
         xc_inp["sigma"] = _get_sigma(rhoaux)
 

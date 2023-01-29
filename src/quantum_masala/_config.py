@@ -26,9 +26,9 @@ class PWConfig:
     symm_use_all_frac: bool = False
     spglib_symprec: float = 1E-5
 
-    libxc_thr_lda_rho: float = 1E-10
-    libxc_thr_gga_rho: float = 1E-6
-    libxc_thr_gga_sig: float = 1E-10
+    # libxc_thr_lda_rho: float = 1E-10
+    # libxc_thr_gga_rho: float = 1E-6
+    # libxc_thr_gga_sig: float = 1E-10
 
     eigsolve_method: Literal['davidson', 'primme'] = 'davidson'
     davidson_maxiter: int = 20
