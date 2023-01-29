@@ -22,20 +22,25 @@ class TaylorExp(TDExpOperBase):
                              f"got '{order}' (type {type(order)})")
         self.order = order
 
-    def prop_psi(self, l_psi_: np.ndarray, l_prop_psi_: np.ndarray):
-        l_prop_psi_[:] = l_psi_
+    def prop_psi(self, l_psi: np.ndarray, l_prop_psi: np.ndarray):
+        l_prop_psi[:] = l_psi
         if self.is_noncolin:
-            l_psi_ = l_psi_.reshape((1, -1, l_psi_.shape[-1]))
-            l_prop_psi_ = l_prop_psi_.reshape((1, -1, l_prop_psi_.shape[-1]))
+            l_psi = l_psi.reshape(
+                (1, -1, self.gkspc.numgk * (1 + self.is_noncolin))
+            )
+            l_prop_psi = l_prop_psi.reshape(
+                (1, -1, self.gkspc.numgk * (1 + self.is_noncolin))
+            )
 
-        numspin = 1 + (self.is_spin and not self.is_noncolin)
-        psi, hpsi = np.copy(l_psi_[0]), np.empty_like(l_psi_[0])
-        for ispin in range(numspin):
-            self.idxspin = ispin
-            l_psi, l_prop_psi = l_psi_[ispin], l_prop_psi_[ispin]
+        for idxspin in range(1 + self.is_spin * (not self.is_noncolin)):
+            if self.is_spin:
+                self.set_idxspin(idxspin)
+            psi, prop_psi = np.copy(l_psi[idxspin]), l_prop_psi[idxspin]
+            hpsi = np.empty_like(psi)
+
             fac = 1
             for iorder in range(self.order):
                 self.h_psi(psi, hpsi)
                 fac *= -1j * self.time_step / (iorder + 1)
-                l_prop_psi += fac * hpsi
+                prop_psi += fac * hpsi
                 psi, hpsi = hpsi, psi
