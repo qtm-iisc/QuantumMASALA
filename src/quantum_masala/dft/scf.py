@@ -178,12 +178,12 @@ def scf(crystal: Crystal, kpts: KPoints,
         if e_error < conv_thr:
             scf_converged = True
         elif idxiter == 0 and e_error < diago_thr * numel:
-            diago_thr = 0.1 * e_error / max(1, numel)
             if iter_printer is not None:
                 iter_printer(idxiter=idxiter, scf_converged=scf_converged,
                              e_error=e_error, diago_thr=diago_thr,
                              diago_avgiter=diago_avgiter,
                              en=en)
+            diago_thr = 0.1 * e_error / max(1, numel)
             continue
         else:
             diago_thr = min(diago_thr, 0.1 * e_error / max(1, numel))
