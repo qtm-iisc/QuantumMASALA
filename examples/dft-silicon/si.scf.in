@@ -1,0 +1,32 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'silicon'
+   pseudo_dir       = './'
+   disk_io          = 'none'
+/
+&SYSTEM
+   ibrav            = 2
+   celldm(1)        = 10.2
+   ecutwfc          = 25
+   nspin            = 1
+   ntyp             = 1
+   nat              = 2
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Si 28.085 Si_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+4 4 4 1 1 1
+
+ATOMIC_POSITIONS alat
+Si 0.00 0.00 0.00
+Si 0.25 0.25 0.25
