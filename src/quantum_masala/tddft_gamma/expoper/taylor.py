@@ -1,5 +1,6 @@
 __all__ = ['TaylorExp']
 import numpy as np
+from scipy.linalg.blas import zaxpy
 
 from quantum_masala.core import GkSpace, RField
 from quantum_masala.pseudo import NonlocGenerator
@@ -42,5 +43,6 @@ class TaylorExp(TDExpOperBase):
             for iorder in range(self.order):
                 self.h_psi(psi, hpsi)
                 fac *= -1j * self.time_step / (iorder + 1)
-                prop_psi += fac * hpsi
+                # prop_psi += fac * hpsi
+                zaxpy(x=hpsi.reshape(-1), y=prop_psi.reshape(-1), a=fac)
                 psi, hpsi = hpsi, psi

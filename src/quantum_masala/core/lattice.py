@@ -522,7 +522,7 @@ class RealLattice(Lattice):
             if not isinstance(n, int) or n < 1:
                 raise ValueError(f"'n{i+1}' must be a positive integer. "
                                  f"got {n} (type {type(n)})")
-            xi.append(np.arange(n, dtype='f8') / n)
+            xi.append(np.fft.fftfreq(n))
         r_cryst = np.array(np.meshgrid(*xi, indexing='ij'))
         if coords == 'cryst':
             return r_cryst

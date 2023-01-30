@@ -1,13 +1,13 @@
 from typing import TypeVar, Callable
 import numpy as np
 
-from quantum_masala.core import GField, RField
+from quantum_masala.core import GField, RField, rho_normalize
 
 from ..wfn_bpar import WavefunBgrp
 from ..expoper.base import TDExpOper
 
 
-def prop_step(wfn_gamma: WavefunBgrp, rho: GField,
+def prop_step(wfn_gamma: WavefunBgrp, rho: GField, numel: float,
               compute_pot_local: Callable[[GField], RField],
               prop_gamma: TDExpOper):
     evc_gk_0 = wfn_gamma.evc_gk.copy()

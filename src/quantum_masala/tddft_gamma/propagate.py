@@ -86,7 +86,8 @@ def propagate(crystal: Crystal, rho_start: GField,
 
     rho = rho_start.copy()
     for istep in range(numstep):
-        prop_step(wfn_gamma, rho, compute_pot_local, prop_gamma)
+        prop_step(wfn_gamma, rho, crystal.numel,
+                  compute_pot_local, prop_gamma)
         rho = wfn_gamma.get_rho()
         rho_normalize(rho, numel)
         callback(istep, rho, wfn_gamma)

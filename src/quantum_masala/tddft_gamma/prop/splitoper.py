@@ -7,7 +7,7 @@ from ..wfn_bpar import WavefunBgrp
 from ..expoper.splitoper import SplitOper
 
 
-def prop_step(wfn_gamma: WavefunBgrp, rho: GField,
+def prop_step(wfn_gamma: WavefunBgrp, rho: GField, numel: float,
               compute_pot_local: Callable[[GField], RField],
               prop_gamma: SplitOper):
     is_spin = wfn_gamma.is_spin
@@ -17,6 +17,7 @@ def prop_step(wfn_gamma: WavefunBgrp, rho: GField,
     prop_gamma.oper_nl(wfn_gamma.evc_gk, False)
 
     rho_half = wfn_gamma.get_rho()
+    rho_half = rho_normalize(rho_half, numel)
     v_loc = compute_pot_local(rho_half)
 
     prop_gamma.update_vloc(v_loc)
