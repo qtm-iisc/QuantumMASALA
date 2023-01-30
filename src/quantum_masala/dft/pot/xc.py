@@ -83,7 +83,7 @@ def xc_compute(rho: GField, rhocore: GField,
 
     need_grad = sum(
         True if xcfunc.get_family() in
-        [xc_flags.XC_FAMILY_GGA, xc_flags.XC_FAMILY_HYB_GGA]
+        [xc_flags.XC_FAMILY_GGA, xc_flags.XC_FAMILY_MGGA]
         else False
         for xcfunc in [exch_func, corr_func]
     )
