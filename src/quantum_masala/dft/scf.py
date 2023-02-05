@@ -1,5 +1,7 @@
-__all__ = ["scf"]
+__all__ = ["scf", "EnergyData", "IterPrinter"]
 from typing import Optional, Callable, Any, Protocol
+from dataclasses import dataclass
+from time import perf_counter
 import numpy as np
 
 from quantum_masala.core import (
@@ -30,10 +32,27 @@ from quantum_masala.dft.mix import *
 from quantum_masala import config, pw_logger
 
 
+@dataclass
+class EnergyData:
+    total: float = 0.0
+    hwf: float = 0.0
+    one_el: float = 0.0
+    ewald: float = 0.0
+    hartree: float = 0.0
+    xc: float = 0.0
+
+    fermi: Optional[float] = None
+    smear: Optional[float] = None
+    internal: Optional[float] = None
+
+    HO_level: Optional[float] = None
+    LU_level: Optional[float] = None
+
+
 class IterPrinter(Protocol):
-    def __call__(self, idxiter: int, scf_converged: bool,
+    def __call__(self, idxiter: int, scf_runtime: float, scf_converged: bool,
                  e_error: float, diago_thr: float, diago_avgiter: float,
-                 en: dict[str, float]) -> None: ...
+                 en: EnergyData) -> None: ...
 
 
 @pw_logger.time('dft:scf')
@@ -48,6 +67,7 @@ def scf(crystal: Crystal, kpts: KPoints,
         iter_printer: Optional[IterPrinter] = None,
         mix_beta: float = 0.7, mix_dim: int = 8,
         ):
+    start_time = perf_counter()
     pwcomm = config.pwcomm
     numel = crystal.numel
 
@@ -67,7 +87,8 @@ def scf(crystal: Crystal, kpts: KPoints,
     grho = rho.gspc
     gwfn = grho
 
-    kpts_kgrp, idxkpts_kgrp = kpts_distribute(kpts, True, True)
+    kpts_kgrp, idxkpts_kgrp = kpts_distribute(kpts, return_indices=True,
+                                              round_robin=False)
     numkpts_kgrp = len(idxkpts_kgrp)
 
     l_wfn_kgrp = wfn_generate(gwfn, kpts, numbnd, is_spin, is_noncolin,
@@ -94,17 +115,16 @@ def scf(crystal: Crystal, kpts: KPoints,
     v_xc: RField
     v_loc: RField
 
-    en = {'total': 0, 'hwf': 0, 'one_el': 0,
-          'hart': 0, 'xc': 0, 'ewald': 0}
+    en: EnergyData = EnergyData()
     if occ == 'smear':
-        en['fermi'], en['smear'] = 0, 0
+        enfermi, en.smear, en.internal = 0, 0, 0
     elif occ == 'fixed':
-        en['occ_max'], en['unocc_min'] = 0, 0
+        en.HO_level, en.LU_level = 0, 0
 
     def compute_pot_local(rho, rho_core):
         nonlocal v_hart, v_xc, v_loc
-        v_hart, en['hart'] = hartree_compute(rho)
-        v_xc, en['xc'] = xc_compute(rho, rho_core, **xc_params)
+        v_hart, en.hartree = hartree_compute(rho)
+        v_xc, en.xc = xc_compute(rho, rho_core, **xc_params)
         v_loc = v_ion + v_hart + v_xc
         # if grho != gwfn, then transformation to fine grid (gwfn) must be done here
         v_loc *= 1 / np.prod(gwfn.grid_shape)
@@ -119,7 +139,7 @@ def scf(crystal: Crystal, kpts: KPoints,
     def gen_ham(wfn: KSWavefun):
         return KSHam(wfn.gkspc, wfn.is_spin, wfn.is_noncolin, v_loc, l_nloc)
 
-    en['ewald'] = ewald_compute(crystal, grho)
+    en.ewald = ewald_compute(crystal, grho)
 
     def compute_energies():
         rho_r = rho.to_rfield()
@@ -130,15 +150,14 @@ def scf(crystal: Crystal, kpts: KPoints,
             e_eigen = pwcomm.kgrp_intercomm.allreduce_sum(e_eigen)
         vhxc = v_hart + v_xc
         e_eigen = pwcomm.world_comm.bcast(e_eigen) * (2 if not is_spin else 1)
-        en['one_el'] = e_eigen - rho_out_r.integrate(vhxc, axis=0).real
-        en['total'] = en['one_el'] + en['ewald'] + en['hart'] + en['xc']
-        en['hwf'] = e_eigen - rho_r.integrate(vhxc, axis=0).real \
-            + en['ewald'] + en['hart'] + en['xc']
+        en.one_el = e_eigen - rho_out_r.integrate(vhxc, axis=0).real
+        en.total = en.one_el + en.ewald + en.hartree + en.xc
+        en.hwf = e_eigen - rho_r.integrate(vhxc, axis=0).real \
+            + en.ewald + en.hartree + en.xc
         if occ == 'smear':
-            en['int'] = en['total']
-            en['total'] += en['smear']
-            en['hwf'] += en['smear']
-
+            en.total += en.smear
+            en.hwf += en.smear
+            en.internal = en.total - en.smear
 
     diago_thr = diago_thr_init
     scf_converged = False
@@ -160,11 +179,11 @@ def scf(crystal: Crystal, kpts: KPoints,
             diago_avgiter += solve_wfn(_wfn, gen_ham, diago_thr, **prec_params)
         diago_avgiter /= numkpts_kgrp * (1 + is_spin)
         if occ == 'fixed':
-            en['occ_max'], en['unocc_min'] = fixed.compute_occ(
+            en.HO_level, en.LU_level = fixed.compute_occ(
                 l_wfn_kgrp, numel
             )
         elif occ == 'smear':
-            en['fermi'], en['smear'] = smear.compute_occ(
+            en.fermi, en.smear = smear.compute_occ(
                 l_wfn_kgrp, numel, smear_typ, e_temp
             )
 
@@ -179,7 +198,8 @@ def scf(crystal: Crystal, kpts: KPoints,
             scf_converged = True
         elif idxiter == 0 and e_error < diago_thr * numel:
             if iter_printer is not None:
-                iter_printer(idxiter=idxiter, scf_converged=scf_converged,
+                iter_printer(idxiter=idxiter, scf_runtime=perf_counter() - start_time,
+                             scf_converged=scf_converged,
                              e_error=e_error, diago_thr=diago_thr,
                              diago_avgiter=diago_avgiter,
                              en=en)
@@ -198,7 +218,8 @@ def scf(crystal: Crystal, kpts: KPoints,
         diago_thr = pwcomm.world_comm.bcast(diago_thr)
         pwcomm.world_comm.barrier()
         if iter_printer is not None:
-            iter_printer(idxiter=idxiter, scf_converged=scf_converged,
+            iter_printer(idxiter=idxiter, scf_runtime=perf_counter() - start_time,
+                         scf_converged=scf_converged,
                          e_error=e_error, diago_thr=diago_thr,
                          diago_avgiter=diago_avgiter,
                          en=en)
