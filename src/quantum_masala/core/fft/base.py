@@ -76,7 +76,7 @@ class FFTDriver(ABC):
     @abstractmethod
     def __init__(self, grid_shape: tuple[int, int, int],
                  idxgrid: tuple[list[int], ...],
-                 normalise_idft: bool = True):
+                 normalise_idft: bool):
         self.grid_shape: tuple[int, int, int] = grid_shape
         """Shape of FFT Grid.
         """
@@ -90,6 +90,7 @@ class FFTDriver(ABC):
         """`True` if Inverse DFT is scaled by 1/N where N is 
         the product of axis lengths
         """
+        self.fft: FFTBackend = None
 
     def g2r(self, arr_inp: np.ndarray, arr_out: Optional[np.ndarray] = None):
         """Computes Backwards FFT where input Fourier Transform is 'truncated'
@@ -110,7 +111,7 @@ class FFTDriver(ABC):
 
         shape_out = (*arr_inp.shape[:-1], *self.grid_shape)
         if arr_out is None:
-            arr_out = np.empty(shape_out, dtype="c16")
+            arr_out = self.fft.create_buffer(shape_out)
         elif arr_out.shape != shape_out:
             raise ValueError(f"'arr_out' must be a NumPy array of shape {shape_out}. "
                              f"Got {arr_out.shape}")
@@ -158,7 +159,7 @@ class FFTDriver(ABC):
 
         shape_out = (*arr_inp.shape[:-3], self.numgrid)
         if arr_out is None:
-            arr_out = np.empty((*arr_inp.shape[:-3], self.numgrid), dtype="c16")
+            arr_out = self.fft.create_buffer(shape_out)
         elif arr_out.shape != shape_out:
             raise ValueError(f"'arr_out' must be a NumPy array of shape {shape_out}. "
                              f"Got {arr_out.shape}")
