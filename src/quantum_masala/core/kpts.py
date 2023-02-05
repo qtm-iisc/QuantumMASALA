@@ -131,8 +131,8 @@ class KPoints:
 
 
 def kpts_distribute(kpts: KPoints, round_robin: bool = False,
-                    return_indices: bool = True) -> Union[KPoints,
-                                                          (KPoints, list[int])]:
+                    return_indices: bool = True
+                    ) -> Union[KPoints, (KPoints, list[int])]:
     pwcomm = config.pwcomm
     numkpts = kpts.numk
 

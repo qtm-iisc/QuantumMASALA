@@ -41,7 +41,7 @@ def print_crystal_info(crystal: Crystal):
     print(f"Number of electrons      : {crystal.numel}")
     print()
     print("Crystal Axes: coordinates in units of 'alat' "
-          "({reallat.alat:.5f} a.u.)")
+          f"({reallat.alat:.5f} a.u.)")
     for i, ai in enumerate(reallat.axes_alat):
         print(f"    a({i+1}) = ({ai[0]:>9.5f}, {ai[1]:>9.5f}, {ai[2]:>9.5f})")
     print()

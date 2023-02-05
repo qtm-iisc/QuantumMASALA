@@ -4,8 +4,8 @@ import logging
 from pathlib import Path
 import warnings
 from time import perf_counter, strftime
-from typing import Optional
 from importlib.util import find_spec
+from typing import Optional
 
 import numpy as np
 
@@ -65,7 +65,10 @@ class PWTimer:
         import sys
         self.enabled = not hasattr(sys, 'ps1')
 
-    def _find_timer(self, label: str) -> Optional[bool]:
+    def _find_timer(self, label: str) -> Optional[int]:
+        if not isinstance(label, str):
+            raise ValueError("'label' must be a string. "
+                             f"got {label} (type {type(label)})")
         idx = np.nonzero(self.l_timer['label'][:self.numtimer] == label)[0]
         if len(idx) == 0:
             return None
@@ -74,7 +77,7 @@ class PWTimer:
         else:
             raise Exception("found multiple timers with same label. This is a bug")
 
-    def start_timer(self, label: str) -> None:
+    def _start_timer(self, label: str) -> None:
         itimer = self._find_timer(label)
         if itimer is None:
             self.l_timer[self.numtimer] = (label, 0, 0., False, 0.)
@@ -90,7 +93,7 @@ class PWTimer:
         timer['start_time'] = perf_counter()
         self.logger.info("timer '%s' started." % (label, ))
 
-    def stop_timer(self, label: str) -> None:
+    def _stop_timer(self, label: str) -> None:
         iclock = self._find_timer(label)
         if iclock is None:
             raise ValueError(f"timer '{label}' does not exist.")
@@ -108,17 +111,17 @@ class PWTimer:
         if self.enabled:
             def timer(func):
                 def call_func(*args, **kwargs):
-                    self.start_timer(label)
+                    self._start_timer(label)
                     try:
                         out = func(*args, **kwargs)
                     except BaseException as e:
-                        self.stop_timer(label)
+                        self._stop_timer(label)
                         raise e
-                    self.stop_timer(label)
+                    self._stop_timer(label)
                     return out
                 return call_func
         else:
-            def timer(func):
+            def timer_(func):
                 def call_func(*args, **kwargs):
                     return func(*args, **kwargs)
                 return call_func

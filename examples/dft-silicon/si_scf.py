@@ -9,14 +9,16 @@ from quantum_masala.pseudo import rho_generate_atomic
 from quantum_masala.dft import scf
 from time import perf_counter
 
-from numpy import array2string
-from sys import maxsize, stdout
-
+from quantum_masala.utils.dft_printers import (
+    print_crystal_info, print_kpoints, print_gspc_info,
+    print_scf_status, print_bands
+)
 
 config.numkgrp = None  # Only k-point parallelization
 pwcomm = config.pwcomm
 
 start_time = perf_counter()
+
 
 # Lattice
 reallat = RealLattice.from_alat(alat=10.2,  # Bohr
@@ -32,35 +34,7 @@ si_atoms = AtomBasis.from_alat('Si', 28.085, si_oncv, reallat,
 crystal = Crystal(reallat, [si_atoms, ])  # Represents the crystal
 recilat = crystal.recilat
 
-if pwcomm.world_rank == 0:
-    print("----------  Crystal Info  ----------")
-    print(f"Lattice parameter 'alat' : {reallat.alat:9.4f}  a.u.")
-    print(f"Unit cell volume         : {reallat.cellvol:9.4f}  (a.u.)^3")
-    print(f"Number of atoms/cell     : {sum(typ.numatoms for typ in crystal.l_atoms)}")
-    print(f"Number of atomic types   : {len(crystal.l_atoms)}")
-    print(f"Number of electrons      : {crystal.numel}")
-    print()
-    print(f"Crystal Axes: coordinates in units of 'alat' ({reallat.alat:.3f} a.u.)")
-    for i, ai in enumerate(reallat.axes_alat):
-        print(f"    a({i+1}) = ( {ai[0]:>8.5f}, {ai[1]:>8.5f}, {ai[2]:>8.5f} )")
-    print()
-    print(f"Reciprocal Axes: coordinates in units of 'tpiba' ({recilat.tpiba:.3f} (a.u.)^-1)")
-    for i, bi in enumerate(recilat.axes_tpiba):
-        print(f"    b({i+1}) = ( {bi[0]:>8.5f}, {bi[1]:>8.5f}, {bi[2]:>8.5f} )")
-    print()
-    for i, typ in enumerate(crystal.l_atoms):
-        print(f"Atom Species #{i+1}")
-        print(f"    Label   : {typ.label}")
-        print(f"    Mass    : {typ.mass:5.2f}")
-        print(f"    Valence : {typ.valence:5.2f}")
-        print(f"    Pseudpot: {typ.ppdata.filename}")
-        print(f"    Coordinates (in units of alat)")
-        for j, pos in enumerate(typ.alat.T):
-            print(f"        {j+1:3d} - ( {pos[0]:>7.4f}, {pos[1]:>7.4f}, {pos[2]:>7.4f})")
-        print()
-    print()
-
-pwcomm.world_comm.barrier()
+print_crystal_info(crystal)
 
 # Generating k-points from a Monkhorst Pack grid (reduced to the crystal's IBZ)
 mpgrid_shape = (4, 4, 4)
@@ -81,16 +55,7 @@ kpts = KPoints.mpgrid(crystal, mpgrid_shape, mpgrid_shift)
 #     [( 0.375, -0.375,  1.125), 0.1875],
 # )
 
-if pwcomm.world_rank == 0:
-    print(f"Number of k-points: {kpts.numk}")
-    print(f"Cartesian coordinates of k-points in units of tpiba")
-    for i, (k_cryst, k_weight) in enumerate(kpts):
-        k_tpiba = recilat.cryst2tpiba(k_cryst)
-        print(f"    k({i+1:>3d}) = "
-              f"( {k_tpiba[0]:>8.5f}, {k_tpiba[1]:>8.5f}, {k_tpiba[2]:>8.5f} )"
-              f"    weight = {k_weight:8.5f}")
-    print()
-pwcomm.world_comm.barrier()
+print_kpoints(kpts)
 
 # -----Setting up G-Space of calculation-----
 ecut_wfn = 25 * RYDBERG
@@ -98,13 +63,9 @@ ecut_wfn = 25 * RYDBERG
 # can be set independently
 ecut_rho = 4 * ecut_wfn
 grho = GSpace(crystal, ecut_rho)
-if pwcomm.world_rank == 0:
-    print(f"Kinetic Energy Cutoff (Wavefun) : {ecut_wfn / RYDBERG} Ry")
-    print(f"Kinetic Energy Cutoff (Ch. Den.): {ecut_wfn / RYDBERG} Ry")
-    print(f"FFT Grid Shape                  : {grho.grid_shape}")
-    print(f"Number of G-vectors             : {grho.numg}")
-    print()
-pwcomm.world_comm.barrier()
+gwfn = grho
+
+print_gspc_info(grho, gwfn)
 
 # Initializing starting charge density from superposition of atomic charges
 rhoatomic = rho_generate_atomic(crystal.l_atoms[0], grho)
@@ -116,27 +77,8 @@ numbnd = int(crystal.numel // 2)
 
 occ = 'fixed'
 
-conv_thr = 1E-10 * RYDBERG
+conv_thr = 1E-8 * RYDBERG
 diago_thr_init = 1E-2 * RYDBERG
-
-
-def iter_printer(idxiter, scf_converged, e_error, diago_thr, diago_avgiter, en):
-    if pwcomm.world_rank == 0:
-        print(f"Iteration # {idxiter+1}, Error: {e_error / RYDBERG:.4e} Ry")
-        print(f"Convergence Status   : "
-              f"{'NOT' if not scf_converged else ''} Converged")
-        if not scf_converged:
-            print(f"Avg Diago Iterations: {diago_avgiter:3.1f}")
-            print(f"Diago Threshold     : {diago_thr / RYDBERG:.2e} Ry")
-        print(f"Run Time: {perf_counter() - start_time:5.1f} sec")
-        print(f"Total Energy:     {en['total'] / RYDBERG:17.8f} Ry")
-        print(f"      one-el:     {en['one_el'] / RYDBERG:17.8f} Ry")
-        print(f"     Hartree:     {en['hart'] / RYDBERG:17.8f} Ry")
-        print(f"          XC:     {en['xc'] / RYDBERG:17.8f} Ry")
-        print(f"       Ewald:     {en['ewald'] / RYDBERG:17.8f} Ry")
-        print(f"    HO Level:     {en['occ_max'] / ELECTRONVOLT:17.8f} eV")
-        print()
-    config.pwcomm.world_comm.barrier()
 
 
 out = scf(crystal=crystal, kpts=kpts, rho_start=rho_start, symm_rho=True,
@@ -144,7 +86,7 @@ out = scf(crystal=crystal, kpts=kpts, rho_start=rho_start, symm_rho=True,
           wfn_init=None,
           xc_params={'exch_name': 'gga_x_pbe', 'corr_name': 'gga_c_pbe'},
           occ=occ, conv_thr=conv_thr, diago_thr_init=diago_thr_init,
-          iter_printer=iter_printer
+          iter_printer=print_scf_status
           )
 
 scf_converged, rho, l_wfn_kgrp, en = out
@@ -152,38 +94,9 @@ scf_converged, rho, l_wfn_kgrp, en = out
 if pwcomm.world_rank == 0:
     print(f"SCF Routine has {'NOT' if not scf_converged else ''} "
           f"achieved convergence")
+    print()
 
-
-stdout.flush()
-print_bands = True
-if scf_converged and print_bands:
-    if pwcomm.world_rank == 0:
-        print("Printing KS Band eigenvalues")
-    for world_rank in range(pwcomm.world_size):
-        if pwcomm.kgrp_rank == 0:
-            for wfn in l_wfn_kgrp:
-                k_tpiba = recilat.cryst2tpiba(wfn.k_cryst)
-                print("            k = "
-                      f"( {k_tpiba[0]:>8.5f}, {k_tpiba[1]:>8.5f}, {k_tpiba[2]:>8.5f} )"
-                      f"    ({wfn.gkspc.numgk:4d} PWs)")
-                for ispin in range(1 + wfn.is_spin):
-                    if wfn.is_spin and not wfn.is_noncolin:
-                        print(f"    SPIN {'UP' if ispin==0 else 'DOWN'}")
-                    print("    Eigenvalues (in eV)")
-                    print('', array2string(
-                        wfn.evl[ispin] / ELECTRONVOLT, separator="",
-                        max_line_width=74, formatter={"float_kind": "{:9.4f}".format},
-                        threshold=maxsize)[1:-1], '')
-                    print("    Occupation")
-                    print('', array2string(
-                        wfn.occ[ispin], separator="", max_line_width=74,
-                        threshold=maxsize, formatter={"float_kind": "{:9.4f}".format},
-                        )[1:-1], '')
-                    print()
-                print('-'*80)
-                stdout.flush()
-        pwcomm.world_comm.barrier()
-pwcomm.world_comm.barrier()
+print_bands(l_wfn_kgrp)
 
 if pwcomm.world_rank == 0:
     print("SCF Routine has exited")

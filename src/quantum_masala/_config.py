@@ -125,6 +125,7 @@ class PWConfig:
                            "If you want to enable band distribution, please specify "
                            "the appropriate # of k-groups by setting "
                            "'quantum_masala.config.numkgrp'")
+            self.numkgrp = numproc
 
         return self._pwcomm
 
