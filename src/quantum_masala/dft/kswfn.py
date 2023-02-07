@@ -28,6 +28,14 @@ class KSWavefun(Wavefun):
         Eigenvalues
         """
 
+        if config.use_gpu:
+            from quantum_masala.core.fft.gpu import CpFFT3D
+            self.fft_mod_gpu = CpFFT3D(self.gkspc.grid_shape,
+                                       self.gkspc.idxgrid,
+                                       normalise_idft=False)
+        else:
+            self.fft_mod_gpu = None
+
     def sync(self, evc: bool = True, evl: bool = True, occ: bool = True):
         if evc:
             self.evc_gk = self.kgrp_intracomm.Bcast(self.evc_gk)
@@ -56,10 +64,20 @@ class KSWavefun(Wavefun):
         rho = RField.zeros(self.gspc, self.numspin)
         sl = self.kgrp_intracomm.psi_scatter_slice(0, self.numbnd)
         fac = 2 - self.is_spin
-        for ispin in range(self.numspin):
-            for ipsi in range(sl.start, sl.stop):
-                rho.r[ispin] += fac * self.occ[ispin, ipsi] * \
-                                self.get_amp2_r((ispin, ipsi))
+        if config.use_gpu:
+            import cupy as cp
+            evc_gk = cp.asarray(self.evc_gk)
+            occ = fac * cp.asarray(self.occ)
+            evc_r = self.fft_mod_gpu.g2r(evc_gk)**2
+            rho_r = cp.sum(cp.abs(evc_r) * cp.expand_dims(occ, axis=(-1, -2, -3)),
+                           axis=1)
+            rho.r[:] = cp.asnumpy(rho_r)
+        else:
+            for ispin in range(self.numspin):
+                for ipsi in range(sl.start, sl.stop):
+                    rho.r[ispin] += fac * self.occ[ispin, ipsi] * \
+                                    self.get_amp2_r((ispin, ipsi))
+
         self.kgrp_intracomm.Allreduce_sum_inplace(rho.r)
         rho = rho.to_gfield()
         if normalise:

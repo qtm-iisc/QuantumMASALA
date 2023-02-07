@@ -3,14 +3,13 @@ from typing import Optional
 import cupy as cp
 from cupyx.scipy.fft import get_fft_plan, fftn, ifftn
 
-from quantum_masala.core.gspc import GkSpace
 from quantum_masala.core.fft.base import FFTDriver, FFTBackend
 
 
 class CpFFTLibWrapper(FFTBackend):
 
-    def __init__(self, arr: cp.ndarray, axes: tuple[int, ...], normalize_idft: bool):
-        super().__init__(arr, axes, normalize_idft)
+    def __init__(self, arr: cp.ndarray, axes: tuple[int, ...], normalise_idft: bool):
+        super().__init__(arr, axes, normalise_idft)
         self.plan_fw = get_fft_plan(arr, axes=self.axes, value_type='C2C')
         self.plan_bw = self.plan_fw
 
@@ -30,8 +29,8 @@ class CpFFT3D(FFTDriver):
 
     def __init__(self, grid_shape: tuple[int, int, int],
                  idxgrid: tuple[list[int], ...],
-                 normalize_idft: bool = True):
-        super().__init__(grid_shape, idxgrid, normalize_idft)
+                 normalise_idft: bool = True):
+        super().__init__(grid_shape, idxgrid, normalise_idft)
         self.idxgrid = cp.array(self.idxgrid)
         self.fft = CpFFTLibWrapper(CpFFTLibWrapper.create_buffer(self.grid_shape),
                                    (0, 1, 2), self.normalise_idft

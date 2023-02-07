@@ -4,7 +4,7 @@ from cupy.cublas import gemm
 from quantum_masala.core import GkSpace, RField
 from quantum_masala.pseudo import NonlocGenerator
 from quantum_masala.dft import KSHam
-from .fftmod_gpu import CpFFT3D
+from quantum_masala.core.fft.gpu import CpFFT3D
 
 
 class KSHamGPU(KSHam):
@@ -22,7 +22,7 @@ class KSHamGPU(KSHam):
         self.vloc_r = cp.asarray(self.vloc_r)
 
         self.fft_mod = CpFFT3D(self.gkspc.grid_shape, self.gkspc.idxgrid,
-                               normalize_idft=False)
+                               normalise_idft=False)
 
     def h_psi(self, l_psi: cp.ndarray, l_hpsi: cp.ndarray):
         l_hpsi[:] = self.ke_gk * l_psi
