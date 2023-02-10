@@ -17,7 +17,7 @@ from quantum_masala.constants import TPI
 from .gspc_symm import SymmMod
 
 
-GOOD_PRIMES: list[int] = [2, 3, 5]
+GOOD_PRIMES: list[int] = [2, 3, 5, 7, 11]
 """List of primes used for finding optimal FFT grid lengths.
 """
 
@@ -50,10 +50,11 @@ def _gen_grid_shape(recilat, ecut) -> tuple[int, ...]:
     """
     omega = np.sqrt(2 * ecut)  # ecut = 0.5 * |G_max|^2
     # Computing 2 \pi / |a_i| where a_i are the basis vectors of the bravais lattice
-    ai = np.linalg.norm(recilat.recvec_inv, axis=1) * TPI
-    tpibai = TPI / ai
-    ni = [int(n) for n in np.ceil(2 * omega / tpibai)]
-
+    b1, b2, b3 = recilat.axes_cart
+    r1 = recilat.cellvol / np.linalg.norm(np.cross(b2, b3))
+    r2 = recilat.cellvol / np.linalg.norm(np.cross(b1, b3))
+    r3 = recilat.cellvol / np.linalg.norm(np.cross(b1, b2))
+    ni = [2*int(np.floor(omega/r)) + 1 for r in [r1, r2, r3]]
     # Finding 'good' values of `grid_shape`
     grid_shape = []
     for x in ni:
