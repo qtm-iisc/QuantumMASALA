@@ -104,12 +104,13 @@ def solver(ham: KSHam,
         evc_red_ = evc_red[:, :ndim].T
 
         sl_bgrp = kgrp_intracomm.psi_scatter_slice(ndim-nunconv, ndim)
-        # ham_red_[sl_bgrp] = psi[sl_bgrp].conj() @ hpsi[:ndim].T
-        # ovl_red_[sl_bgrp] = psi[sl_bgrp].conj() @ psi[:ndim].T
-        ham_red_[sl_bgrp] = gemm(alpha=1.0, a=psi[sl_bgrp].T, trans_a=2,
-                                 b=hpsi[:ndim].T, trans_b=0)
-        ovl_red_[sl_bgrp] = gemm(alpha=1.0, a=psi[sl_bgrp].T, trans_a=2,
-                                 b=psi[:ndim].T, trans_b=0)
+        if sl_bgrp.stop > sl_bgrp.start:
+            # ham_red_[sl_bgrp] = psi[sl_bgrp].conj() @ hpsi[:ndim].T
+            # ovl_red_[sl_bgrp] = psi[sl_bgrp].conj() @ psi[:ndim].T
+            ham_red_[sl_bgrp] = gemm(alpha=1.0, a=psi[sl_bgrp].T, trans_a=2,
+                                     b=hpsi[:ndim].T, trans_b=0)
+            ovl_red_[sl_bgrp] = gemm(alpha=1.0, a=psi[sl_bgrp].T, trans_a=2,
+                                     b=psi[:ndim].T, trans_b=0)
         kgrp_intracomm.psi_Allgather_inplace(ham_red[ndim-nunconv:ndim])
         kgrp_intracomm.psi_Allgather_inplace(ovl_red[ndim-nunconv:ndim])
         if kgrp_intracomm.rank == 0:
