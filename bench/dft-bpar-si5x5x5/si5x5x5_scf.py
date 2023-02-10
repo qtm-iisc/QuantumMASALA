@@ -1,6 +1,7 @@
 from quantum_masala import config, pw_logger
 from quantum_masala.constants import RYDBERG, ELECTRONVOLT
-from quantum_masala.core import RealLattice, AtomBasis, Crystal
+from quantum_masala.core import RealLattice, AtomBasis
+from quantum_masala.core import Crystal, crystal_gen_supercell
 from quantum_masala.pseudo import UPFv2Data
 from quantum_masala.core import KPoints
 
@@ -30,55 +31,41 @@ si_oncv = UPFv2Data.from_file('Si', 'Si_ONCV_PBE-1.2.upf')
 si_atoms = AtomBasis.from_alat('Si', 28.085, si_oncv, reallat,
                                [0., 0., 0.], [0.25, 0.25, 0.25])
 
-crystal = Crystal(reallat, [si_atoms, ])  # Represents the crystal
+crystal = Crystal(reallat, [si_atoms, ])
+# Generating supercell
+supercell_dim = (5, 5, 5)
+print(f"Generating a {supercell_dim} supercell")
+crystal = crystal_gen_supercell(crystal, supercell_dim)
+
+reallat = crystal.reallat
 recilat = crystal.recilat
 
-print_crystal_info(crystal)
+kpts = KPoints.gamma(crystal)
 
-# Generating k-points from a Monkhorst Pack grid (reduced to the crystal's IBZ)
-mpgrid_shape = (4, 4, 4)
-mpgrid_shift = (True, True, True)
-kpts = KPoints.mpgrid(crystal, mpgrid_shape, mpgrid_shift)
-
-# Alternatively, k-points can be set from input list
-# kpts = KPoints.from_tpiba(crystal,
-#     [(-0.125,  0.125,  0.125), 0.0625],
-#     [(-0.375,  0.375, -0.125), 0.1875],
-#     [( 0.375, -0.375,  0.625), 0.1875],
-#     [( 0.125, -0.125,  0.375), 0.1875],
-#     [(-0.125,  0.625,  0.125), 0.1875],
-#     [( 0.625, -0.125,  0.875), 0.3750],
-#     [( 0.375,  0.125,  0.625), 0.3750],
-#     [(-0.125, -0.875,  0.125), 0.1875],
-#     [(-0.375,  0.375,  0.375), 0.0625],
-#     [( 0.375, -0.375,  1.125), 0.1875],
-# )
-
-print_kpoints(kpts)
-
-# -----Setting up G-Space of calculation-----
 ecut_wfn = 25 * RYDBERG
 # NOTE: In future version, hard grid (charge/pot) and smooth-grid (wavefun)
 # can be set independently
 ecut_rho = 4 * ecut_wfn
 grho = GSpace(crystal, ecut_rho)
-gwfn = grho
 
-print_gspc_info(grho, gwfn)
-
-# Initializing starting charge density from superposition of atomic charges
 rhoatomic = rho_generate_atomic(crystal.l_atoms[0], grho)
 
-# -----Spin-unpolarized calculation-----
 is_spin, is_noncolin = False, False
-rho_start = rhoatomic  # Atomic density as starting charge density for SCF Iteration
-numbnd = int(crystal.numel // 2)
+rho_start = rhoatomic
+numbnd = crystal.numel // 2
 
 occ = 'fixed'
 
-conv_thr = 1E-8 * RYDBERG
+conv_thr = 1E-6 * RYDBERG
 diago_thr_init = 1E-2 * RYDBERG
 
+print_crystal_info(crystal)
+pwcomm.world_comm.barrier()
+
+print_kpoints(kpts)
+pwcomm.world_comm.barrier()
+
+print_gspc_info(grho, grho)
 
 out = scf(crystal=crystal, kpts=kpts, rho_start=rho_start, symm_rho=True,
           numbnd=numbnd, is_spin=is_spin, is_noncolin=is_noncolin,
@@ -96,6 +83,7 @@ if pwcomm.world_rank == 0:
     print()
 
 print_bands(l_wfn_kgrp)
+
 
 if pwcomm.world_rank == 0:
     print("SCF Routine has exited")

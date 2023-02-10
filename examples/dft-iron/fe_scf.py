@@ -13,7 +13,6 @@ from quantum_masala.utils.dft_printers import (
     print_scf_status, print_bands
 )
 
-config.numkgrp = None  # Only k-point parallelization
 pwcomm = config.pwcomm
 
 
