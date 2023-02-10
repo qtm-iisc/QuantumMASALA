@@ -25,9 +25,6 @@ dependencies = [
     "scipy",
     "pyfftw",
     "spglib",
-    "pylibxc",
-    "h5py",
-    "lxml",
 ]
 
 [project.optional-dependencies]

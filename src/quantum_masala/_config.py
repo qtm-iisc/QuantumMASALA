@@ -125,7 +125,6 @@ class PWConfig:
 
     def parse_args(self):
         args = argparser.parse_args()
-        print(args)
         self.use_gpu = args.use_gpu
         self.logfile = args.log or args.logfile is not None
         if self.logfile:

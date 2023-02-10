@@ -46,9 +46,9 @@ def solver(ham: KSHam,
     numeig, numgk = evc_gk.shape
 
     # Buffer for solution and initializing it
-    evc = xp.array(evc_gk, dtype=xp.complex128)
-    evl = xp.empty(numeig, dtype=xp.complex128)
-    unconv_flag = xp.ones(numeig, dtype=xp.bool)
+    evc = xp.array(evc_gk, dtype='c16')
+    evl = xp.empty(numeig, dtype='c16')
+    unconv_flag = xp.ones(numeig, dtype='bool')
     nunconv = numeig
 
     evc[:] /= xp.linalg.norm(evc, axis=1, keepdims=True)
@@ -56,12 +56,12 @@ def solver(ham: KSHam,
 
     # Initializing Workspace
     ndim_max = config.davidson_numwork * numeig
-    psi = xp.empty((ndim_max, numgk), dtype=xp.complex128)
-    hpsi = xp.empty((ndim_max, numgk), dtype=xp.complex128)
-    ham_red = xp.zeros((ndim_max, ndim_max), dtype=xp.complex128)
-    ovl_red = xp.zeros((ndim_max, ndim_max), dtype=xp.complex128)
-    evc_red = xp.empty((numeig, ndim_max), dtype=xp.complex128, order='F')
-    evl_red = xp.empty(numeig, dtype=xp.complex128)
+    psi = xp.empty((ndim_max, numgk), dtype='c16')
+    hpsi = xp.empty((ndim_max, numgk), dtype='c16')
+    ham_red = xp.zeros((ndim_max, ndim_max), dtype='c16')
+    ovl_red = xp.zeros((ndim_max, ndim_max), dtype='c16')
+    evc_red = xp.empty((numeig, ndim_max), dtype='c16', order='F')
+    evl_red = xp.empty(numeig, dtype='c16')
 
     ndim = numeig
     psi[:ndim] = evc
