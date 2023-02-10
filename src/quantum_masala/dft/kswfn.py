@@ -67,10 +67,13 @@ class KSWavefun(Wavefun):
         if config.use_gpu:
             import cupy as cp
             evc_gk = cp.asarray(self.evc_gk)
-            occ = fac * cp.asarray(self.occ)
-            evc_r = self.fft_mod_gpu.g2r(evc_gk)**2
-            rho_r = cp.sum(cp.abs(evc_r) * cp.expand_dims(occ, axis=(-1, -2, -3)),
-                           axis=1)
+            rho_r = cp.zeros((self.numspin, *self.gspc.grid_shape), dtype='c16')
+            for ispin in range(self.numspin):
+                for ipsi in range(sl.start, sl.stop):
+                    rho_r[ispin] += fac * self.occ[ispin, ipsi] * cp.abs(
+                            self.fft_mod_gpu.g2r(evc_gk[ispin, ipsi])**2
+                            )
+
             rho.r[:] = cp.asnumpy(rho_r)
         else:
             for ispin in range(self.numspin):
