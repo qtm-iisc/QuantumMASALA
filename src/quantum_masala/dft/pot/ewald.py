@@ -45,10 +45,9 @@ def ewald_compute(crystal: Crystal, gspc: GSpace) -> float:
         (3, 1, -1)
     )
     qij = l_charges.reshape(-1, 1) * l_charges.reshape(1, -1)
-    ni = np.floor(4 / beta / np.linalg.norm(latvec, axis=1))
+    ni = np.floor(4 / beta / np.linalg.norm(latvec, axis=1)).astype('i8') + 2
 
-    ni = [int(n) for n in ni]
-    xi = [np.fft.fftfreq(n, 1 / n).astype("i4") if n != 0 else [0, ]
+    xi = [np.fft.fftfreq((2*n + 1), 1/(2*n + 1)).astype("i4")
           for n in ni]
     N = np.array(np.meshgrid(*xi, indexing='ij')).reshape((3, -1, 1, 1))
     Rij_cryst = N + np.expand_dims(rij_cryst, axis=1)
