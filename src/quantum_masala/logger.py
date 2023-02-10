@@ -35,17 +35,14 @@ def logger_set_filehandle(file_name: str):
     logger = logging.getLogger('QTMPy')
     if logger.hasHandlers():
         pw_logger.warn("'pw_logger' has handlers already initialized.")
-    if file_name is not None:
-        if MPI_WORLD_RANK == 0:
-            logfile_path = Path(file_name)
-            if logfile_path.is_file():
-                logfile_path.rename(
-                    logfile_path.with_suffix(logfile_path.suffix + '.old')
-                )
-    else:
-        file_name = f'QTMPy_{strftime("%Y%m%d-%H%M%S")}.log'
-    if MPI_WORLD_SIZE > 1:
-        file_name = COMM_WORLD.bcast(file_name)
+
+    if MPI_WORLD_RANK == 0:
+        logfile_path = Path(file_name)
+        if logfile_path.is_file():
+            logfile_path.rename(
+                logfile_path.with_suffix(
+                    f'.pre{strftime("%Y%m%d-%H%M%S")}' + logfile_path.suffix
+                ))
 
     logger_file = logging.FileHandler(file_name)
     logger_file.setLevel(logging.DEBUG)

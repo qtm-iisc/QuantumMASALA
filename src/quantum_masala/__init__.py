@@ -7,3 +7,5 @@ __all__ = ['core',
            'config', 'pw_logger',
            'constants'
            ]
+
+config.parse_args()

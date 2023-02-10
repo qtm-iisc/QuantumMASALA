@@ -98,7 +98,6 @@ class KPoints:
                is_time_reversal: bool = True,
                ):
         if use_symm:
-
             ir_reciprocal_mesh = get_stabilized_reciprocal_mesh(
                 grid_shape,
                 crystal.symm.reallat_rot,

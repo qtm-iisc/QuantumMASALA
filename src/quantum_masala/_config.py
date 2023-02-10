@@ -1,11 +1,24 @@
-# TODO: Refactor this where fft_backend is a property with setters
 from os import getenv
+from argparse import ArgumentParser
 from importlib.util import find_spec
 
 from dataclasses import dataclass
 from typing import Optional, Literal
 
 RNG_DEFAULT_SEED = 489
+LOGFILE_DEFAULT_DIR = './qtmpy.log'
+
+argparser = ArgumentParser()
+argparser.add_argument('-nkgrp', '-nk', type=int, default=None,
+                       help='number of k groups to split MPI processes across')
+argparser.add_argument('--use-gpu', action='store_true',
+                       help="enable gpu acceleration (if applicable). "
+                            "requires 'cupy' library to be installed")
+argparser.add_argument('-log', action='store_true',
+                       help='enable event logging to file')
+argparser.add_argument('--logfile', action='store', type=str,
+                       help=f'name of the logfile. '
+                            f'default is {LOGFILE_DEFAULT_DIR}')
 
 
 @dataclass
@@ -42,7 +55,7 @@ class PWConfig:
     tddft_prop_method: Literal['etrs', 'splitoperator'] = 'etrs'
 
     logfile: bool = False
-    logfile_name: Optional[str] = 'QTMPy.log'
+    logfile_name: str = LOGFILE_DEFAULT_DIR
 
     _rng_seed: int = RNG_DEFAULT_SEED
 
@@ -62,15 +75,14 @@ class PWConfig:
         return self._numkgrp
 
     @numkgrp.setter
-    def numkgrp(self, numkgrp: Optional[int]):
+    def numkgrp(self, numkgrp: int):
+        print('setting numkgrp: ', numkgrp)
         numproc = 1
         if find_spec("mpi4py") is not None:
             from mpi4py.MPI import COMM_WORLD
             numproc = COMM_WORLD.Get_size()
 
-        if numkgrp is None:
-            numkgrp = numproc
-        elif not isinstance(numkgrp, int) or numkgrp < 1:
+        if not isinstance(numkgrp, int) or numkgrp < 1:
             raise ValueError("'numkgrp' must be a positive integer. "
                              f"Got {numkgrp} (type '{type(numkgrp)}')")
         if numkgrp > numproc or numproc % numkgrp != 0:
@@ -83,11 +95,7 @@ class PWConfig:
         from .core.pwcomm import PWComm
         self._pwcomm = PWComm(self._numkgrp)
 
-        from quantum_masala import pw_logger
-        from quantum_masala.logger import logger_set_filehandle
-        if self.logfile:
-            logger_set_filehandle(self.logfile_name)
-
+        from .logger import pw_logger
         pw_logger.log_message('world_rank/world_size - kgrp_rank/kgrp_size: '
                               f'{self.pwcomm.world_rank}/{self._pwcomm.world_size} - '
                               f'{self.pwcomm.kgrp_rank}/{self._pwcomm.kgrp_size}')
@@ -100,18 +108,35 @@ class PWConfig:
     def use_gpu(self, use_gpu: bool):
         if not isinstance(use_gpu, bool):
             raise TypeError(f"'use_gpu' must be a boolean. Got '{type(use_gpu)}'")
-        if use_gpu and find_spec('cupy') is None:
-            raise ModuleNotFoundError(
-                "'CuPy' cannot be located. 'use_gpu' can be set to 'True' only "
-                "when 'CuPy' is installed."
-            )
+        if use_gpu:
+            try:
+                import cupy as cp
+                _ = cp.zeros((10, 10), dtype='c16')
+            except Exception as e:
+                raise RuntimeError(
+                    "Error encountered when importing cupy and creating a test array. "
+                    "Refer to exception above for further info."
+                ) from e
         self._use_gpu = use_gpu
 
     @property
     def pwcomm(self):
-        if self._numkgrp is None:
-            from quantum_masala import pw_logger
-            from quantum_masala.logger import logger_set_filehandle
+        return self._pwcomm
+
+    def parse_args(self):
+        args = argparser.parse_args()
+        print(args)
+        self.use_gpu = args.use_gpu
+        self.logfile = args.log or args.logfile is not None
+        if self.logfile:
+            if args.logfile is None:
+                self.logfile_name = LOGFILE_DEFAULT_DIR
+            else:
+                self.logfile_name = args.logfile
+
+        numkgrp = args.nkgrp
+        if numkgrp is None:
+            from .logger import pw_logger, logger_set_filehandle
             if self.logfile:
                 logger_set_filehandle(self.logfile_name)
 
@@ -120,14 +145,16 @@ class PWConfig:
                 from mpi4py.MPI import COMM_WORLD
                 numproc = COMM_WORLD.Get_size()
 
-            pw_logger.warn("'numkgrp' has not bee initialized. Setting it to "
-                           f"{numproc} (# of processes in COMM_WORLD).\n"
-                           "If you want to enable band distribution, please specify "
-                           "the appropriate # of k-groups by setting "
-                           "'quantum_masala.config.numkgrp'")
-            self.numkgrp = numproc
-
-        return self._pwcomm
+            if numproc != 1:
+                pw_logger.warn(
+                    f"'numkgrp' has not been specified. Setting it to {numproc} "
+                    "(# of processes in COMM_WORLD).\n"
+                    "To enable band distribution, please specify the appropriate "
+                    "number of k-groups using command line option '-nk'/'-nkgrp' "
+                    "or setting 'quantum_masala.config.numkgrp'"
+                )
+            numkgrp = numproc
+        self.numkgrp = numkgrp
 
 
 config = PWConfig()
