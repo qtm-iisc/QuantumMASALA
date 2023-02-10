@@ -25,7 +25,7 @@ class CrystalSymm:
 
         if config.symm_check_supercell:
             idx_identity = np.nonzero(
-                np.all(reallat_symm['rotations'] - np.eye(3, dtype='i8'), axis=(1, 2))
+                np.all(reallat_symm['rotations'] == np.eye(3, dtype='i8'), axis=(1, 2))
             )[0]
             if len(idx_identity) != 1:
                 idx_notrans = np.nonzero(
