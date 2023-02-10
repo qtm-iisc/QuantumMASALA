@@ -1,6 +1,6 @@
 __all__ = ['PyFFTWLibWrapper']
-import numpy as np
 import pyfftw
+import numpy as np
 
 from quantum_masala import config
 from ..base import FFTBackend

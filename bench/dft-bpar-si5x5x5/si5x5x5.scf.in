@@ -14,7 +14,7 @@
    nat              = 250
 /
 &ELECTRONS
-   conv_thr         = 1e-8
+   conv_thr         = 1e-6
    diago_full_acc   = .true.
 /
 &IONS

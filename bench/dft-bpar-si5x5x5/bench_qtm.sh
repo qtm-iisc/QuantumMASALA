@@ -10,4 +10,4 @@ for pow in $(seq 1 1 5); do
 done
 
 echo "Running QTM in GPU"
-python si5x5x5_scf.py --use-gpu > $nproc.py.out
+python si5x5x5_scf.py --use-gpu > gpu.py.out

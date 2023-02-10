@@ -76,7 +76,6 @@ class PWConfig:
 
     @numkgrp.setter
     def numkgrp(self, numkgrp: int):
-        print('setting numkgrp: ', numkgrp)
         numproc = 1
         if find_spec("mpi4py") is not None:
             from mpi4py.MPI import COMM_WORLD
