@@ -9,7 +9,7 @@ for pow in $(seq 0 1 4); do
     nproc=$((2 ** pow))
 
     echo "Running QTM in $nproc processes"
-    mpirun -np $nproc python -u si5x5x5_scf.py -nk 1 > $nproc.py.out
+    mpirun -np $nproc python -u si5x5x5_scf.py -nk 1 > $nproc-$OMP_NUM_THREADSs.py.out
 done
 
 export OMP_NUM_THREADS=2
@@ -18,5 +18,5 @@ for pow in $(seq 0 1 4); do
     nproc=$((2 ** pow))
 
     echo "Running QTM in $nproc processes"
-    mpirun -np $nproc python -u si5x5x5_scf.py -nk 1> $nproc.py.out
+    mpirun -np $nproc python -u si5x5x5_scf.py -nk 1 > $nproc-$OMP_NUM_THREADS.py.out
 done

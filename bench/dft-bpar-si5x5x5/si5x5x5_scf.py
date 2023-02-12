@@ -15,6 +15,8 @@ from quantum_masala.utils.dft_printers import (
     print_scf_status, print_bands
 )
 
+print("Setting numkgrp=1")
+config.numkgrp = 1  # Only one k-point, so parallelize across bands
 pwcomm = config.pwcomm
 
 start_time = perf_counter()
