@@ -3,7 +3,7 @@ from quantum_masala.constants import RYDBERG, ELECTRONVOLT
 from quantum_masala.core import RealLattice, AtomBasis
 from quantum_masala.core import Crystal, crystal_gen_supercell
 from quantum_masala.pseudo import UPFv2Data
-from quantum_masala.core import KPoints
+from quantum_masala.core import KList
 
 from quantum_masala.core import GSpace
 from quantum_masala.pseudo import rho_generate_atomic

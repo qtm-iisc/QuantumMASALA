@@ -2,7 +2,7 @@ from quantum_masala import config, pw_logger
 from quantum_masala.constants import RYDBERG, ELECTRONVOLT
 from quantum_masala.core import RealLattice, AtomBasis, Crystal
 from quantum_masala.pseudo import UPFv2Data
-from quantum_masala.core import KPoints
+from quantum_masala.core import KList
 
 from quantum_masala.core import GSpace
 from quantum_masala.pseudo import rho_generate_atomic
