@@ -118,7 +118,7 @@ class PWTimer:
                     return out
                 return call_func
         else:
-            def timer_(func):
+            def timer(func):
                 def call_func(*args, **kwargs):
                     return func(*args, **kwargs)
                 return call_func

@@ -21,6 +21,14 @@ argparser.add_argument('--logfile', action='store', type=str,
                             f'default is {LOGFILE_DEFAULT_DIR}')
 
 
+def _get_mpi_world_size():
+    size = 1
+    if find_spec('mpi4py') is not None:
+        from mpi4py.MPI import COMM_WORLD
+        size = COMM_WORLD.Get_size()
+    return size
+
+
 @dataclass
 class PWConfig:
     _numkgrp: int = None
@@ -76,10 +84,7 @@ class PWConfig:
 
     @numkgrp.setter
     def numkgrp(self, numkgrp: int):
-        numproc = 1
-        if find_spec("mpi4py") is not None:
-            from mpi4py.MPI import COMM_WORLD
-            numproc = COMM_WORLD.Get_size()
+        numproc = _get_mpi_world_size()
 
         if not isinstance(numkgrp, int) or numkgrp < 1:
             raise ValueError("'numkgrp' must be a positive integer. "
@@ -108,6 +113,11 @@ class PWConfig:
         if not isinstance(use_gpu, bool):
             raise TypeError(f"'use_gpu' must be a boolean. Got '{type(use_gpu)}'")
         if use_gpu:
+            if _get_mpi_world_size() != 1:
+                raise NotImplementedError(
+                    "GPU Implementation does not support running across"
+                    "multiple MPI Processes. Try running with one MPI Process"
+                    )
             try:
                 import cupy as cp
                 _ = cp.zeros((10, 10), dtype='c16')
@@ -123,7 +133,7 @@ class PWConfig:
         return self._pwcomm
 
     def parse_args(self):
-        args = argparser.parse_args()
+        args, _ = argparser.parse_known_args()
         self.use_gpu = args.use_gpu
         self.logfile = args.log or args.logfile is not None
         if self.logfile:
@@ -138,10 +148,7 @@ class PWConfig:
             if self.logfile:
                 logger_set_filehandle(self.logfile_name)
 
-            numproc = 1
-            if find_spec("mpi4py") is not None:
-                from mpi4py.MPI import COMM_WORLD
-                numproc = COMM_WORLD.Get_size()
+            numproc = _get_mpi_world_size()
 
             if numproc != 1:
                 pw_logger.warn(
