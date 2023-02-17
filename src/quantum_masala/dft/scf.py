@@ -6,7 +6,7 @@ import numpy as np
 
 from quantum_masala.core import (
     Crystal,
-    KPoints, kpts_distribute,
+    KList, kpts_distribute,
     GSpace, GField, RField,
     Wavefun,
     rho_check, rho_normalize,
@@ -56,7 +56,7 @@ class IterPrinter(Protocol):
 
 
 @pw_logger.time('dft:scf')
-def scf(crystal: Crystal, kpts: KPoints,
+def scf(crystal: Crystal, kpts: KList,
         rho_start: GField, symm_rho: bool,
         numbnd: int, is_spin: bool, is_noncolin: bool,
         wfn_init: Optional[Callable[[KSWavefun, int], None]],

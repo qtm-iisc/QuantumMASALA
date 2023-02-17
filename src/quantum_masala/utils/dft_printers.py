@@ -1,7 +1,7 @@
 from numpy import array2string
 from sys import maxsize, stdout
 
-from quantum_masala.core import Crystal, GSpace, KPoints
+from quantum_masala.core import Crystal, GSpace, KList
 from quantum_masala.constants import RYDBERG, ELECTRONVOLT
 from quantum_masala.dft import KSWavefun
 from quantum_masala.dft.scf import EnergyData
@@ -65,9 +65,9 @@ def print_crystal_info(crystal: Crystal):
 
 
 @print_worldroot
-def print_kpoints(kpts: KPoints):
+def print_kpoints(kpts: KList):
     recilat = kpts.recilat
-    print(f"Number of k-points: {kpts.numk}")
+    print(f"Number of k-points: {len(kpts)}")
     print(f"Cartesian coordinates of k-points in units of tpiba")
     for i, (k_cryst, k_weight) in enumerate(kpts):
         k_tpiba = recilat.cryst2tpiba(k_cryst)

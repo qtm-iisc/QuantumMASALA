@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ["KPoints", "kpts_distribute"]
+__all__ = ["KList", "kpts_distribute"]
 from typing import Union, Optional
 import numpy as np
 from spglib import get_stabilized_reciprocal_mesh
@@ -17,34 +17,47 @@ def _sanitize_weights(weights: list[float]):
     return weights
 
 
-class KPoints:
+class KList:
 
     def __init__(self, recilat: ReciprocalLattice, numkpts: int, cryst: np.ndarray,
                  weights: np.ndarray):
         self.recilat = recilat
-        self.numk = numkpts
-        self.cryst = np.empty((3, self.numk), dtype='f8')
-        self.weights = np.empty(self.numk, dtype='f8')
+        if cryst.shape[0] != weights.shape[0]:
+            raise ValueError("length of 'cryst' and 'weights' do not match. "
+                             f"len(cryst)={len(cryst)}, len(weights)={len(weights)}")
+        self.len_ = cryst.shape[0]
+        if weights.ndim != 1:
+            raise ValueError(f"'weights' must be a 1d array. got {weights.ndim}")
+        if cryst.ndim != 2 or cryst.shape[1] != 3:
+            raise ValueError("'cryst' must be a 2D numpy array representing"
+                             "the list of k-points in crystal coordinates"
+                             f"located in 3D space. got cryst.shape={cryst.shape}")
+
+        self.cryst = np.empty((self.len_, 3), dtype='f8')
+        self.weights = np.empty(self.len_, dtype='f8')
         self.cryst[:] = cryst
         self.weights[:] = weights
 
+    def __len__(self):
+        return self.len_
+
     @property
     def cart(self):
-        return self.recilat.cryst2cart(self.cryst)
+        return self.recilat.cryst2cart(self.cryst, axis=1)
 
     @property
     def tpiba(self):
-        return self.recilat.cryst2tpiba(self.cryst)
+        return self.recilat.cryst2tpiba(self.cryst, axis=1)
 
-    def __getitem__(self, item) -> Union[KPoints,
+    def __getitem__(self, item) -> Union[KList,
                                          tuple[tuple[float, float, float], float]]:
         if isinstance(item, slice):
             cryst = self.cryst[:, item]
             weights = self.weights[item]
             numkpts = len(weights)
-            return KPoints(self.recilat, numkpts, cryst, weights)
+            return KList(self.recilat, numkpts, cryst, weights)
         elif isinstance(item, int):
-            return tuple(self.cryst[:, item]), self.weights[item]
+            return tuple(self.cryst[item]), self.weights[item]
         else:
             raise TypeError(f"indices must be integers or slices, not {type(item)}")
 
@@ -58,7 +71,7 @@ class KPoints:
         recilat = crystal.recilat
         cryst = recilat.cart2cryst(cart, axis=1)
         weights = _sanitize_weights(weights)
-        return cls(recilat, len(cryst), cryst.T, weights)
+        return cls(recilat, len(cryst), cryst, weights)
 
     @classmethod
     def from_cryst(cls, crystal, *l_kpts_cryst):
@@ -70,7 +83,7 @@ class KPoints:
         recilat = crystal.recilat
         cryst = np.array(cryst)
         weights = _sanitize_weights(weights)
-        return cls(recilat, len(cryst), cryst.T, weights)
+        return cls(recilat, len(cryst), cryst, weights)
 
     @classmethod
     def from_tpiba(cls, crystal, *l_kpts_tpiba):
@@ -82,7 +95,7 @@ class KPoints:
         recilat = crystal.recilat
         cryst = recilat.tpiba2cryst(tpiba, axis=1)
         weights = _sanitize_weights(weights)
-        return cls(recilat, len(cryst), cryst.T, weights)
+        return cls(recilat, len(cryst), cryst, weights)
 
     @classmethod
     def gamma(cls, crystal: Crystal):
@@ -126,14 +139,14 @@ class KPoints:
             weights = np.ones(numk) / numk
 
         weights = _sanitize_weights(weights)
-        return cls(crystal.recilat, len(k_cryst), k_cryst.T, weights)
+        return cls(crystal.recilat, len(k_cryst), k_cryst, weights)
 
 
-def kpts_distribute(kpts: KPoints, round_robin: bool = False,
+def kpts_distribute(kpts: KList, round_robin: bool = False,
                     return_indices: bool = True
-                    ) -> Union[KPoints, (KPoints, list[int])]:
+                    ) -> Union[KList, (KList, list[int])]:
     pwcomm = config.pwcomm
-    numkpts = kpts.numk
+    numkpts = len(kpts)
 
     numkgrp, idxkgrp = pwcomm.numkgrp, pwcomm.idxkgrp
     if numkpts < pwcomm.numkgrp:

@@ -2,7 +2,7 @@ __all__ = ['KSWavefun', 'wfn_generate', 'wfn_gen_rho']
 from typing import Optional
 import numpy as np
 
-from quantum_masala.core import GSpace, KPoints, Wavefun, RField, GField
+from quantum_masala.core import GSpace, KList, Wavefun, RField, GField
 from quantum_masala.core.pwcomm import KgrpIntracomm
 from quantum_masala import config, pw_logger
 
@@ -88,7 +88,7 @@ class KSWavefun(Wavefun):
         return rho
 
 
-def wfn_generate(gspc: GSpace, kpts: KPoints,
+def wfn_generate(gspc: GSpace, kpts: KList,
                  numbnd: int, is_spin: bool, is_noncolin: bool,
                  idxkpts: Optional[list[int]] = None):
     """Generates ``Wavefun`` instances for each k-point in ``kpts``.
@@ -97,7 +97,7 @@ def wfn_generate(gspc: GSpace, kpts: KPoints,
     Parameters
     ----------
     gspc : GSpace
-    kpts : KPoints
+    kpts : KList
     numspin : int
     numbnd : int
     noncolin : bool
@@ -114,7 +114,7 @@ def wfn_generate(gspc: GSpace, kpts: KPoints,
 
     l_wfn = []
     if idxkpts is None:
-        idxkpts = range(kpts.numk)
+        idxkpts = range(len(kpts))
     for idxk in idxkpts:
         l_wfn.append(KSWavefun(gspc, *kpts[idxk], numbnd, is_spin, is_noncolin))
 
