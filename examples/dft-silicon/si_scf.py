@@ -38,10 +38,10 @@ print_crystal_info(crystal)
 # Generating k-points from a Monkhorst Pack grid (reduced to the crystal's IBZ)
 mpgrid_shape = (4, 4, 4)
 mpgrid_shift = (True, True, True)
-kpts = KPoints.mpgrid(crystal, mpgrid_shape, mpgrid_shift)
+kpts = KList.mpgrid(crystal, mpgrid_shape, mpgrid_shift)
 
 # Alternatively, k-points can be set from input list
-# kpts = KPoints.from_tpiba(crystal,
+# kpts = KList.from_tpiba(crystal,
 #     [(-0.125,  0.125,  0.125), 0.0625],
 #     [(-0.375,  0.375, -0.125), 0.1875],
 #     [( 0.375, -0.375,  0.625), 0.1875],

@@ -16,7 +16,7 @@ from quantum_masala.utils.dft_printers import (
 )
 
 config.numkgrp = 1  # Only 1 kgrp; Band parallelization
-config.use_gpu = True
+config.use_gpu = False
 pwcomm = config.pwcomm
 
 start_time = perf_counter()
@@ -35,14 +35,14 @@ si_atoms = AtomBasis.from_alat('Si', 28.085, si_oncv, reallat,
 
 crystal = Crystal(reallat, [si_atoms, ])
 # Generating supercell
-supercell_dim = (4, 4, 4)
+supercell_dim = (3, 3, 3)
 print(f"Generating a {supercell_dim} supercell")
 crystal = crystal_gen_supercell(crystal, supercell_dim)
 
 reallat = crystal.reallat
 recilat = crystal.recilat
 
-kpts = KPoints.gamma(crystal)
+kpts = KList.gamma(crystal)
 
 ecut_wfn = 25 * RYDBERG
 # NOTE: In future version, hard grid (charge/pot) and smooth-grid (wavefun)

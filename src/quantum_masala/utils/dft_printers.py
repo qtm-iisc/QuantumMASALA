@@ -56,7 +56,7 @@ def print_crystal_info(crystal: Crystal):
         print(f"    Mass    : {typ.mass:5.2f}")
         print(f"    Valence : {typ.valence:5.2f}")
         print(f"    Pseudpot: {typ.ppdata.filename}")
-        print(f"               MD5:{typ.ppdata.md5_checksum}")
+        print(f"              MD5: {typ.ppdata.md5_checksum}")
         print(f"    Coordinates (in units of alat)")
         for j, pos in enumerate(typ.alat.T):
             print(f"        {j+1:3d} - ({pos[0]:>9.5f}, {pos[1]:>9.5f}, {pos[2]:>9.5f})")
@@ -94,7 +94,7 @@ def print_gspc_info(grho: GSpace, gwfn: GSpace):
 def print_scf_status(idxiter: int, scf_runtime: float,
                      scf_converged: bool, e_error: float,
                      diago_thr: float, diago_avgiter: float,
-                     en: EnergyData):
+                     en: EnergyData, **kwargs):
     print(f"Iteration # {idxiter + 1}, Run Time: {scf_runtime:5.1f} sec")
     print(f"Convergence Status   : "
           f"{'NOT' if not scf_converged else ''} Converged")

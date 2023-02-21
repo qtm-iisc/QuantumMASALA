@@ -19,7 +19,7 @@ def _sanitize_weights(weights: list[float]):
 
 class KList:
 
-    def __init__(self, recilat: ReciprocalLattice, numkpts: int, cryst: np.ndarray,
+    def __init__(self, recilat: ReciprocalLattice, cryst: np.ndarray,
                  weights: np.ndarray):
         self.recilat = recilat
         if cryst.shape[0] != weights.shape[0]:
@@ -52,10 +52,9 @@ class KList:
     def __getitem__(self, item) -> Union[KList,
                                          tuple[tuple[float, float, float], float]]:
         if isinstance(item, slice):
-            cryst = self.cryst[:, item]
+            cryst = self.cryst[item]
             weights = self.weights[item]
-            numkpts = len(weights)
-            return KList(self.recilat, numkpts, cryst, weights)
+            return KList(self.recilat, cryst, weights)
         elif isinstance(item, int):
             return tuple(self.cryst[item]), self.weights[item]
         else:
@@ -71,7 +70,7 @@ class KList:
         recilat = crystal.recilat
         cryst = recilat.cart2cryst(cart, axis=1)
         weights = _sanitize_weights(weights)
-        return cls(recilat, len(cryst), cryst, weights)
+        return cls(recilat, cryst, weights)
 
     @classmethod
     def from_cryst(cls, crystal, *l_kpts_cryst):
@@ -83,7 +82,7 @@ class KList:
         recilat = crystal.recilat
         cryst = np.array(cryst)
         weights = _sanitize_weights(weights)
-        return cls(recilat, len(cryst), cryst, weights)
+        return cls(recilat, cryst, weights)
 
     @classmethod
     def from_tpiba(cls, crystal, *l_kpts_tpiba):
@@ -95,12 +94,12 @@ class KList:
         recilat = crystal.recilat
         cryst = recilat.tpiba2cryst(tpiba, axis=1)
         weights = _sanitize_weights(weights)
-        return cls(recilat, len(cryst), cryst, weights)
+        return cls(recilat, cryst, weights)
 
     @classmethod
     def gamma(cls, crystal: Crystal):
-        return cls(crystal.recilat, 1,
-                   np.zeros((3, 1), dtype='f8'),
+        return cls(crystal.recilat,
+                   np.zeros((1, 3), dtype='f8'),
                    np.ones(1, dtype='f8'))
 
     @classmethod
@@ -139,7 +138,7 @@ class KList:
             weights = np.ones(numk) / numk
 
         weights = _sanitize_weights(weights)
-        return cls(crystal.recilat, len(k_cryst), k_cryst, weights)
+        return cls(crystal.recilat, k_cryst, weights)
 
 
 def kpts_distribute(kpts: KList, round_robin: bool = False,
