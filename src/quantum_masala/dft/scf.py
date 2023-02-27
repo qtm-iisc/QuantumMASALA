@@ -1,26 +1,27 @@
 __all__ = ["scf", "EnergyData", "IterPrinter"]
 from typing import Optional, Callable, Any, Protocol
+
 from dataclasses import dataclass
 from time import perf_counter
 import numpy as np
 
 from quantum_masala.core import (
     Crystal,
-    KList, kpts_distribute,
+    KList, klist_distribute,
     GSpace, GField, RField,
     Wavefun,
-    rho_check, rho_normalize,
+    rho_check, rho_normalize, rho_atomic
 )
 from quantum_masala.pseudo import (
-    loc_generate, NonlocGenerator
+    loc_generate_pot_rhocore, NonlocGenerator
 )
 from quantum_masala.dft.kswfn import (
     KSWavefun,
     wfn_generate, wfn_gen_rho
 )
 from quantum_masala.dft.pot import (
-    hartree_compute, xc_compute,
-    ewald_compute,
+    hartree_compute, ewald_compute,
+    xc_compute, get_libxc_func, check_libxc_func,
 )
 
 from quantum_masala.dft.eigsolve import solve_wfn
@@ -29,6 +30,7 @@ from quantum_masala.dft.occ import fixed, smear
 
 from quantum_masala.dft.mix import *
 
+from quantum_masala.constants import RYDBERG
 from quantum_masala import config, pw_logger
 
 
@@ -56,24 +58,30 @@ class IterPrinter(Protocol):
 
 
 @pw_logger.time('dft:scf')
-def scf(crystal: Crystal, kpts: KList,
-        rho_start: GField, symm_rho: bool,
+def scf(crystal: Crystal, kpts: KList, gspc_rho: GSpace, gspc_wfn: GSpace,
         numbnd: int, is_spin: bool, is_noncolin: bool,
-        wfn_init: Optional[Callable[[KSWavefun, int], None]],
-        xc_params: dict[str, Any],
+        symm_rho: bool = True,
+        rho_start: Optional[GField] = None, mag_start: Optional[list[float]] = None,
+        wfn_init: Optional[Callable[[KSWavefun, int], None]] = None,
+        libxc_func: Optional[tuple[str, str]] = None,
         occ: str = 'smear', smear_typ: str = 'gauss', e_temp: float = 1E-3,
-        conv_thr: float = 1E-6, max_iter: int = 100,
-        diago_thr_init: float = 1E-2,
+        conv_thr: float = 1E-6*RYDBERG, max_iter: int = 100,
+        diago_thr_init: float = 1E-2*RYDBERG,
         iter_printer: Optional[IterPrinter] = None,
         mix_beta: float = 0.7, mix_dim: int = 8,
         ):
     start_time = perf_counter()
     pwcomm = config.pwcomm
-    numel = crystal.numel
+    if gspc_rho != gspc_wfn:
+        raise NotImplementedError("Calculation with different meshgrids not supported")
 
-    rho_check(rho_start, is_spin)
-    rho_start = rho_normalize(rho_start, numel)
-    rho = rho_start.copy()
+    numel = crystal.numel
+    if rho_start is None:
+        rho = rho_atomic(crystal, gspc_rho, is_spin, mag_start)
+    else:
+        rho_check(rho_start, gspc_rho, is_spin)
+        rho_start = rho_normalize(rho_start, numel)
+        rho = rho_start.copy()
 
     if config.mixing_method == 'genbroyden':
         mixmod = GenBroyden(rho, mix_beta, mix_dim)
@@ -84,14 +92,13 @@ def scf(crystal: Crystal, kpts: KList,
     else:
         raise ValueError('abc')
 
-    grho = rho.gspc
-    gwfn = grho
+    gspc_rho = rho.gspc
+    gspc_wfn = gspc_rho
 
-    kpts_kgrp, idxkpts_kgrp = kpts_distribute(kpts, return_indices=True,
-                                              round_robin=False)
+    kpts_kgrp, idxkpts_kgrp = klist_distribute(kpts, round_robin=False, return_indices=True)
     numkpts_kgrp = len(idxkpts_kgrp)
 
-    l_wfn_kgrp = wfn_generate(gwfn, kpts, numbnd, is_spin, is_noncolin,
+    l_wfn_kgrp = wfn_generate(gspc_wfn, kpts, numbnd, is_spin, is_noncolin,
                               idxkpts_kgrp)
     if wfn_init is None:
         def wfn_init(wfn_, ikpt_):
@@ -100,14 +107,14 @@ def scf(crystal: Crystal, kpts: KList,
     for ikpt in range(numkpts_kgrp):
         wfn_init(l_wfn_kgrp[ikpt], idxkpts_kgrp[ikpt])
 
-    v_ion, rho_core = GField.zeros(grho, 1), GField.zeros(grho, 1)
+    v_ion, rho_core = GField.zeros(gspc_rho, 1), GField.zeros(gspc_rho, 1)
 
     l_nloc = []
     for sp in crystal.l_atoms:
-        v_ion_typ, rho_core_typ = loc_generate(sp, grho)
+        v_ion_typ, rho_core_typ = loc_generate_pot_rhocore(sp, gspc_rho)
         v_ion += v_ion_typ
         rho_core += rho_core_typ
-        l_nloc.append(NonlocGenerator(sp, gwfn))
+        l_nloc.append(NonlocGenerator(sp, gspc_wfn))
     v_ion = v_ion.to_rfield()
 
     rho_out: GField
@@ -121,13 +128,18 @@ def scf(crystal: Crystal, kpts: KList,
     elif occ == 'fixed':
         en.HO_level, en.LU_level = 0, 0
 
+    if libxc_func is None:
+        libxc_func = get_libxc_func(crystal)
+    else:
+        check_libxc_func(libxc_func)
+
     def compute_pot_local(rho, rho_core):
         nonlocal v_hart, v_xc, v_loc
         v_hart, en.hartree = hartree_compute(rho)
-        v_xc, en.xc = xc_compute(rho, rho_core, **xc_params)
+        v_xc, en.xc = xc_compute(rho, rho_core, *libxc_func)
         v_loc = v_ion + v_hart + v_xc
-        # if grho != gwfn, then transformation to fine grid (gwfn) must be done here
-        v_loc *= 1 / np.prod(gwfn.grid_shape)
+        # if gspc_rho != gspc_wfn, then transformation to fine grid (gspc_wfn) must be done here
+        v_loc *= 1 / np.prod(gspc_wfn.grid_shape)
         v_loc.Bcast()
         return v_loc
 
@@ -139,7 +151,7 @@ def scf(crystal: Crystal, kpts: KList,
     def gen_ham(wfn: KSWavefun):
         return KSHam(wfn.gkspc, wfn.is_spin, wfn.is_noncolin, v_loc, l_nloc)
 
-    en.ewald = ewald_compute(crystal, grho)
+    en.ewald = ewald_compute(crystal, gspc_rho)
 
     def compute_energies():
         rho_r = rho.to_rfield()
@@ -172,7 +184,7 @@ def scf(crystal: Crystal, kpts: KList,
 
         prec_params = {}
         if config.eigsolve_method == 'davidson':
-            prec_params['vbare_g0'] = np.sum(v_ion.r) / np.prod(grho.grid_shape)
+            prec_params['vbare_g0'] = np.sum(v_ion.r) / np.prod(gspc_rho.grid_shape)
 
         diago_avgiter = 0
         for _wfn in l_wfn_kgrp:
