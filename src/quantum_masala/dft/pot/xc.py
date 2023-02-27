@@ -1,10 +1,42 @@
+__all__ = ['get_libxc_func', 'check_libxc_func', 'xc_compute']
 import numpy as np
 
 from pylibxc import LibXCFunctional
+from pylibxc.util import xc_available_functional_names
 import pylibxc.flags as xc_flags
 
-from quantum_masala.core import GField, RField, rho_check, deloper
-from quantum_masala import config, pw_logger
+from quantum_masala.core import Crystal, GField, RField, rho_check, deloper
+from quantum_masala import pw_logger
+
+
+def get_libxc_func(crystal: Crystal) -> tuple[str, str]:
+    libxc_func = None
+    for typ in crystal.l_atoms:
+        ppdata = typ.ppdata
+        if ppdata.libxc_func is None:
+            pw_logger.warn(
+                "could not find the correct libxc functional names for "
+                f"species '{typ.label}' (Pseudopotential: '{ppdata.filename}').\n"
+            )
+            continue
+        if libxc_func is None:
+            libxc_func = ppdata.libxc_func
+        elif ppdata.libxc_func != libxc_func:
+            raise ValueError(
+                "XC functionals is not identical across all species. "
+                "Manually specify the functionals using libxc functional names."
+            )
+
+    return libxc_func
+
+
+def check_libxc_func(libxc_func):
+    l_avail_funcname = xc_available_functional_names()
+    for funcname in libxc_func:
+        if funcname not in l_avail_funcname:
+            raise ValueError(
+                f"XC Functional '{funcname}' is not avaialable in libxc."
+            )
 
 
 def _get_sigma(rhoaux: GField) -> np.ndarray:
@@ -76,10 +108,8 @@ def xc_compute(rho: GField, rhocore: GField,
     numspin = rho.shape[0]
     rhoaux = rho + (1/numspin)*rhocore
 
-
-    xc_spin = "unpolarized" if numspin == 1 else "polarized"
-    exch_func = LibXCFunctional(exch_name, xc_spin)
-    corr_func = LibXCFunctional(corr_name, xc_spin)
+    exch_func = LibXCFunctional(exch_name, numspin)
+    corr_func = LibXCFunctional(corr_name, numspin)
 
     need_grad = sum(
         True if xcfunc.get_family() in
