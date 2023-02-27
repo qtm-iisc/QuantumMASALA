@@ -2,9 +2,9 @@
 
 export OMP_NUM_THREADS=1
 echo "Setting OMP_NUM_THREADS to $OMP_NUM_THREADS"
-for pow in $(seq 2 1 6); do
+for pow in $(seq 5 -1 1); do
     nproc=$((2 ** pow))
 
     echo "Running QTM in $nproc processes"
-    mpirun -np $nproc python -u o_scf.py > $nproc.py.out
+    mpirun -np $nproc python -u si6x6x6_scf.py -nk 1 > $nproc-$OMP_NUM_THREADS.py.out
 done
