@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ["KList", "kpts_distribute"]
+__all__ = ["KList", "klist_distribute"]
 from typing import Union, Optional
 import numpy as np
 from spglib import get_stabilized_reciprocal_mesh
@@ -141,9 +141,9 @@ class KList:
         return cls(crystal.recilat, k_cryst, weights)
 
 
-def kpts_distribute(kpts: KList, round_robin: bool = False,
-                    return_indices: bool = True
-                    ) -> Union[KList, (KList, list[int])]:
+def klist_distribute(kpts: KList, round_robin: bool = False,
+                     return_indices: bool = True
+                     ) -> Union[KList, (KList, list[int])]:
     pwcomm = config.pwcomm
     numkpts = len(kpts)
 

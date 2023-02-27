@@ -10,6 +10,6 @@ from .pwcomm import PWComm
 from .rho import *
 from . import deloper
 
-from .kpts import *
+from .klist import *
 from .wavefun import *
 
