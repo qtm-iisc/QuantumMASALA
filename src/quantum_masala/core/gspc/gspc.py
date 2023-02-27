@@ -17,7 +17,7 @@ from quantum_masala.constants import TPI
 from .gspc_symm import SymmMod
 
 
-GOOD_PRIMES: list[int] = [2, 3, 5, 7, 11]
+GOOD_PRIMES: list[int] = [2, 3, 5]
 """List of primes used for finding optimal FFT grid lengths.
 """
 
@@ -184,3 +184,20 @@ class GSpace:
         the G-vectors in 'tpiba' units
         """
         return self.recilat.cryst2tpiba(self.cryst)
+
+    def __eq__(self, other):
+        # Check type
+        if not isinstance(other, type(self)):
+            return False
+        # Check reciprocal lattice
+        if not np.allclose(self.recilat.recvec, other.recilat.recvec):
+            return False
+        # Check FFT Mesh Shape
+        if self.grid_shape != other.grid_shape:
+            return False
+        # Check cutoff energy
+        if self.ecut != other.ecut:
+            return False
+
+        # The G vectors must be identical if it passes above checks, hopefully
+        return True
