@@ -11,8 +11,8 @@ import numpy as np
 from quantum_masala.core.ppfile import PseudoPotFile
 from quantum_masala.constants import RYDBERG_HART
 
-_LIBXC_FUNCNAME_MAP = {
-    "pbe": "gga_x_pbe gga_c_pbe"
+_LIBXC_MAP = {
+    "pbe": ("gga_x_pbe", "gga_c_pbe")
 }
 
 
@@ -152,7 +152,9 @@ class UPFv2Data(PseudoPotFile):
             data["dij"] = np.zeros((0, 0), dtype=np.float64)
             data["l_beta_times_r"] = []
 
+        data['libxc_func'] = None
         funcname = data['functional']
-        data['functional'] = _LIBXC_FUNCNAME_MAP[funcname.lower()]
+        if funcname.lower() in _LIBXC_MAP:
+            data['libxc_func'] = _LIBXC_MAP[funcname.lower()]
 
         return cls(dirname, data['z_valence'], **data)

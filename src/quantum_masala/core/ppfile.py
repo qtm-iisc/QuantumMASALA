@@ -29,6 +29,7 @@ class PseudoPotFile(ABC):
     md5_checksum: str = field(init=False)
 
     valence: int
+    libxc_func: tuple[str, str]
 
     @classmethod
     @abstractmethod
