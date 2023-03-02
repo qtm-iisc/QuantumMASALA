@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Callable
+from typing import Optional
 import numpy as np
 from scipy.integrate import simpson
 
@@ -20,9 +20,10 @@ DAMP_DEFAULT = 1E-4
 
 
 def dipole_response(crystal: Crystal, rho_start: GField,
-                    wfn_gamma: WavefunBgrp, xc_params: dict[str, Any],
+                    wfn_gamma: WavefunBgrp,
                     time_step: float, numstep: int,
                     kick_strength: float = 1E-4, kick_direction: str = 'z',
+                    libxc_func: Optional[tuple[str, str]] = None,
         ):
 
     if kick_direction not in ['x', 'y', 'z']:
@@ -59,8 +60,8 @@ def dipole_response(crystal: Crystal, rho_start: GField,
         dip_t[istep + 1] = dip / kick_strength
 
     compute_dipole(-1, rho_start, wfn_gamma)
-    propagate(crystal, rho_start, wfn_gamma, xc_params,
-              time_step, numstep, compute_dipole)
+    propagate(crystal, rho_start, wfn_gamma,
+              time_step, numstep, compute_dipole, libxc_func)
 
     return dip_t
 

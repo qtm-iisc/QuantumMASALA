@@ -1,18 +1,18 @@
-from typing import Any, Callable
+from typing import Optional, Callable
 import numpy as np
 
 from quantum_masala.core import (
-    Crystal,
-    GField,
+    Crystal, GField, RField,
     rho_check, rho_normalize,
 )
 from quantum_masala.pseudo import (
-    loc_generate, NonlocGenerator
+    loc_generate_pot_rhocore, NonlocGenerator
 )
 from quantum_masala.dft.pot import (
-    hartree_compute, xc_compute,
-    ewald_compute
+    hartree_compute, ewald_compute,
+    xc_compute, get_libxc_func, check_libxc_func,
 )
+from quantum_masala.dft import EnergyData
 
 from .wfn_bpar import WavefunBgrp, wfn_gamma_check
 
@@ -21,9 +21,9 @@ from quantum_masala import config
 
 def propagate(crystal: Crystal, rho_start: GField,
               wfn_gamma: WavefunBgrp,
-              xc_params: dict[str, Any],
               time_step: float, numstep: int,
               callback: Callable[[int, GField, WavefunBgrp], None],
+              libxc_func: Optional[tuple[str, str]] = None,
               ):
     pwcomm = config.pwcomm
     numel = crystal.numel
@@ -32,31 +32,43 @@ def propagate(crystal: Crystal, rho_start: GField,
     is_spin = wfn_gamma.is_spin
     is_noncolin = wfn_gamma.is_noncolin
 
-    rho_check(rho_start, is_spin)
-    grho = rho_start.gspc
-    gwfn = wfn_gamma.gspc
+    rho_check(rho_start, wfn_gamma.gspc, is_spin)
+    gspc_rho = rho_start.gspc
+    gspc_wfn = wfn_gamma.gspc
     gkspc = wfn_gamma.gkspc
 
-    v_ion, rho_core = GField.zeros(grho, 1), GField.zeros(grho, 1)
+    v_ion, rho_core = GField.zeros(gspc_rho, 1), GField.zeros(gspc_rho, 1)
 
     l_nloc = []
     for sp in crystal.l_atoms:
-        v_ion_typ, rho_core_typ = loc_generate(sp, grho)
+        v_ion_typ, rho_core_typ = loc_generate_pot_rhocore(sp, gspc_rho)
         v_ion += v_ion_typ
         rho_core += rho_core_typ
-        l_nloc.append(NonlocGenerator(sp, gwfn))
+        l_nloc.append(NonlocGenerator(sp, gspc_wfn))
     v_ion = v_ion.to_rfield()
 
-    en = {}
+    rho_out: GField
+    v_hart: RField
+    v_xc: RField
+    v_loc: RField
 
-    def compute_pot_local(rho):
-        v_hart, en['hart'] = hartree_compute(rho)
-        v_xc, en['xc'] = xc_compute(rho, rho_core, **xc_params)
+    en: EnergyData = EnergyData()
+
+    if libxc_func is None:
+        libxc_func = get_libxc_func(crystal)
+    else:
+        check_libxc_func(libxc_func)
+
+    def compute_pot_local(rho_):
+        nonlocal v_hart, v_xc, v_loc
+        nonlocal rho_core
+        v_hart, en.hartree = hartree_compute(rho_)
+        v_xc, en.xc = xc_compute(rho_, rho_core, *libxc_func)
         v_loc = v_ion + v_hart + v_xc
         v_loc.Bcast()
-        v_loc *= 1 / np.prod(gwfn.grid_shape)
+        v_loc *= 1 / np.prod(gspc_wfn.grid_shape)
         return v_loc
-    en['ewald'] = ewald_compute(crystal, grho)
+    en.ewald = ewald_compute(crystal, gspc_rho)
 
     prop_kwargs = {}
     if config.tddft_exp_method == 'taylor':
@@ -86,6 +98,7 @@ def propagate(crystal: Crystal, rho_start: GField,
 
     rho = rho_start.copy()
     for istep in range(numstep):
+        print(f'iter # {istep}')
         prop_step(wfn_gamma, rho, crystal.numel,
                   compute_pot_local, prop_gamma)
         rho = wfn_gamma.get_rho()

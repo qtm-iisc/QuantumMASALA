@@ -124,7 +124,7 @@ def scf(crystal: Crystal, kpts: KList, gspc_rho: GSpace, gspc_wfn: GSpace,
 
     en: EnergyData = EnergyData()
     if occ == 'smear':
-        enfermi, en.smear, en.internal = 0, 0, 0
+        en.fermi, en.smear, en.internal = 0, 0, 0
     elif occ == 'fixed':
         en.HO_level, en.LU_level = 0, 0
 

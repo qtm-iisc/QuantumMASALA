@@ -5,7 +5,6 @@ from quantum_masala.pseudo import UPFv2Data
 from quantum_masala.core import KList
 
 from quantum_masala.core import GSpace
-from quantum_masala.pseudo import rho_generate_atomic
 from quantum_masala.dft import scf
 
 from quantum_masala.utils.dft_printers import (
@@ -48,14 +47,11 @@ gwfn = grho
 
 print_gspc_info(grho, gwfn)
 
-# Initializing starting charge density from superposition of atomic charges
-rhoatomic = rho_generate_atomic(crystal.l_atoms[0], grho)
-
 # -----Spin-polarized (collinear) calculation-----
 is_spin, is_noncolin = True, False
 # Starting with asymmetric spin distribution else convergence may yield only
 # non-magnetized states
-rho_start = [0.55, 0.45] * rhoatomic
+mag_start = [0.1]
 numbnd = 12  # Ensure adequate # of bands if system is not an insulator
 
 occ = 'smear'
@@ -66,13 +62,8 @@ conv_thr = 1E-8 * RYDBERG
 diago_thr_init = 1E-2 * RYDBERG
 
 
-out = scf(crystal=crystal, kpts=kpts, rho_start=rho_start, symm_rho=True,
-          numbnd=numbnd, is_spin=is_spin, is_noncolin=is_noncolin,
-          wfn_init=None,
-          xc_params={'exch_name': 'gga_x_pbe', 'corr_name': 'gga_c_pbe'},
-          occ=occ, smear_typ=smear_typ, e_temp=e_temp,
-          conv_thr=conv_thr, diago_thr_init=diago_thr_init,
-          iter_printer=print_scf_status)
+out = scf(crystal, kpts, grho, gwfn, numbnd, is_spin, is_noncolin, mag_start=mag_start, occ='smear', smear_typ='gauss',
+          e_temp=1E-2 * RYDBERG, conv_thr=1E-8 * RYDBERG, diago_thr_init=1E-2 * RYDBERG, iter_printer=print_scf_status)
 
 scf_converged, rho, l_wfn_kgrp, en = out
 

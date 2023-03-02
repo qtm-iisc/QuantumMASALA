@@ -6,6 +6,6 @@ for pow in $(seq 0 1 4); do
     nproc=$((2 ** pow))
 
     echo "Running QE in $nproc processes"
-    mpirun -np $nproc pw.x -nk $nproc -in si5x5x5.scf.in > $nproc.qe.out
+    mpirun -np $nproc pw.x -nk 1 -nb $nproc -in si5x5x5.scf.in > $nproc.qe.out
 done
 
