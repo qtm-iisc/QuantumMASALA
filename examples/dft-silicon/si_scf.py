@@ -5,8 +5,12 @@ from quantum_masala.core import (
 from quantum_masala.pseudo import UPFv2Data
 from quantum_masala.dft import scf
 from quantum_masala.utils.dft_printers import (
-    print_crystal_info, print_kpoints, print_gspc_info, print_scf_status
+    print_crystal_info, print_kpoints, print_gspc_info, print_scf_status,
+    print_bands
 )
+
+from quantum_masala import config, pw_logger
+pwcomm = config.pwcomm
 
 # Lattice
 reallat = RealLattice.from_alat(alat=10.2,  # Bohr
@@ -39,7 +43,6 @@ print_gspc_info(gspc_rho, gspc_wfn)
 
 # -----Spin-unpolarized calculation-----
 is_spin, is_noncolin = False, False
-rho_start = rhoatomic  # Atomic density as starting charge density for SCF Iteration
 numbnd = int(crystal.numel // 2)
 
 out = scf(crystal, kpts, gspc_rho, gspc_wfn, numbnd, is_spin, is_noncolin,

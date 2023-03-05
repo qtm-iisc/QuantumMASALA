@@ -37,7 +37,7 @@ class PWConfig:
 
     fft_use_sticks: bool = False
     fft_backend: Optional[Literal['mkl_fft', 'pyfftw',
-                                  'scipy', 'numpy']] = 'pyfftw'
+                                  'scipy', 'numpy']] = None
     fft_threads: int = int(getenv("OMP_NUM_THREADS", "1"))
     pyfftw_planner: Literal['FFTW_ESTIMATE', 'FFTW_MEASURE',
                             'FFTW_PATIENT', 'FFTW_EXHAUSTIVE'] = 'FFTW_MEASURE'
