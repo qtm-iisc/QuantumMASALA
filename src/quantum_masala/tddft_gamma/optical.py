@@ -43,11 +43,10 @@ def dipole_response(crystal: Crystal, rho_start: GField,
     for typ in crystal.l_atoms:
         rcenter_cryst += typ.valence * np.sum(typ.cryst, axis=1)
     rcenter_cryst /= crystal.numel
+    rcenter_cart = reallat.cryst2cart(rcenter_cryst)
 
-    rmesh_cryst = reallat.get_mesh_coords(*gspc_wfn.grid_shape, 'cryst')
-    rmesh_cryst -= rcenter_cryst.reshape((3, 1, 1, 1))
-    rmesh_cryst -= np.rint(rmesh_cryst)
-    rmesh_cart = reallat.cryst2cart(rmesh_cryst)
+    rmesh_cart = reallat.get_mesh_coords(*gspc_wfn.grid_shape,
+                                         'cart', tuple(rcenter_cart))
 
     evc_r = wfn_gamma.gkspc.fft_mod.g2r(wfn_gamma.evc_gk)
     evc_r *= np.exp(-1j * kick_strength

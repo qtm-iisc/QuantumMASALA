@@ -515,15 +515,23 @@ class RealLattice(Lattice):
             raise ValueError("'coords' must be one of 'cryst', 'cart' or 'alat'. "
                              f"Got {coords}")
 
-    def get_mesh_coords(self, n1: int = 1, n2: int = 1, n3: int = 1,
-                        coords: str = 'cryst'):
+    def get_mesh_coords(self, n1: int, n2: int, n3: int, coords: str = 'cryst',
+                        origin: tuple[float, float, float] = (0., 0., 0.)):
         xi = []
         for i, n in enumerate([n1, n2, n3]):
             if not isinstance(n, int) or n < 1:
                 raise ValueError(f"'n{i+1}' must be a positive integer. "
                                  f"got {n} (type {type(n)})")
-            xi.append(np.fft.fftfreq(n))
+            xi.append(np.arange(n)/n)
         r_cryst = np.array(np.meshgrid(*xi, indexing='ij'))
+
+        if coords == 'cart':
+            origin = self.cart2cryst(origin)
+        elif coords == 'alat':
+            origin = self.alat2cryst(origin)
+        r_cryst -= origin.reshape((3, 1, 1, 1))
+        r_cryst -= np.rint(r_cryst)
+
         if coords == 'cryst':
             return r_cryst
         elif coords == 'cart':
