@@ -12,7 +12,7 @@ authors = [
     {name = "S Shri Hari", email = "shriharis@iisc.ac.in"},
     {name = "Agrim Sharma", email = "agrimsharma@iisc.ac.in"},
     {name = "Manish Jain", email = "mjain@iisc.ac.in"},
-]
+] 
 maintainers = [
     {name = "S Shri Hari", email = "shriharis@iisc.ac.in"},
     {name = "Manish Jain", email = "mjain@iisc.ac.in"}
@@ -25,6 +25,8 @@ dependencies = [
     "scipy",
     "pyfftw",
     "spglib",
+    "tqdm",
+    "h5py",
 ]
 
 [project.optional-dependencies]

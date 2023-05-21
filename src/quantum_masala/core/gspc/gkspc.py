@@ -10,6 +10,7 @@ TODO : Complete documentation
 
 __all__ = ['GkSpace']
 
+from typing import Sequence
 import numpy as np
 
 from quantum_masala.core import ReciprocalLattice
@@ -37,7 +38,7 @@ class GkSpace:
      defined for this G-Space, otherwise the data has to be interpolated to
      this grid. This is requiure
     """
-    def __init__(self, gspc: GSpace, k_cryst: tuple[float, float, float]):
+    def __init__(self, gspc: GSpace, k_cryst: tuple[float, float, float], ecutwfc:float=None):
         self.gspc = gspc
         """quantum_masala.core.Gspace : Represents the smooth FFT Grid; Local
         Potentials operating on wavefunctions shoud be required
@@ -49,10 +50,14 @@ class GkSpace:
 
         self.grid_shape = self.gspc.grid_shape
         self.reclat: ReciprocalLattice = self.gspc.recilat
-        """Re
-        """
-        self.ecutwfc = self.gspc.ecut / 4
-
+        
+        # AS: Suggestion : Rename ecutwfc to ecut. ecutwfc makes sense in dft context, but in general, 
+        #     it is just the cutoff for a shifted G-grid, which may correspond to anything.
+        if ecutwfc==None:
+            self.ecutwfc = self.gspc.ecut / 4
+        else:
+            self.ecutwfc = ecutwfc
+            
         gk_cryst = self.gspc.cryst.reshape((3, -1)) + self.k_cryst.reshape((3, 1))
         gk_cart = self.reclat.cryst2cart(gk_cryst)
         gk_2 = np.sum(gk_cart**2, axis=0)
@@ -106,3 +111,45 @@ class GkSpace:
     @property
     def norm(self):
         return np.linalg.norm(self.cart, axis=0)
+    
+    @property
+    def g_norm2(self):
+        return np.sum(self.g_cart ** 2, axis=0)
+
+    @property
+    def gk_indices_tosorted(self):
+        """Copy of ``sort_cryst_like_BGW``"""
+        # return np.argsort(self.norm2)
+        # return sort_cryst_like_BGW(self.cryst, self.norm)
+
+        # Sorting order same as BerkeleyGW
+        cryst = self.cryst
+        key_array = self.norm
+        indices_cryst_sorted = np.lexsort(
+            (
+                cryst[2, :],
+                cryst[1, :],
+                cryst[0, :],
+                np.around(key_array, 5),
+            )
+        )
+    
+        return indices_cryst_sorted
+    
+    @property
+    def gk_indices_fromsorted(self):
+        return np.argsort(self.gk_indices_tosorted)
+
+    def cryst_to_norm2(self, l_vecs: Sequence) -> Sequence:
+        """Calculate the norm^2 of a given list of vectors in crystal coordinates.
+        
+        Parameters
+        ----------
+        l_vec: Sequence
+            List of vectors in crystal coordinates. shape: (3,:)
+        
+        Returns
+        -------
+        np.ndarray of shape (:)
+        """
+        return np.sum(np.square(self.reclat.recvec @ l_vecs), axis=0)

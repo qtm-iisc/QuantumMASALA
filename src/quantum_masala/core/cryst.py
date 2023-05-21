@@ -30,11 +30,14 @@ class AtomBasis:
     """
 
     def __init__(self, label: str, mass: Optional[float], ppdata, reallat: RealLattice,
-                 cryst: np.ndarray):
+                 cryst: np.ndarray, valence:float=None):
         self.label: str = label
         self.mass: Optional[float] = mass
         self.ppdata: PseudoPotFile = ppdata
-        self.valence: float = self.ppdata.valence
+        if ppdata != None:
+            self.valence: float = self.ppdata.valence
+        else:
+            self.valence: float = valence
 
         self.reallat: RealLattice = reallat
         if cryst.ndim != 2 or cryst.shape[0] != 3:
@@ -67,10 +70,10 @@ class AtomBasis:
         return cls(label, mass, ppdata, reallat, cryst)
 
     @classmethod
-    def from_alat(cls, label, mass, ppdata, reallat, *l_pos_alat):
+    def from_alat(cls, label, mass, ppdata, reallat, *l_pos_alat, valence=None):
         alat = np.array(l_pos_alat).T
         cryst = reallat.alat2cryst(alat)
-        return cls(label, mass, ppdata, reallat, cryst)
+        return cls(label, mass, ppdata, reallat, cryst, valence)
 
     @classmethod
     def from_angstrom(cls, label, mass, ppdata, reallat, *l_pos_ang):

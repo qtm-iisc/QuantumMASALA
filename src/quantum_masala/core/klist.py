@@ -48,6 +48,11 @@ class KList:
     @property
     def tpiba(self):
         return self.recilat.cryst2tpiba(self.cryst, axis=1)
+    
+    @property
+    def numk(self):
+        """alias for ``len_``"""
+        return self.len_
 
     def __getitem__(self, item) -> Union[KList,
                                          tuple[tuple[float, float, float], float]]:
