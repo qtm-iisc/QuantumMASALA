@@ -3,6 +3,7 @@ from pprint import pprint
 from time import time, time_ns
 from typing import List, NamedTuple
 import numpy as np
+from tqdm import trange
 from quantum_masala.constants import RYDBERG
 from quantum_masala.core import (
     Crystal,
@@ -10,6 +11,7 @@ from quantum_masala.core import (
     KList,
 )
 from quantum_masala.core.fft import get_fft_driver
+# import gc
 
 # from quantum_masala.core.fft import FFTGSpace
 from quantum_masala.core.gspc.gkspc import GkSpace
@@ -70,10 +72,6 @@ class Epsilon:
         - Receive GSpace, ElectronWfn etc. objects constructed from ``wfn.h5`` and ``wfnq.h5``
         - Load EpsilonInp object constructed from ``epsilon.inp``
 
-        Parameters
-        ----------
-        crystal:
-
         """
         self.crystal = crystal
         self.gspace = gspace
@@ -94,8 +92,7 @@ class Epsilon:
                     gspc=self.gspace,
                     k_cryst=self.qpts.cryst[i_q],
                     ecutwfc=self.epsinp.epsilon_cutoff
-                    * RYDBERG,  # FIXME: Decide where this conversion should happen. \
-                    # Since the rest of our code is in Hartree atomic unts (is it?), the conversion should happen in EpsilonInp
+                    * RYDBERG, 
                 )
             )
 
@@ -106,7 +103,7 @@ class Epsilon:
             avgcut=0,
         )
 
-    def matrix_elements(self, i_q):
+    def matrix_elements(self, i_q, yielding=False):
         """
         To Calculate the M - matrix for calculation of polarizability.
 
@@ -194,6 +191,8 @@ class Epsilon:
 
         evl_c = [evl[_][:number_bands][0] for _ in range(len(evl))]
 
+        prod_grid_shape = np.prod(self.gspace.grid_shape)
+
         # For efficiency, caching the valence band ifft's to improve serial performance,
         # but this should be removed later, or a cleaner solution must be found.
         @lru_cache(maxsize=int(n_v_max))
@@ -205,8 +204,14 @@ class Epsilon:
             return wfn_v.gkspc.fft_mod.g2r(wfn_v.evc_gk[0, i_b_v, :])
 
         # MATRIX ELEMENTS CALCULATION ---------------------------------------------------
-
-        M = np.zeros((n_kpts, n_c_max, n_v_max, self.l_gq[i_q].numgk), dtype=complex)
+        if not yielding:
+            M = np.zeros((n_kpts, n_c_max, n_v_max, self.l_gq[i_q].numgk), dtype=complex)
+        # Memory reqd = complex(8bytes) * n_kpts * n_c_max * n_v_max * self.l_gq[i_q].numgk
+        # For a converged run, such as the one shown in the QTM paper,
+        # n_kpts ~ 3
+        # n_c_max ~ 272-4
+        # n_v_max ~ 4
+        # numgk ~ 537
 
         # TODO: Refactor older i_c, i_v loops to just one i_k_c loop,
         #       and (depending on target architecture,) vectorize i_b_c and i_b_v to compute all ffts at once and reuse them.
@@ -228,9 +233,6 @@ class Epsilon:
             if prev_i_k_c != i_k_c:
                 prev_i_k_c = i_k_c
 
-                #dbg
-                # print(umklapp[i_k_c])
-                # print(self.l_gq[i_q].g_cryst.shape)
                 l_g_umklapp = self.l_gq[i_q].g_cryst - umklapp[i_k_c][:, None]
 
                 grid_g_umklapp = tuple(
@@ -279,11 +281,17 @@ class Epsilon:
                 # The FFT result will be cut-off according to umklapped_fft_driver's cryst
                 sqrt_Ec_Ev = np.sqrt(evl_c[i_k_c][i_b_c] - evl_v[i_k_v][i_b_v])
 
-                M[i_k_c, i_b_c - n_c_beg, i_b_v] = fft_prod * np.reciprocal(
-                    sqrt_Ec_Ev * np.prod(self.gspace.grid_shape)
-                )
-
-        return M
+                if yielding:
+                    M = fft_prod * np.reciprocal(sqrt_Ec_Ev * prod_grid_shape)
+                    yield M
+                else:
+                    M[i_k_c, i_b_c - n_c_beg, i_b_v] = fft_prod * np.reciprocal(
+                        sqrt_Ec_Ev * prod_grid_shape
+                    )
+                # In `polarizability`, these three indices are bein summed over anyway, so it might make sense to have an alternative function for polarizability where polarizability is calculated directly, without ever storing the full M.
+                
+        if not yielding:
+            yield M
 
     @classmethod
     def from_data(cls, wfndata, wfnqdata, epsinp):
@@ -310,6 +318,15 @@ class Epsilon:
         # Nice suggestion by SH: consider doin this within matrix_elements, to avoid space wastage.
         polarizability_matrix = -np.einsum("ijkl,ijkm->lm", np.conj(M), M)
 
+        return polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
+
+    def polarizability_active(self, i_q):
+        """Returns Polarizability Matrix in G, G' both ordered by |G+q|. Differs from the ``polarizability`` method in that it actively calls ``matrix_element`` function and does the sums in a memory-efficient way."""
+        # for i_q in trange(0, self.qpts.numq, desc="Epsilon> q-pt index"):
+        polarizability_matrix = np.zeros((self.l_gq[i_q].numgk, self.l_gq[i_q].numgk), dtype=complex)
+        for M in self.matrix_elements(i_q=i_q, yielding=True):
+            polarizability_matrix += -np.einsum("l,m->lm", np.conj(M), M)
+            
         return polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
 
     # EPSILON INVERSE ===========================================================================

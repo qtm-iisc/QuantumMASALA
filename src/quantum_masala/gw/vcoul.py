@@ -1,4 +1,5 @@
 from copy import deepcopy
+import os
 
 from typing import Dict, List
 import numpy as np
@@ -13,7 +14,7 @@ from quantum_masala.gw.core import QPoints
 
 from numpy.random import MT19937
 from numpy.random import RandomState
-
+from multiprocessing import Pool
 
 TOL_SMALL = 1e-5
 
@@ -68,7 +69,8 @@ class Vcoul:
     v_minibz_montecarlo()
         Calculate vcoul averaged using montecarlo over minibz for qpt = (0,0,0)
     v_minibz_montecarlo_hybrid()
-        Calculate vcoul averaged using montecarlo over minibz for qpt = (0,0,0)
+        Calculate analytically in the sphere inscribed in minibz, 
+        but add the contribution from the left-over region using montecarlo.
 
     Notes
     -----
@@ -83,10 +85,10 @@ class Vcoul:
     """
 
     # Consider using enum for truncflag and avgflag
-    N_SAMPLES = 2.5e4
-    N_SAMPLES_COARSE = 2.5e4
+    N_SAMPLES = 2.5e3
+    N_SAMPLES_COARSE = 2.5e3
     SEED = 5000
-    print(f"Warning! Sigma.SEED = {SEED}")
+    # print(f"Warning! Sigma.SEED = {SEED}")
 
     def __init__(
         self,
@@ -262,7 +264,7 @@ class Vcoul:
             """Given a sub-matrix from epsinv and the wingtype, fix it.
             This nested function is exactly like th efixwings of BGW."""
 
-            print(f"wcoul0: {wcoul0}, vcoul: {vcoul}, q0len: {q0len}, oneoverq: {oneoverq}")
+            # print(f"wcoul0: {wcoul0}, vcoul: {vcoul}, q0len: {q0len}, oneoverq: {oneoverq}")
 
             # if wingtype=="head":
             #     print("oneoverq  ", oneoverq)
@@ -793,7 +795,68 @@ class Vcoul:
                     f"{qvec[0]:>11.8f} {qvec[1]:>11.8f} {qvec[2]:>11.8f}  {gvec[0]:>6} {gvec[1]:>6} {gvec[2]:>6}       {self.vcoul[i_q][i_g]:<.8E}"
                 )
 
+    def set_vcoul_and_oneoverq(self, vcoul, oneoverq):
+        self.vcoul=vcoul
+        self.oneoverq=oneoverq
+
+    def get_vcoul_and_oneoverq(self):
+        return self.vcoul, self.oneoverq
+
     # METHODS :
+    
+    def calculate_vcoul_single_qpt(self, i_q, averaging_func=None, bare=False, random_avg=True):
+        if self.qpts.index_q0 == i_q:
+            qvec = np.zeros_like(self.qpts.cryst[i_q])
+        else:
+            qvec = self.qpts.cryst[i_q]
+        qvec_cryst = qvec
+        qvec_cart = self.gspace.recilat.cryst2cart(qvec_cryst.reshape(-1, 3).T).T
+        qlength = np.linalg.norm(qvec_cart)
+
+        if bare: #This was in the fixwings version in 4x4x4-results branch of newpygw
+        # if bare or qlength**2 >= self.avgcut:
+            # print("bare vcoul")
+            vqg = self.v_bare(i_q, averaging_func)
+            # self.vcoul.append(vqg)
+
+            # oneoverq calculation
+            if self.qpts.index_q0 == i_q:
+                qvec = np.zeros_like(self.qpts.cryst[i_q])
+            else:
+                qvec = self.qpts.cryst[i_q]
+
+            oneoverq = 8 * np.pi / qlength
+            # self.oneoverq.append(oneoverq)
+
+        else:
+            # print("averaged vcoul")
+            if self.qpts.index_q0 == i_q:
+                qvec = np.zeros_like(self.qpts.cryst[i_q])
+            else:
+                qvec = self.qpts.cryst[i_q]
+            vqg = np.zeros(self.l_gspace_q[i_q].g_cryst.shape[1])
+
+            for i_g, gvec in enumerate(self.l_gspace_q[i_q].g_cryst.T):
+                shift_vec_cryst = qvec + self.l_gspace_q[i_q].g_cryst.T[i_g]
+                # shift_vec_cart = self.gspace.recilat.cryst2cart(shift_vec_cryst.reshape(-1,3).T).T
+
+                if random_avg:
+                    vqg[i_g], _ = self.v_minibz_montecarlo_hybrid(
+                        shift_vec_cryst=shift_vec_cryst
+                    )  # , hybrid_for_non0=True)
+                else:
+                    vqg[i_g] = self.v_minibz_sphere_shifted(qvec + gvec)
+                # print(f"vqg[{i_g}] = {vqg[i_g]}")
+
+            # self.vcoul.append(vqg)
+
+            oneoverq = self.oneoverq_minibz_montecarlo(shift_vec_cryst=qvec_cryst)
+            # print(f"oneoverq: {oneoverq}")
+
+            # print(f"qvec: {qvec_cryst}, oneoverq: {oneoverq}")
+            # self.oneoverq.append(oneoverq)
+
+        return vqg, oneoverq
 
     def calculate_vcoul(self, averaging_func=None, bare=False, random_avg=True):
         """Populate the vcoul list vcoul[i_q][i_g].
@@ -802,71 +865,14 @@ class Vcoul:
 
         TODO: Implement bare_cutoff and averaged_cutoff.
         """
+
         self.vcoul = []
         self.oneoverq = []
+        
         for i_q in trange(self.qpts.numq, desc="Vcoul calculation for qpts"):
-            # print(f"Calculate vcoul: i_q\t{i_q}")
-
-            if self.qpts.index_q0 == i_q:
-                qvec = np.zeros_like(self.qpts.cryst[i_q])
-            else:
-                qvec = self.qpts.cryst[i_q]
-            qvec_cryst = qvec
-            qvec_cart = self.gspace.recilat.cryst2cart(qvec_cryst.reshape(-1, 3).T).T
-            qlength = np.linalg.norm(qvec_cart)
-
-            if bare: #This was in the fixwings version in 4x4x4-results branch of newpygw
-            # if bare or qlength**2 >= self.avgcut:
-                # print("bare vcoul")
-                self.vcoul.append(self.v_bare(i_q, averaging_func))
-
-                # oneoverq calculation
-                if self.qpts.index_q0 == i_q:
-                    qvec = np.zeros_like(self.qpts.cryst[i_q])
-                else:
-                    qvec = self.qpts.cryst[i_q]
-
-                # Deprecated: Oneoverq is calcualted only for G=0
-                # oneoverq_qg = np.zeros(self.l_gspace_q[i_q].cryst.shape[1])
-                # for i_g, gvec in enumerate(self.l_gspace_q[i_q].cryst.T):
-                #     shift_vec_cryst=qvec+self.l_gspace_q[i_q].cryst.T[i_g]
-                #     shift_vec_cart = self.gspace.recilat.cryst2cart(shift_vec_cryst.reshape(-1,3).T).T
-                #     shift_length = np.linalg.norm(shift_vec_cart)
-                #     oneoverq_qg[i_g] = 8*np.pi/shift_length
-
-                # for i_g, gvec in enumerate(self.l_gspace_q[i_q].cryst.T):
-                oneoverq = 8 * np.pi / qlength
-                self.oneoverq.append(oneoverq)
-
-            else:
-                # print("averaged vcoul")
-                if self.qpts.index_q0 == i_q:
-                    qvec = np.zeros_like(self.qpts.cryst[i_q])
-                else:
-                    qvec = self.qpts.cryst[i_q]
-                vqg = np.zeros(self.l_gspace_q[i_q].g_cryst.shape[1])
-
-                for i_g, gvec in enumerate(self.l_gspace_q[i_q].g_cryst.T):
-                    shift_vec_cryst = qvec + self.l_gspace_q[i_q].g_cryst.T[i_g]
-                    # shift_vec_cart = self.gspace.recilat.cryst2cart(shift_vec_cryst.reshape(-1,3).T).T
-
-                    if random_avg:
-                        vqg[i_g], _ = self.v_minibz_montecarlo_hybrid(
-                            shift_vec_cryst=shift_vec_cryst
-                        )  # , hybrid_for_non0=True)
-                    else:
-                        vqg[i_g] = self.v_minibz_sphere_shifted(qvec + gvec)
-                    # print(f"vqg[{i_g}] = {vqg[i_g]}")
-
-                self.vcoul.append(vqg)
-
-                oneoverq = self.oneoverq_minibz_montecarlo(shift_vec_cryst=qvec_cryst)
-                # print(f"oneoverq: {oneoverq}")
-
-                # print(f"qvec: {qvec_cryst}, oneoverq: {oneoverq}")
-                self.oneoverq.append(oneoverq)
-
-            # self.write_vcoul([i_q])
+            vqg, oneoverq = self.calculate_vcoul_single_qpt(i_q, averaging_func, bare, random_avg)
+            self.vcoul.append(vqg)
+            self.oneoverq.append(oneoverq)
 
         return
 
@@ -890,13 +896,13 @@ class Vcoul:
         #     qlength = np.linalg.norm(qvec_cart)
         #     vcoul = 8*np.pi/qlength**2
         vcoul = self.vcoul[i_q][self.l_gspace_q[i_q].gk_indices_tosorted][0]
-        self.write_vcoul([i_q])
+        # self.write_vcoul([i_q])
         # print(vcoul)
         if wcoul0 is None:
             wcoul0 = epsinv[0,0] * vcoul
 
         # wcoul0 = epsinv[0,0] * self.vcoul[i_q][0]
-        print(wcoul0)
+        # print(wcoul0)
 
         if i_q == self.qpts.index_q0:
             q0len = np.sqrt(self.l_gspace_q[self.qpts.index_q0].cryst_to_norm2(self.qpts.q0vec))

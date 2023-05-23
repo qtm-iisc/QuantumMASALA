@@ -44,20 +44,21 @@ class QPoints(KList):
             ``is_q0`` column from inp files
         """
         # cryst_gamma = np.array(cryst)
+        #dbg
+        print(cryst.shape)
+
         index_q0 = None
         if is_q0!=None:
             index_q0 = np.where(is_q0)[0][0] 
         else:
-            index_q0 = np.argmin(recilat.norm2(cryst))#np.linalg.norm(cryst, axis=1))
-            #dbg
-            print(recilat.norm2(cryst).shape)
+            index_q0 = np.argmin(recilat.norm2(cryst.T))
        
         # cryst_gamma[:,index_q0] = 0
         weights = np.ones(cryst.shape[0])
         super().__init__(recilat, cryst, weights)
         self.index_q0 = index_q0
-        self.q0vec = cryst[:, self.index_q0]
-        print("q0vec init:", self.q0vec)
+        self.q0vec = cryst[self.index_q0,:]
+        # print("q0vec init:", self.q0vec)
         self.numq = cryst.shape[0]
         self.is_q0 = is_q0 #if is_q0!=None else [False]*len(cryst)
 

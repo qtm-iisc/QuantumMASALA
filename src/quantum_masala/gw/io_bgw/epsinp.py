@@ -133,6 +133,12 @@ class Epsinp():
         self.qgrid : List[int] = None
         """Q-grid for the epsmat file. Defaults to the WFN k-grid.
         """
+
+        self.qpoints : List[float] = None
+        """qx qy qz 1/scale\_factor is\_q0
+        scale\_factor is for specifying values such as 1/3 is\_q0 = 0 for regular, non-zero q-vectors (read val WFNs from `WFN`) is\_q0 = 1 for a small q-vector in semiconductors (read val WFNs from `WFNq`) is\_q0 = 2 for a small q-vector in metals (read val WFNs from `WFN`) if present the small q-vector should be first in the list You can generate this list with `kgrid.x`: just set the shifts to zero and use same grid numbers as for `WFN`. Then replace the zero vector with q0.
+        """
+
         # Options:
 
         self.write_subspace_epsinv : bool = False
@@ -173,10 +179,6 @@ class Epsinp():
         """
         self.comm_nonblocking_cyclic : bool = False
         """Within [`gcomm_matrix`](http://manual.berkeleygw.org/3.0/epsilon-keywords/#gcomm_matrix), employs a non-blocking cyclic communication scheme overlapping computation and communication in the evaluation of the polarizability (drastically reduce the time spent in communication for large runs, but require more memory).
-        """
-        self.begin : bool = False
-        """qx qy qz 1/scale\_factor is\_q0
-        scale\_factor is for specifying values such as 1/3 is\_q0 = 0 for regular, non-zero q-vectors (read val WFNs from `WFN`) is\_q0 = 1 for a small q-vector in semiconductors (read val WFNs from `WFNq`) is\_q0 = 2 for a small q-vector in metals (read val WFNs from `WFN`) if present the small q-vector should be first in the list You can generate this list with `kgrid.x`: just set the shifts to zero and use same grid numbers as for `WFN`. Then replace the zero vector with q0.
         """
         self.fermi_level_absolute : bool = False
         """"""

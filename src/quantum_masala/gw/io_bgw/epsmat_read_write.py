@@ -85,13 +85,14 @@ template_dict = {
 
 
 # import h5py
-from h5_io.h5_utils import (
+import numpy as np
+from quantum_masala.gw.h5_io.h5_utils import (
     cplx_to_real,
     create_empty_h5,
     real_to_cplx,
     write_recursive_h5,
 )
-from mydebugtoolkit import *
+from quantum_masala.gw.mydebugtoolkit import *
 import h5py
 
 TOLERANCE = 1e-5
@@ -201,80 +202,3 @@ if __name__ == "__main__":
     # mats = read_mats("testmat.h5")
     # print(*mats, sep="\n")
 
-# eps_header
-# ├ flavor                 2
-# ├ freqs
-# │ ├ freq_dep             0
-# │ ├ freqs          (1, 2)
-# │ ├ nfreq                1
-# │ └ nfreq_imag           0
-# ├ gspace
-# │ ├ ekin           (1, 4573)
-# │ ├ gind_eps2rho   (1, 4573)
-# │ ├ gind_rho2eps   (1, 4573)
-# │ ├ nmtx           (1,)
-# │ ├ nmtx_max             15
-# │ └ vcoul          (1, 15)
-# ├ params
-# │ ├ ecuts                2.0
-# │ ├ efermi               0.4709460447947025
-# │ ├ has_advanced         0
-# │ ├ icutv                0
-# │ ├ intraband_flag       0
-# │ ├ intraband_overlap_min        0.5
-# │ ├ matrix_flavor        2
-# │ ├ matrix_type          0
-# │ ├ nband                8
-# │ ├ nmatrix              1
-# │ ├ subsample            0
-# │ └ subspace             0
-# ├ qpoints
-# │ ├ nq                   1
-# │ ├ qgrid          (3,)
-# │ ├ qpt_done       (1,)
-# │ └ qpts           (1, 3)
-# └ versionnumber          3
-# mats
-# ├ matrix           (1, 1, 1, 15, 15, 2)
-# └ matrix-diagonal  (1, 15, 2)
-# mf_header
-# ├ crystal
-# │ ├ adot           (3, 3)
-# │ ├ alat                 10.2612
-# │ ├ apos           (2, 3)
-# │ ├ atyp           (2,)
-# │ ├ avec           (3, 3)
-# │ ├ bdot           (3, 3)
-# │ ├ blat                 0.6123246118562727
-# │ ├ bvec           (3, 3)
-# │ ├ celvol               270.10614592123204
-# │ ├ nat                  2
-# │ └ recvol               0.9183434630722345
-# ├ flavor                 2
-# ├ gspace
-# │ ├ FFTgrid        (3,)
-# │ ├ components     (4573, 3)
-# │ ├ ecutrho              100.0
-# │ └ ng                   4573
-# ├ kpoints
-# │ ├ ecutwfc              25.0
-# │ ├ el             (1, 64, 30)
-# │ ├ ifmax          (1, 64)
-# │ ├ ifmin          (1, 64)
-# │ ├ kgrid          (3,)
-# │ ├ mnband               30
-# │ ├ ngk            (64,)
-# │ ├ ngkmax               588
-# │ ├ nrk                  64
-# │ ├ nspin                1
-# │ ├ nspinor              1
-# │ ├ occ            (1, 64, 30)
-# │ ├ rk             (64, 3)
-# │ ├ shift          (3,)
-# │ └ w              (64,)
-# ├ symmetry
-# │ ├ cell_symmetry        0
-# │ ├ mtrx           (48, 3, 3)
-# │ ├ ntran                48
-# │ └ tnp            (48, 3)
-# └ versionnumber          1

@@ -10,7 +10,7 @@ class Sigmainp():
         - Parameters: have value and type
         - Options: have no value, if set in sigma.inp, their value is True, by default they are init to False
         
-        The __init__ code can be generated via epsinp.ipynb file. It is generated from html to md conversion of [http://manual.berkeleygw.org/3.0/sigma-keywords/]
+        The __init__ code can be generated using epsinp.ipynb file. It is generated from html to md conversion of [http://manual.berkeleygw.org/3.0/sigma-keywords/]
         """
 
         self.band_index_min : int = None
@@ -18,6 +18,10 @@ class Sigmainp():
         """
         self.band_index_max : int = None
         """Maximum band index for diagonal matrix elements (n=mn=m) of \\Sigma\\Sigma to be computed.
+        """
+        self.kpoints : List[float] = None
+        """kx ky kz 1/scale\_factor
+        scale\_factor is for specifying values such as 1/3
         """
         self.sigma_matrix : List[int] = None
         """Alternatively, select a specific value of l and let n and m vary in the range from band\_index\_min to band\_index\_max Set l to 0 to skip the off-diagonal calculation (default) If l = -1 then l\_i is set to n\_i (i = 1 ... noffdiag) i.e. each row is computed at different eigenvalue If l = -2 then l\_i is set to m\_i (i = 1 ... noffdiag) i.e. each column is computed at different eigenvalue For l > 0, all elements are computed at eigenvalue of band l. Set t to 0 for the full matrix (default) or to -1/+1 for the lower/upper triangle
@@ -180,10 +184,6 @@ class Sigmainp():
         self.number_diag : bool = False
         """Number or diagonal matrix elements, i.e., for n=mn=m.
         """
-        self.begin : bool = False
-        """kx ky kz 1/scale\_factor
-        scale\_factor is for specifying values such as 1/3
-        """
         self.number_offdiag : bool = False
         """Number of off-diagonal matrix elements
         """
@@ -283,6 +283,11 @@ class Sigmainp():
         """By default, the code reads the dielectric matrix for a single q->0 q-point. The following flag enables the subsampling of Voronoi cell containing Gamma. Your eps0mat file should contain a list of radial q-points (which will not be unfolded by symmetries) instead of a single q->0 point. You should provide a file subweights.dat containing the weights w(q) associated to each subsampled q-point (which will be renormalized so that \\sum w(q)=1). Using this subsampling allows one to accelerate the convergence with respect to the number of q-points, and is especially helpful when dealing with large unit cells, truncated Coulomb potential and birefringent materials.
         """
 
+        # Required inputs:
+        assert self.band_index_max != None, "band_index_max is required"
+        assert self.band_index_min != None, "band_index_min is required"
+        assert len(self.kpoints) > 0,       "list of kpoints is required"
+            
 
 # sigma = Sigmainp()
 # sigma.
