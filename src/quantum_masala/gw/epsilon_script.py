@@ -10,6 +10,7 @@
 
 # from functools import lru_cache
 import numpy as np
+from quantum_masala.core.pwcomm import _MPI4PY_INSTALLED, COMM_WORLD
 from quantum_masala.gw.h5_io.h5_utils import *
 import sys
 
@@ -18,7 +19,7 @@ sys.path.append("..")
 sys.path.append(".")
 
 # dirname = "./test/bgw/"
-dirname = "./scripts/results/si_4_gw/"
+dirname = "./scripts/results/si_4_gw_cohsex_nn25000/"
 
 # %% [markdown]
 # ### Load WFN data
@@ -62,15 +63,6 @@ print(wfnqdata.__doc__)
 # print(*zip(vxc_data.kpts, vxc_data.vxc), sep="\n\n")
 
 
-
-# %%
-# Testing FFT
-wfn = wfndata.l_wfn[0]
-print(wfn.evc_gk.shape)
-wfn.gkspc.fft_mod.g2r(wfn.evc_gk[0,1,:]).shape
-
-
-# %% [markdown]
 # ### Initialize Epsilon Class
 
 # %%
@@ -125,9 +117,20 @@ def reorder_2d_matrix_sorted_gvecs(a, indices):
     return np.take_along_axis(np.take_along_axis(a, tiled_indices, 1), tiled_indices.T, 0)
 
 epsmats = []
+if _MPI4PY_INSTALLED and COMM_WORLD.Get_size() > 1:
+    in_parallel=True
+else:
+    in_parallel = False
 
-for i_q in trange(0, epsilon.qpts.numq, desc="Epsilon> q-pt index"):
-    
+if in_parallel:
+    proc_rank = COMM_WORLD.Get_rank()
+    q_indices = np.arange(epsilon.qpts.numq)
+    proc_q_indices =  np.array_split(q_indices, COMM_WORLD.Get_size())[proc_rank]
+    iterable = proc_q_indices
+else:
+    iterable = trange(0, epsilon.qpts.numq, desc="Epsilon> q-pt index")
+
+for i_q in iterable:    
     # Create map between BGW's sorting order and QTm's sorting order
     gkspc  = epsilon.l_gq[i_q]
     if i_q == epsilon.qpts.index_q0:
@@ -164,7 +167,8 @@ for i_q in trange(0, epsilon.qpts.numq, desc="Epsilon> q-pt index"):
         epsilon.write_epsmat(filename="test/epsilon/eps0mat_qtm.h5", epsinvmats=[epsinv])
     else:
         epsref = np.array(epsilon.read_epsmat(dirname + "epsmat.h5")[i_q - 1][0, 0])
-        epsmats.append(epsinv)
+        if not in_parallel:
+            epsmats.append(epsinv)
 
     # Calculate stddev between reference and calculated epsinv matrices
     mindim = min(epsref.shape)
@@ -177,25 +181,12 @@ for i_q in trange(0, epsilon.qpts.numq, desc="Epsilon> q-pt index"):
         print("i_q",i_q)
         break
 
-epsilon.write_epsmat(filename="test/epsilon/epsmat_qtm.h5", epsinvmats=epsmats)
 
 
-# %%
-# %load_ext line_profiler
-# %lprun -f epsilon.matrix_elements epsilon.matrix_elements(i_q=0)
-
-# %prun epsilon.matrix_elements(i_q=0)
-
-
-# %%
-# %load_ext memory_profiler
-# %mprun epsilon.matrix_elements(i_q=0)
-# %memit epsilon.matrix_elements(i_q=0,yielding=True)
-
-# %% [markdown]
-# <!-- ## Issues:
-# - Still inaccurate epsilon: Complex part of epsilon? Visual inspection tells that complex part matches exactly to all decimals available (10 digits) -->
-# <!-- ##### Fixed, but for later reference:
-# - fixed now: Vcoul ordering: Previous code was ordered by decreasing kinetic energy, this one uses Vcoul where ordering has been figured out. -->
-
-
+# print_condition = (not in_parallel) or (in_parallel and COMM_WORLD.Get_rank()==0)
+if in_parallel:
+    epsmats = COMM_WORLD.allgather(epsinv)[1:]
+    if COMM_WORLD.Get_rank()==0:
+        epsilon.write_epsmat(filename="test/epsilon/epsmat_qtm.h5", epsinvmats=epsmats)
+else:
+    epsilon.write_epsmat(filename="test/epsilon/epsmat_qtm.h5", epsinvmats=epsmats)

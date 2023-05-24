@@ -221,7 +221,7 @@ class Epsilon:
         #       And the analysis will be slightly different in the case of Sigma's matrix elements.
 
         prev_i_k_c = None  # To avoid recalculation for the same kc vector,
-        for i_c in range(n_c):
+        for i_c in range(n_c):#, desc="mtxel i_c loop"):
             i_k_c = l_i_c[0][i_c]  # unoccupied k indices, repeated
             i_b_c = l_i_c[1][i_c]  # unoccupied band indices, repeated
 

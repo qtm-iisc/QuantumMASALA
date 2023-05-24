@@ -1,5 +1,7 @@
 from copy import deepcopy
-import os
+from importlib.util import find_spec
+# from numba import jit
+from itertools import chain
 
 from typing import Dict, List
 import numpy as np
@@ -9,14 +11,20 @@ from tqdm import trange
 from quantum_masala.core import GSpace, GkSpace
 
 from quantum_masala.constants import RYDBERG_HART
+from quantum_masala.core.pwcomm import _MPI4PY_INSTALLED
 
 from quantum_masala.gw.core import QPoints
 
 from numpy.random import MT19937
 from numpy.random import RandomState
-from multiprocessing import Pool
+# from multiprocessing import Pool
+
+if _MPI4PY_INSTALLED:
+    from mpi4py import MPI
+
 
 TOL_SMALL = 1e-5
+
 
 
 class Vcoul:
@@ -85,7 +93,7 @@ class Vcoul:
     """
 
     # Consider using enum for truncflag and avgflag
-    N_SAMPLES = 2.5e3
+    N_SAMPLES = 2.5e4
     N_SAMPLES_COARSE = 2.5e3
     SEED = 5000
     # print(f"Warning! Sigma.SEED = {SEED}")
@@ -97,6 +105,7 @@ class Vcoul:
         bare_coulomb_cutoff: float,
         avgcut: float = TOL_SMALL,
         bare_init = True, # To save time by default
+        parallel = False,
     ) -> None:
         """Init Vcoul object
 
@@ -127,6 +136,17 @@ class Vcoul:
             for i_q in range(self.qpts.numq)
         ]
 
+        self.in_parallel = False
+        self.comm = None
+        self.comm_size = None
+        if parallel:
+            if _MPI4PY_INSTALLED:
+                self.comm = MPI.COMM_WORLD
+                self.comm_size = self.comm.Get_size()
+                if self.comm.Get_size() > 1:
+                    self.in_parallel=True
+                
+                
         self.calculate_vcoul(bare=bare_init)#averaging_func=None)
 
         return
@@ -346,7 +366,8 @@ class Vcoul:
         # gqq = self.l_gspace_q[i_q].shifted_norm2
 
         # Calculate bare Coulomb interaction
-        vqg = 8 * np.pi * np.reciprocal(gqq)
+        vqg = np.ones_like(gqq) * np.nan
+        vqg[np.nonzero(gqq)] = 8 * np.pi * np.reciprocal(gqq[np.nonzero(gqq)])
         # vqg[np.isnan(vqg)] = self.v0_sph()
 
         # if averaging_func != None and i_q==self.qpts.index_q0:
@@ -710,15 +731,14 @@ class Vcoul:
         shift_length = np.linalg.norm(shift_vec_cart)
         # print("shift_length", shift_length)
         # if True:
-        oneoverqsph = 8 * np.pi / shift_length
-        # print("oneoverq_minibz_sphere", oneoverqsph)
-        # v_sph = 32 * np.pi**2 * q_cutoff / (8*np.pi**3/(self.gspace.reallat_cellvol * self.qpts.numq))
+        # if shift_length<
+        # oneoverqsph = 8 * np.pi / shift_length
         # From BGW minibzaverage_3d:
         # nn2 = idnint(nmc_coarse * 4d0 * q0sph2 / length_qk)
         # nn2 = max(1, min(nn2, nn))
         
         # Apparently idnint is equivalent to np.round
-        nsamples = np.round(self.N_SAMPLES_COARSE * 4.0 * q_cutoff**2 / shift_length**2)
+        nsamples = np.round(self.N_SAMPLES_COARSE * 4.0 * q_cutoff**2 / shift_length**2) if shift_length > 0 else np.nan
         nsamples = max(1, min(self.N_SAMPLES, nsamples))
         # Older line:
         # nsamples = self.N_SAMPLES
@@ -801,9 +821,16 @@ class Vcoul:
 
     def get_vcoul_and_oneoverq(self):
         return self.vcoul, self.oneoverq
+    
+    def bcast_vcoul_and_oneoverq(self, comm=None):
+        # if self.in_parallel:
+        if comm is not None:
+            comm.Barrier()
+            self.vcoul = comm.bcast(self.vcoul, root=0)
+            self.oneoverq = comm.bcast(self.oneoverq, root=0)
+        return
 
     # METHODS :
-    
     def calculate_vcoul_single_qpt(self, i_q, averaging_func=None, bare=False, random_avg=True):
         if self.qpts.index_q0 == i_q:
             qvec = np.zeros_like(self.qpts.cryst[i_q])
@@ -825,7 +852,7 @@ class Vcoul:
             else:
                 qvec = self.qpts.cryst[i_q]
 
-            oneoverq = 8 * np.pi / qlength
+            oneoverq = 8 * np.pi / qlength if qlength > 0 else np.nan
             # self.oneoverq.append(oneoverq)
 
         else:
@@ -858,7 +885,7 @@ class Vcoul:
 
         return vqg, oneoverq
 
-    def calculate_vcoul(self, averaging_func=None, bare=False, random_avg=True):
+    def calculate_vcoul(self, averaging_func=None, bare=False, random_avg=True, parallel=True):
         """Populate the vcoul list vcoul[i_q][i_g].
         The onus of using appropriate vcoul averaging function
         to modify vcoul entries is on the user.
@@ -868,12 +895,32 @@ class Vcoul:
 
         self.vcoul = []
         self.oneoverq = []
-        
-        for i_q in trange(self.qpts.numq, desc="Vcoul calculation for qpts"):
-            vqg, oneoverq = self.calculate_vcoul_single_qpt(i_q, averaging_func, bare, random_avg)
-            self.vcoul.append(vqg)
-            self.oneoverq.append(oneoverq)
 
+
+        if not (self.in_parallel and parallel):
+            for i_q in trange(self.qpts.numq):#, desc="Vcoul calculation for qpts"):
+                vqg, oneoverq = self.calculate_vcoul_single_qpt(i_q, averaging_func, bare, random_avg)
+                self.vcoul.append(vqg)
+                self.oneoverq.append(oneoverq)
+        else:
+            proc_vcoul=[]
+            proc_oneoverq=[]
+            proc_rank = self.comm.Get_rank()
+
+            q_indices = np.arange(self.qpts.numq)
+            proc_q_indices =  np.array_split(q_indices, self.comm_size)[proc_rank]
+            
+            for i_q in proc_q_indices:
+                vqg, oneoverq = self.calculate_vcoul_single_qpt(i_q, averaging_func, bare, random_avg)
+                proc_vcoul.append(vqg)
+                proc_oneoverq.append(oneoverq)
+            
+            self.comm.Barrier()
+            gathered_oneoverq = self.comm.allgather(proc_oneoverq)
+            gathered_vcoul = self.comm.allgather(proc_vcoul)
+            self.vcoul = list(chain.from_iterable(gathered_vcoul))
+            self.oneoverq = list(chain.from_iterable(gathered_oneoverq))
+            self.comm.Barrier()
         return
 
     def calculate_fixedeps(
