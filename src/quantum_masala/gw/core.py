@@ -44,8 +44,6 @@ class QPoints(KList):
             ``is_q0`` column from inp files
         """
         # cryst_gamma = np.array(cryst)
-        #dbg
-        print(cryst.shape)
 
         index_q0 = None
         if is_q0!=None:

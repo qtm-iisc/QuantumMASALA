@@ -105,7 +105,7 @@ class Vcoul:
         bare_coulomb_cutoff: float,
         avgcut: float = TOL_SMALL,
         bare_init = True, # To save time by default
-        parallel = False,
+        parallel = True,
     ) -> None:
         """Init Vcoul object
 
@@ -143,7 +143,7 @@ class Vcoul:
             if _MPI4PY_INSTALLED:
                 self.comm = MPI.COMM_WORLD
                 self.comm_size = self.comm.Get_size()
-                if self.comm.Get_size() > 1:
+                if self.comm_size > 1:
                     self.in_parallel=True
                 
                 
@@ -898,7 +898,7 @@ class Vcoul:
 
 
         if not (self.in_parallel and parallel):
-            for i_q in trange(self.qpts.numq):#, desc="Vcoul calculation for qpts"):
+            for i_q in trange(self.qpts.numq, desc="Vcoul calculation for qpts"):
                 vqg, oneoverq = self.calculate_vcoul_single_qpt(i_q, averaging_func, bare, random_avg)
                 self.vcoul.append(vqg)
                 self.oneoverq.append(oneoverq)

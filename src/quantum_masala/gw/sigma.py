@@ -1642,7 +1642,7 @@ class Sigma:
         band_index_min = self.sigmainp.band_index_min
         band_index_max = self.sigmainp.band_index_max
         number_bands_outer = band_index_max-band_index_min+1
-        print("dE:", dE)
+        # print("dE:", dE)
 
         if diag:
             sigma = np.zeros((self.n_kpts, number_bands_outer), dtype=complex)
@@ -1876,6 +1876,8 @@ class Sigma:
         band_index_max = self.sigmainp.band_index_max
         # number_bands_outer = band_index_max-band_index_min+1
 
+        print_condition = (not self.in_parallel) or (self.in_parallel and COMM_WORLD.Get_rank()==0)
+
         # Calculate on-shell QP energy = Emf - Vxc + Sig(Eo)
         # Vxc data
         vxc_data = inp.read_vxc(dirname + "vxc.dat")
@@ -1887,7 +1889,8 @@ class Sigma:
 
         emf = np.array([self.l_wfn[i_k].evl for i_k in self.l_k_indices])
         emf = np.array(emf[:,0,band_index_min-1:band_index_max])* emf_factor
-        print("emf\n",emf)
+        if print_condition:
+            print("emf\n",emf)
 
         # before slicing emf, create dE with the correct shape
         dE = np.zeros_like(emf)
@@ -1899,39 +1902,44 @@ class Sigma:
         # ==============
 
         sigma_sx_gpp_mat = self.sigma_sx_gpp()
-        print("Sigma SX GPP")
-        print(np.around((sigma_sx_gpp_mat) * Sigma.sigma_factor, 6))
-        print()
-        # print(sigma_sx_gpp_mat)
-        # print()
+        if print_condition:
+            print("Sigma SX GPP")
+            print(np.around((sigma_sx_gpp_mat) * Sigma.sigma_factor, 6))
+            print()
+            # print(sigma_sx_gpp_mat)
+            # print()
 
         sigma_ch_gpp_mat = self.sigma_ch_gpp()
-        print("Sigma CH GPP")
-        print(np.around((sigma_ch_gpp_mat) * Sigma.sigma_factor, 6))
-        print()
-        # print(sigma_ch_gpp_mat)
-        # print()
+        if print_condition:
+            print("Sigma CH GPP")
+            print(np.around((sigma_ch_gpp_mat) * Sigma.sigma_factor, 6))
+            print()
+            # print(sigma_ch_gpp_mat)
+            # print()
 
         sigma_ch_static_mat = self.sigma_ch_static()
-        print("Sigma CH STATIC COHSEX")
-        print(np.around((sigma_ch_static_mat) * Sigma.sigma_factor, 6))
-        print()
-        # print(sigma_ch_static_mat)
-        # print()
+        if print_condition:
+            print("Sigma CH STATIC COHSEX")
+            print(np.around((sigma_ch_static_mat) * Sigma.sigma_factor, 6))
+            print()
+            # print(sigma_ch_static_mat)
+            # print()
 
         sigma_ch_exact_mat = self.sigma_ch_static_exact()
-        print("Sigma CH EXACT GPP")
-        print(np.around((sigma_ch_exact_mat) * Sigma.sigma_factor, 6))
-        print()
-        # print(sigma_ch_exact_mat)
-        # print()
+        if print_condition:
+            print("Sigma CH EXACT GPP")
+            print(np.around((sigma_ch_exact_mat) * Sigma.sigma_factor, 6))
+            print()
+            # print(sigma_ch_exact_mat)
+            # print()
 
         sigma_x_mat = self.sigma_x()
-        print("Sigma X GPP")
-        print(np.around((sigma_x_mat) * Sigma.sigma_factor, 6))
-        print()
-        # print(sigma_x_mat)
-        # print()
+        if print_condition:
+            print("Sigma X GPP")
+            print(np.around((sigma_x_mat) * Sigma.sigma_factor, 6))
+            print()
+            # print(sigma_x_mat)
+            # print()
 
         # Sig without Remainder
         sigma_mat = (
@@ -1941,16 +1949,18 @@ class Sigma:
             + 0.5 * (sigma_ch_exact_mat - sigma_ch_static_mat)
         )
         sigma_mat = np.around((sigma_mat) * Sigma.sigma_factor, 6)
-        print("Sig GPP:")
-        print(sigma_mat.T)
-        print("Eqp0")
-        # print(sigma_mat.shape)
-        # print(emf.shape)
-        # print(vxc.shape)
+        if print_condition:
+            print("Sig GPP:")
+            print(sigma_mat.T)
+            print("Eqp0")
+            # print(sigma_mat.shape)
+            # print(emf.shape)
+            # print(vxc.shape)
         Eqp0 = sigma_mat + emf - vxc
         # Static Remainder
         # Eqp0 += Eqp0 + 0.5*(sigma_ch_exact_mat-sigma_ch_static_mat)[self.slice_l_k]* Sigma.sigma_factor
-        print(Eqp0.T)
+        if print_condition:
+            print(Eqp0.T)
 
         # Calculate Eqp1
         # ==============
@@ -1964,20 +1974,22 @@ class Sigma:
         dE /= emf_factor
 
         sigma_ch_gpp_mat_2 = self.sigma_ch_gpp(dE)
-        print("Sigma CH GPP dE")
-        print(np.around((sigma_ch_gpp_mat_2) * Sigma.sigma_factor, 6))
-        print()
-        # print(sigma_ch_gpp_mat_2)
-        # print()
-        # print(sigma_ch_gpp_mat_2 * Sigma.sigma_factor) #[self.slice_l_k]
+        if print_condition:
+            print("Sigma CH GPP dE")
+            print(np.around((sigma_ch_gpp_mat_2) * Sigma.sigma_factor, 6))
+            print()
+            # print(sigma_ch_gpp_mat_2)
+            # print()
+            # print(sigma_ch_gpp_mat_2 * Sigma.sigma_factor) #[self.slice_l_k]
 
         sigma_sx_gpp_mat_2 = self.sigma_sx_gpp(dE)
-        print("Sigma SX GPP dE")
-        print(np.around((sigma_sx_gpp_mat_2) * Sigma.sigma_factor, 6))
-        print()
-        # print(sigma_sx_gpp_mat_2)
-        # print()
-        # print(sigma_sx_gpp_mat_2 * Sigma.sigma_factor) #[self.slice_l_k]
+        if print_condition:
+            print("Sigma SX GPP dE")
+            print(np.around((sigma_sx_gpp_mat_2) * Sigma.sigma_factor, 6))
+            print()
+            # print(sigma_sx_gpp_mat_2)
+            # print()
+            # print(sigma_sx_gpp_mat_2 * Sigma.sigma_factor) #[self.slice_l_k]
 
         dSigdE = (
             (
@@ -1991,8 +2003,10 @@ class Sigma:
         slope = slope  # [self.slice_l_k]
         Z = 1 / (1 - dSigdE)
         Z = Z  # [self.slice_l_k]
-        print("Z:")
-        print(Z.T)
+        
+        if print_condition:
+            print("Z:")
+            print(Z.T)
 
         # Sig with Remainder
         sigma_mat_2 = (
@@ -2000,14 +2014,15 @@ class Sigma:
         )  # [self.slice_l_k]
         sigma_mat_2 = np.around((sigma_mat_2) * Sigma.sigma_factor, 6)
 
-        print("Sig_2:")
-        print(sigma_mat_2.T)
-
-        print("Eqp1")
+        if print_condition:
+            print("Sig_2:")
+            print(sigma_mat_2.T)
+            print("Eqp1")
         # Eqp1 = sigma_mat_2+emf-vxc
         # Eqp0_static_corrected = Eqp0 + 0.5*()
         Eqp1 = Eqp0 + slope * (Eqp0 - emf)
-        print(np.real(Eqp1).T)
+        if print_condition:
+            print(np.real(Eqp1).T)
 
         print_x = np.real(
             np.around((sigma_x_mat) * Sigma.sigma_factor, 6)
@@ -2021,27 +2036,28 @@ class Sigma:
         print_exact_ch = np.real(
             np.around((sigma_ch_exact_mat) * Sigma.sigma_factor, 6)
         )  # [self.slice_l_k]
-
-        for k in range(3):
-            print(
-                "   n         Emf          Eo           X        SX-X          CH         Sig         Vxc        Eqp0        Eqp1       Znk"
-            )
-            for n in range(self.sigmainp.band_index_min-1, self.sigmainp.band_index_max-self.sigmainp.band_index_min+1):
+        
+        if print_condition:        
+            for k in range(3):
                 print(
-                    "{:>4}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}".format(
-                        n,
-                        emf[k, n],
-                        emf[k, n],
-                        print_x[k, n],
-                        print_sx[k, n],
-                        print_ch[k, n],
-                        np.real(sigma_mat[k, n]),
-                        np.real(vxc[k, n]),
-                        np.real(Eqp0[k, n]),
-                        np.real(Eqp1[k, n]),
-                        np.real(Z[k, n]),
-                    )
+                    "   n         Emf          Eo           X        SX-X          CH         Sig         Vxc        Eqp0        Eqp1       Znk"
                 )
+                for n in range(self.sigmainp.band_index_min-1, self.sigmainp.band_index_max-self.sigmainp.band_index_min+1):
+                    print(
+                        "{:>4}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}".format(
+                            n,
+                            emf[k, n],
+                            emf[k, n],
+                            print_x[k, n],
+                            print_sx[k, n],
+                            print_ch[k, n],
+                            np.real(sigma_mat[k, n]),
+                            np.real(vxc[k, n]),
+                            np.real(Eqp0[k, n]),
+                            np.real(Eqp1[k, n]),
+                            np.real(Z[k, n]),
+                        )
+                    )
 
 
 if __name__ == "__main__":
@@ -2052,7 +2068,10 @@ if __name__ == "__main__":
     from quantum_masala.gw.io_bgw.epsmat_read_write import read_mats
     from quantum_masala.core.pwcomm import _MPI4PY_INSTALLED, COMM_WORLD
 
-    in_parallel = _MPI4PY_INSTALLED
+    if _MPI4PY_INSTALLED and COMM_WORLD.Get_size() > 1:
+        in_parallel=True
+    else:
+        in_parallel = False
     print_condition = (not in_parallel) or (in_parallel and COMM_WORLD.Get_rank()==0)
 
     if print_condition:
@@ -2273,6 +2292,7 @@ if __name__ == "__main__":
     if int(sys.argv[1]) == 9:  # Sigma Static COHSEX
         # print("Sigma Static COHSEX")
         sigma.calculate_static_cohsex()
+        
     if print_condition:
         print(
             "Sigma script finished running : ",

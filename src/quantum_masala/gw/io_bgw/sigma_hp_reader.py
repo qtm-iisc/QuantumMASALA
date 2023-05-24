@@ -48,7 +48,7 @@ def read_sigma_hp(filename):
             elif line.startswith("====="):
                 break
             elif line.strip():
-                print(line.strip())
+                # print(line.strip())
                 split_line = line.strip().split()
                 # if "=" not in split_line:
                 data_dict[split_line[0]] = [split_line[i] for i in range(1,len(split_line)) if split_line[i] != "="]
