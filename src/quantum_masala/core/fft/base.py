@@ -9,6 +9,8 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
+from quantum_masala import pw_logger
+
 
 class FFTBackend(ABC):
     """Abstract Base Class for interfacing with different FFT Backends
@@ -92,6 +94,7 @@ class FFTDriver(ABC):
         """
         self.fft: FFTBackend = None
 
+    @pw_logger.time('FFTDriver:g2r')
     def g2r(self, arr_inp: np.ndarray, arr_out: Optional[np.ndarray] = None):
         """Computes Backwards FFT where input Fourier Transform is 'truncated'
 
@@ -139,7 +142,8 @@ class FFTDriver(ABC):
             Contains the input data transformed to real-space
         """
         pass
-
+    
+    @pw_logger.time('FFTDriver:r2g')
     def r2g(self, arr_inp: np.ndarray, arr_out: Optional[np.ndarray] = None):
         """Computes Forward FFT where output Fourier Transform is 'truncated'
 

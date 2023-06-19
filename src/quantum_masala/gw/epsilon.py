@@ -4,6 +4,7 @@ from time import time, time_ns
 from typing import List, NamedTuple
 import numpy as np
 from tqdm import trange
+from quantum_masala import pw_logger
 from quantum_masala.constants import RYDBERG
 from quantum_masala.core import (
     Crystal,
@@ -11,6 +12,7 @@ from quantum_masala.core import (
     KList,
 )
 from quantum_masala.core.fft import get_fft_driver
+
 # import gc
 
 # from quantum_masala.core.fft import FFTGSpace
@@ -24,6 +26,7 @@ from quantum_masala.gw.io_bgw.epsmat_read_write import read_mats, write_mats
 from quantum_masala.gw.vcoul import Vcoul
 
 
+# @pw_logger.time('epsilon')
 class Epsilon:
     """Epsilon Matrix Class
     Generate (optionally frequency dependent) dielectric function and its inverse.
@@ -69,9 +72,22 @@ class Epsilon:
     ):
         """Initialize Epsilon
 
+        Parameters
+        ----------
+        crystal: Crystal
+        gspace: GSpace
+        kpts: KList
+        kptsq: KList
+        l_wfn: List[KSWavefun]
+        l_wfnq: List[KSWavefun]
+        l_gsp_wfn: List[GkSpace]
+        l_gsp_wfnq: List[GkSpace]
+        qpts: QPoints
+        epsinp: NamedTuple
+
+
         - Receive GSpace, ElectronWfn etc. objects constructed from ``wfn.h5`` and ``wfnq.h5``
         - Load EpsilonInp object constructed from ``epsilon.inp``
-
         """
         self.crystal = crystal
         self.gspace = gspace
@@ -91,8 +107,7 @@ class Epsilon:
                 GkSpace(
                     gspc=self.gspace,
                     k_cryst=self.qpts.cryst[i_q],
-                    ecutwfc=self.epsinp.epsilon_cutoff
-                    * RYDBERG, 
+                    ecutwfc=self.epsinp.epsilon_cutoff * RYDBERG,
                 )
             )
 
@@ -103,9 +118,11 @@ class Epsilon:
             avgcut=0,
         )
 
+    # @profile
+    @pw_logger.time("epsilon:matrix_elements")
     def matrix_elements(self, i_q, yielding=False):
         """
-        To Calculate the M - matrix for calculation of polarizability.
+        Calculate the plane wave matrix elements required for calculation of polarizability.
 
             M_{n,n'} (k,q,G) = < n, k+q | exp(i(G+q).r) | n', k >
 
@@ -121,7 +138,21 @@ class Epsilon:
             NOTE: k+q may not lie in the given k-space so we add displ. vector (umklapp)
             and so we have to subtract that displ. from (q+G) in the central exponential.
 
-        Refer: eqns (8) and (13) in BGW arxiv paper (1111.4429).
+        Reference: eqns (8) and (13) in BGW arxiv paper (1111.4429).
+
+        Parameters
+        ----------
+        i_q : int
+            Index of the q-point
+        yielding : bool, optional
+            If True, yield plane wave matrix elements, one-by-one for each bra (valence) band.
+            If False, yield the full plane wave matrix elements at once.
+
+        Yields
+        ------
+        M: np.ndarray
+            Plane wave matrix elements
+
         """
 
         # ** ALL K VECTORS, Q VECTORS, G VECTORS WILL BE IN CRYSTAL BASIS **
@@ -195,6 +226,8 @@ class Epsilon:
 
         # For efficiency, caching the valence band ifft's to improve serial performance,
         # but this should be removed later, or a cleaner solution must be found.
+
+        # @pw_logger.time('matrix_elements:get_evc_gk_r2g')
         @lru_cache(maxsize=int(n_v_max))
         def get_evc_gk_r2g(i_k_v, i_b_v):
             if is_qpt_0:
@@ -205,7 +238,9 @@ class Epsilon:
 
         # MATRIX ELEMENTS CALCULATION ---------------------------------------------------
         if not yielding:
-            M = np.zeros((n_kpts, n_c_max, n_v_max, self.l_gq[i_q].numgk), dtype=complex)
+            M = np.zeros(
+                (n_kpts, n_c_max, n_v_max, self.l_gq[i_q].numgk), dtype=complex
+            )
         # Memory reqd = complex(8bytes) * n_kpts * n_c_max * n_v_max * self.l_gq[i_q].numgk
         # For a converged run, such as the one shown in the QTM paper,
         # n_kpts ~ 3
@@ -213,15 +248,8 @@ class Epsilon:
         # n_v_max ~ 4
         # numgk ~ 537
 
-        # TODO: Refactor older i_c, i_v loops to just one i_k_c loop,
-        #       and (depending on target architecture,) vectorize i_b_c and i_b_v to compute all ffts at once and reuse them.
-        #       This way, the r2g is expected to be the most frequently called routine.
-        #       r2g will be called nv*nc times, whereas g2r will be called nv+nc times
-        #       The details will depend on the nature of parallelization.
-        #       And the analysis will be slightly different in the case of Sigma's matrix elements.
-
         prev_i_k_c = None  # To avoid recalculation for the same kc vector,
-        for i_c in range(n_c):#, desc="mtxel i_c loop"):
+        for i_c in range(n_c):  # , desc="mtxel i_c loop"):
             i_k_c = l_i_c[0][i_c]  # unoccupied k indices, repeated
             i_b_c = l_i_c[1][i_c]  # unoccupied band indices, repeated
 
@@ -244,7 +272,7 @@ class Epsilon:
                 umklapped_fft_driver = get_fft_driver()(
                     self.gspace.grid_shape,
                     grid_g_umklapp,
-                    normalise_idft=False,  
+                    normalise_idft=False,
                     # NOTE: normalise_idft=False will be the default for all gw code,
                     # as this is the default for gkspc.fft_driver constructor call.
                     # However, it matters only for ifft, i.e. g2r,
@@ -289,12 +317,24 @@ class Epsilon:
                         sqrt_Ec_Ev * prod_grid_shape
                     )
                 # In `polarizability`, these three indices are bein summed over anyway, so it might make sense to have an alternative function for polarizability where polarizability is calculated directly, without ever storing the full M.
-                
+
         if not yielding:
             yield M
 
     @classmethod
     def from_data(cls, wfndata, wfnqdata, epsinp):
+        """Construct an `Epsilon` object from objects derived directly from BGW-compatible input files.
+
+        Parameters
+        ----------
+        wfndata
+            WfnData object, constructed from WFN.h5 file.
+        wfnqdata
+            WfnData object for shifted grid, constructed from WFNq.h5 file.
+        epsinp
+            EpsilonInput object, constructed from epsilon.inp file.
+        """
+
         qpts = QPoints.from_cryst(wfndata.kpts.recilat, epsinp.is_q0, *epsinp.qpts)
 
         return Epsilon(
@@ -313,25 +353,49 @@ class Epsilon:
     # CHI ===========================================================================
 
     def polarizability(self, M):
-        """Polarizability Matrix in G, G' both ordered by |G+q|"""
+        """Polarizability Matrix
+
+        Parameters
+        ----------
+        M : np.ndarray
+            Plane wave matrix elements.
+        """
 
         # Nice suggestion by SH: consider doin this within matrix_elements, to avoid space wastage.
         polarizability_matrix = -np.einsum("ijkl,ijkm->lm", np.conj(M), M)
 
         return polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
 
+    @pw_logger.time("epsilon:polarizability_active")
     def polarizability_active(self, i_q):
-        """Returns Polarizability Matrix in G, G' both ordered by |G+q|. Differs from the ``polarizability`` method in that it actively calls ``matrix_element`` function and does the sums in a memory-efficient way."""
+        """Calculates Polarizability Matrix.
+        Differs from the ``polarizability`` method in that it actively calls ``matrix_element`` function and does the sums in a memory-efficient way.
+
+        Parameters
+        ----------
+        i_q : int
+            index of qpoint for which polarizability will be calculated.
+        """
         # for i_q in trange(0, self.qpts.numq, desc="Epsilon> q-pt index"):
-        polarizability_matrix = np.zeros((self.l_gq[i_q].numgk, self.l_gq[i_q].numgk), dtype=complex)
+        polarizability_matrix = np.zeros(
+            (self.l_gq[i_q].numgk, self.l_gq[i_q].numgk), dtype=complex
+        )
         for M in self.matrix_elements(i_q=i_q, yielding=True):
             polarizability_matrix += -np.einsum("l,m->lm", np.conj(M), M)
-            
+
         return polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
 
     # EPSILON INVERSE ===========================================================================
+    @pw_logger.time("epsilon:epsilon_inverse")
     def epsilon_inverse(self, i_q, polarizability_matrix):
-        """Calculate epsilon inverse, given index of q-point"""
+        """Calculate epsilon inverse, given index of q-point
+
+        Parameters
+        ----------
+        i_q : int
+            index of q-point
+        polarizability_matrix : np.ndarray
+        """
 
         vqg = self.vcoul.v_bare(i_q)
         I = np.identity(len(polarizability_matrix))
@@ -342,10 +406,28 @@ class Epsilon:
 
     # READ / WRITE EPSMAT =============================================================
 
-    def write_epsmat(self, filename, epsinvmats):
-        """Save data to epsmat.h5 file"""
+    @pw_logger.time("epsilon:write_epsmat")
+    def write_epsmat(self, filename: str, epsinvmats: List[np.ndarray]):
+        """Save data to epsmat.h5 file
+
+        Parameters
+        ----------
+        filename : str
+        epsinvmats : List[np.ndarray]
+            List of epsilon inverse matrices to be saved.
+        """
         write_mats(filename, epsinvmats)
 
-    def read_epsmat(self, filename):
-        """Read epsmat from epsmat.h5 file"""
+    def read_epsmat(self, filename: str):
+        """Read epsmat from epsmat.h5 file
+
+        Parameters
+        ----------
+        filename : str
+
+        Returns
+        -------
+        epsinvmats : List[np.ndarray]
+            List of epsilon inverse matrices read from file.
+        """
         return read_mats(filename)
