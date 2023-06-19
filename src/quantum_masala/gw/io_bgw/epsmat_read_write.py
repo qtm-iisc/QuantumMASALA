@@ -86,6 +86,7 @@ template_dict = {
 
 # import h5py
 import numpy as np
+# from quantum_masala.core.pwcomm import COMM_WORLD
 from quantum_masala.gw.h5_io.h5_utils import (
     cplx_to_real,
     create_empty_h5,
@@ -113,7 +114,11 @@ def unpad_array(arr):
         else:
             break
 
-    return arr
+    # arr should be square
+    mindim = min(arr.shape[-2:])
+    # print(mindim)
+
+    return arr[...,:mindim,:mindim]
 
 
 def write_mats(filename, mats, auxfile=None):
@@ -134,6 +139,7 @@ def write_mats(filename, mats, auxfile=None):
 
     # Find the maximum size of matrices in mats
     # in order to be able to create a single 'matrix' array
+    # print("mats", mats, COMM_WORLD.Get_rank())
     max_dim = max([max(mat.shape) for mat in mats])
     # debug('mats')
     # debug('max_dim')

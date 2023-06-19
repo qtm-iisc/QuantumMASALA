@@ -35,8 +35,18 @@ def read_input_h5_namedtuple(filename, name, **kwargs):
 
 
 def read_rho(filename):
-    """Read RHO - the fortran binary file containg rho data
-    Returns lists of gvecs and list of corresponding rho values (complex for now).
+    """Read RHO - the fortran binary file containg rho data.
+
+    Parameters
+    ----------
+    filename: str
+    
+    Returns 
+    -------
+    rhotuple : NamedTuple
+        Contains a) a list of gvecs, and b) a list of corresponding rho values.
+    
+        
     Comments give the corresponding lines from pw2bgw that wrote out the RHO file.
     We read and ignore irrelevant data.
     """
