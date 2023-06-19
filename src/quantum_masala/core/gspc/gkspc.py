@@ -119,21 +119,13 @@ class GkSpace:
     @property
     def gk_indices_tosorted(self):
         """Copy of ``sort_cryst_like_BGW``"""
-        # return np.argsort(self.norm2)
+        from quantum_masala.gw.core import sort_cryst_like_BGW
         # return sort_cryst_like_BGW(self.cryst, self.norm)
 
         # Sorting order same as BerkeleyGW
         cryst = self.cryst
-        key_array = self.norm
-        indices_cryst_sorted = np.lexsort(
-            (
-                cryst[2, :],
-                cryst[1, :],
-                cryst[0, :],
-                np.around(key_array, 5),
-            )
-        )
-    
+        key_array = self.norm2
+        indices_cryst_sorted = sort_cryst_like_BGW(cryst, key_array)
         return indices_cryst_sorted
     
     @property
