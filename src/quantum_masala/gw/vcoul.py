@@ -1,10 +1,12 @@
 from copy import deepcopy
+from functools import lru_cache
 from importlib.util import find_spec
 # from numba import jit
 from itertools import chain
 
 from typing import Dict, List
 import numpy as np
+from scipy import spatial
 from tqdm import trange
 
 # from quantum_masala.gw.core import GSpaceQpt
@@ -17,6 +19,8 @@ from quantum_masala.gw.core import QPoints
 
 from numpy.random import MT19937
 from numpy.random import RandomState
+
+from quantum_masala.logger import pw_logger
 # from multiprocessing import Pool
 
 if _MPI4PY_INSTALLED:
@@ -40,7 +44,7 @@ class Vcoul:
     if W is the final quantity of relevance for the application such as
     the evaluation of W for the self-energy.
 
-    FIXME: Recheck documentation when completed.
+    TODO: Recheck documentation when completed.
 
     Attributes
     ----------
@@ -84,17 +88,13 @@ class Vcoul:
     -----
     - Truncation has not been implemented yet.
     - Performance related note: We assume that this class is being used to
-        find vcoul for all qpts. Assumption used to deciding whether or not to
+        find vcoul for all qpts. Assumption used for deciding whether or not to
         construct GSpaceQpt.
-    - No smart "hack" has been provided. Ref to BGW vcoul_generator:
-        !! we "hack" v to make it consistent with W, otherwise the partition (SX-X) + X
-        !! would not be correct for metals. We never perform these "hacks" on v(q)
-        !! if peinf%jobtypeeval=0.:
     """
 
     # Consider using enum for truncflag and avgflag
-    N_SAMPLES = 2.5e4
-    N_SAMPLES_COARSE = 2.5e3
+    N_SAMPLES = 2.5e6
+    N_SAMPLES_COARSE = 2.5e5
     SEED = 5000
     # print(f"Warning! Sigma.SEED = {SEED}")
 
@@ -153,24 +153,35 @@ class Vcoul:
 
     def __repr__(self):
         string = f"""Vcoul:
-            * gspace = {self.gspace}
-            * qpts = {self.qpts}
-            * bare_coulomb_cutoff = {self.bare_coulomb_cutoff}
-            * avgcut = {self.avgcut}
-            * l_gspace_q = {type(self.l_gspace_q)} of length {len(self.l_gspace_q)}
-            * vcoul = {type(self.vcoul)} of length {len(self.vcoul)}
+        * gspace = {self.gspace}
+        * qpts = {self.qpts}
+        * bare_coulomb_cutoff = {self.bare_coulomb_cutoff}
+        * avgcut = {self.avgcut}
+        * l_gspace_q = {type(self.l_gspace_q)} of length {len(self.l_gspace_q)}
+        * vcoul = {type(self.vcoul)} of length {len(self.vcoul)}
+        * N_SAMPLES = {Vcoul.N_SAMPLES}
+        * N_SAMPLES_COARSE = {Vcoul.N_SAMPLES_COARSE}
+        * SEED = {Vcoul.SEED}
         """
+        if Vcoul.SEED!=5000:
+            string+="\nWARNING: Vcoul.SEED={self.SEED}"
+        if Vcoul.N_SAMPLES!=2.5e6:
+            string+="\nWARNING: Vcoul.N_SAMPLES={self.N_SAMPLES}"
+        if Vcoul.N_SAMPLES_COARSE!=2.5e5:
+            string+="\nWARNING: Vcoul.N_SAMPLES_COARSE={self.N_SAMPLES_COARSE}"
         return string
 
     # HELPER FUNCTIONS :
-
+    @pw_logger.time('Vcoul:closer_than_d')
     def closer_than_d(self, pt, l_pts, d):
         """Check if distance of point `pt` to some point in `l_pts` is less than `d`."""
+        # TODO: Turn into np.array operation instead of loop to improve speed.        
         for r in l_pts:
             if np.linalg.norm(r - pt) <= d:
                 return True
         return False
 
+    @pw_logger.time('Vcoul:ws_sphere_inout')
     def ws_sphere_inout(self, pt, l_pts, centre, radius):
         """Correction for spherical approximation for montecarlo in wigner-seitz. [All Cartesian coords]
             `ws` means "Wigner Seitz"
@@ -184,6 +195,8 @@ class Vcoul:
 
         d_centre = np.linalg.norm(pt - centre)
         d_nbhd, closest_pt, closest_i = self.closest_pt_dst(pt, l_pts)
+        # d_nbhd = np.min(l_pts-pt)
+
         # d_nbhd = np.min(np.linalg.norm(pt[None,:]-l_pts), axis=1)
 
         in_sph = d_centre <= radius
@@ -197,6 +210,7 @@ class Vcoul:
             return -1
         return None
 
+    @pw_logger.time('Vcoul:closest_pt_dst')
     def closest_pt_dst(self, pt, l_pts):
         """Find distance to the closest point from the neighbourhood and the distance from it. [All Cartesian coords]
 
@@ -231,6 +245,7 @@ class Vcoul:
                 min_dist, min_pt, min_i = dist, r, i
 
         return min_dist, min_pt, min_i
+    
 
     def fixwings(
         self,
@@ -255,8 +270,8 @@ class Vcoul:
             With head and wing elements fixed.
 
 
-        Notes from BGW
-        --------------
+        Notes from BGW, for reference
+        -----------------------------
             ! MODULE: fixwings_m
             !
             !> Rescale epsmat to make it compatible with W averaging
@@ -354,6 +369,16 @@ class Vcoul:
 
         return fixed_epsinv
 
+    @lru_cache()
+    def mt19937_samples(self, nsamples = N_SAMPLES):
+        rs = RandomState(self.SEED)
+        mt19937 = MT19937()
+        mt19937.state = rs.get_state()
+
+        # Discard first 2500000*3 random numbers.
+        dump = mt19937.random_raw(int(self.N_SAMPLES) * 3)
+        return mt19937.random_raw(3*int(nsamples))
+
     # CORE FUNCTIONS :
 
     def v_bare(self, i_q, averaging_func=None):
@@ -418,7 +443,7 @@ class Vcoul:
         return 8 * np.pi * numerator / denominator
 
     def v_minibz_montecarlo(self, nsamples=N_SAMPLES, shift_vec_cryst=None, seed=None):
-        """Naive montecarlo, returns answer in a.u."""
+        """Naive montecarlo, returns answer in Rydberg a.u."""
         if seed != None:
             np.random.seed(seed)
 
@@ -501,7 +526,7 @@ class Vcoul:
         return v_avg
 
     def v_minibz_montecarlo_hybrid(self, shift_vec_cryst=None):
-        """Return average Coulomb in miniBZ. (a.u.)
+        """Return average Coulomb in miniBZ. (Rydberg a.u.)
 
         Notes
         -----
@@ -510,6 +535,7 @@ class Vcoul:
             ! integration ~const. by choosing the number of points such that N ~ 1/ekinx.
             ! This is because, in 3D, error = sigma/N^{3/2}, and sigma ~ 1/ekinx^{3/2}
             ! If we fix the number of points such that N(ekinx=4*q0sph2) = nmc_coarse,
+        - Performance: 
         """
 
         # print(shift_vec_cryst, end="\t")
@@ -520,14 +546,7 @@ class Vcoul:
         # Init random number generator
         # seed=5000 is in accordance with BGW
         # print(f"Warning: seed is {self.SEED}")
-        rs = RandomState(self.SEED)
-        mt19937 = MT19937()
-        mt19937.state = rs.get_state()
-
-        # Discard first 2500000*3 random numbers.
-        dump = mt19937.random_raw(int(self.N_SAMPLES) * 3) / 2**32
-        # dump = mt19937.random_raw(2500000*3)/2**32
-        # print("discarding initial random variables:", mt19937.random_raw(2500000*3)/2**32)
+        
 
         # NOTE: This was older version
         #       The newer version, takes the in-sphere of the miniBZ.
@@ -565,9 +584,6 @@ class Vcoul:
             full_qpts += list(np.multiply(s, l_k))
         full_qpts = np.unique(full_qpts, axis=0)
 
-        # print(f"full_qpts {len(full_qpts)}")
-        # print(full_qpts)
-
         # Filter points in grid that are within 2*k_cutoff,
         # and hence their wigner-seitz plane can cut the sphere with radius k_cutoff
         # nbhd converted to CARTESIAN coords (a.u.), because we need norm.
@@ -581,13 +597,7 @@ class Vcoul:
         # 32.0D0 * PI_D**2 * SQRT(q0sph2) / ( 8.0D0 * PI_D**3 / (celvol * dble(nfk)) )
 
         nbhd_crys = full_qpts[np.where(normsq_arr <= (8 * q_cutoff) ** 2)]
-
-        # print(nbhd_crys)
         nbhd_cart = self.gspace.recilat.cryst2cart(nbhd_crys.T).T
-
-        v_corr = 0
-        oneoverq_corr = 0
-        n_corr = 0
 
         shift_length = np.linalg.norm(shift_vec_cart)
         if shift_length < TOL_SMALL:
@@ -609,32 +619,25 @@ class Vcoul:
                 self.N_SAMPLES_COARSE * 4.0 * q_cutoff**2 / shift_length**2
             )
             nsamples = max(1, min(self.N_SAMPLES, nsamples))
-            # print("nn2 = ", nsamples)
             q_cutoff = 0
 
         nsamples = int(nsamples)
 
-        for _ in range(nsamples):  # , desc=str(shift_vec_cryst)):
-            pt_crys = mt19937.random_raw(3) / 2**32
-            pt_crys /= self.qpts.numq ** (1 / 3)
+        sample_factor = 1/(2**32 * self.qpts.numq ** (1 / 3))
+        arr_pt_crys = self.mt19937_samples()[:3*nsamples].reshape(-1,3) * sample_factor
+        arr_pt_cart = self.gspace.recilat.cryst2cart(arr_pt_crys.T).T
 
-            pt_cart = self.gspace.recilat.cryst2cart(pt_crys.T).T
+        tree = spatial.KDTree(nbhd_cart)
+        arr_index_closest_nbhd_cart = tree.query(arr_pt_cart)[1]
+        arr_pt_cart -= np.take(nbhd_cart, arr_index_closest_nbhd_cart, axis=0)
+        arr_length = np.linalg.norm(arr_pt_cart,axis=1)
+        arr_length_shifted = np.linalg.norm(arr_pt_cart + shift_vec_cart, axis=1)
 
-            # Shift pt from q-grid zone to WS cell
-            index_closest_nbhd_cart = np.argmin(
-                np.linalg.norm(nbhd_cart - pt_cart, axis=1)
-            )
-            pt_cart -= nbhd_cart[index_closest_nbhd_cart]
-            pt_crys -= nbhd_crys[index_closest_nbhd_cart]
-
-            length = np.linalg.norm(pt_cart)
-            length_shifted = np.linalg.norm(pt_cart + shift_vec_cart)
-            oneoverlength = 1 / length_shifted
-            oneoverq_corr += oneoverlength
-            if length > q_cutoff:
-                # pt is in ws but not in sph, needs to be counted
-                n_corr += 1
-                v_corr += oneoverlength**2
+        where_length_gt_qcutoff = np.where(arr_length > q_cutoff)
+        arr_oneoverlength = np.reciprocal(arr_length_shifted)
+        n_corr = len(where_length_gt_qcutoff[0])
+        v_corr = np.sum(np.square(arr_oneoverlength[where_length_gt_qcutoff]))
+        oneoverq_corr = np.sum(arr_oneoverlength)
 
         # Had to have the following conditional, because the formula used for
         # v_q0 averaged in BGW takes the smaller volume of inscribed sphere into account
@@ -652,26 +655,20 @@ class Vcoul:
     def oneoverq_minibz_montecarlo(
         self, shift_vec_cryst=None
     ):  # , hybrid_for_non0 = False):
-        # print(shift_vec_cryst, end="\t")
-
-        # Relative error calculation: 1/sqrt(nsamples)
-        # nsamples = int(nsamples)
 
         # Init random number generator
-        # seed=5000 is in accordance with BGW
-        # print(f"Warning: seed is {self.SEED}")
-        rs = RandomState(self.SEED)
-        mt19937 = MT19937()
-        mt19937.state = rs.get_state()
+        # rs = RandomState(self.SEED)
+        # mt19937 = MT19937()
+        # mt19937.state = rs.get_state()
 
         # Discard first 2500000*3 random numbers.
         # dump = mt19937.random_raw(2500000*3)/2**32
-        dump = mt19937.random_raw(int(self.N_SAMPLES) * 3) / 2**32
-        dump=dump # to avoid commenting out the dumping line, because dump is not used
+        # dump = mt19937.random_raw(int(self.N_SAMPLES) * 3)
+        # dump=dump # to avoid commenting out the dumping line, because dump is not used
         # print("discarding initial random variables:", mt19937.random_raw(2500000*3)/2**32)
 
-        # NOTE: This was older version
-        #       The newer version, takes the in-sphere of the miniBZ.
+        # NOTE: The following line was in an older version of `qtm`.
+        #       The newer version takes the in-sphere of the miniBZ istead of sphere with the same volume as miniBZ.
         #
         # calculate k_cutoff, which is radius of sphere with same volume as miniBZ at q=0
         #   math: 4pi/3 k_c^3 = recvol/nqpts
@@ -706,60 +703,43 @@ class Vcoul:
             full_qpts += list(np.multiply(s, l_k))
         full_qpts = np.unique(full_qpts, axis=0)
 
-        # print(f"full_qpts {len(full_qpts)}")
-        # print(full_qpts)
-
         # Filter points in grid that are within 2*k_cutoff,
         # and hence their wigner-seitz plane can cut the sphere with radius k_cutoff
         # nbhd converted to CARTESIAN coords (a.u.), because we need norm.
         # ZERO_TOL = 1e-5
 
         normsq_arr = self.gspace.recilat.norm2(full_qpts.T)
-
         q_cutoff = np.sqrt(np.min(normsq_arr[np.where(normsq_arr > TOL_SMALL)])) / 2
-        # print("q0sph2:", q_cutoff**2)
 
         # 32.0D0 * PI_D**2 * SQRT(q0sph2) / ( 8.0D0 * PI_D**3 / (celvol * dble(nfk)) )
 
         nbhd_crys = full_qpts[np.where(normsq_arr <= (8 * q_cutoff) ** 2)]
 
-        # print(nbhd_crys)
+        
         nbhd_cart = self.gspace.recilat.cryst2cart(nbhd_crys.T).T
 
         oneoverq_corr = 0
 
         shift_length = np.linalg.norm(shift_vec_cart)
-        # print("shift_length", shift_length)
-        # if True:
-        # if shift_length<
-        # oneoverqsph = 8 * np.pi / shift_length
+        
         # From BGW minibzaverage_3d:
         # nn2 = idnint(nmc_coarse * 4d0 * q0sph2 / length_qk)
         # nn2 = max(1, min(nn2, nn))
         
         # Apparently idnint is equivalent to np.round
         nsamples = np.round(self.N_SAMPLES_COARSE * 4.0 * q_cutoff**2 / shift_length**2) if shift_length > 0 else np.nan
-        nsamples = max(1, min(self.N_SAMPLES, nsamples))
-        # Older line:
-        # nsamples = self.N_SAMPLES
+        nsamples = int(max(1, min(self.N_SAMPLES, nsamples)))
+        
+        sample_factor = 1/(2**32 * self.qpts.numq ** (1 / 3))
+        arr_pt_crys = self.mt19937_samples()[:3*nsamples].reshape(-1,3) * sample_factor
+        arr_pt_cart = self.gspace.recilat.cryst2cart(arr_pt_crys.T).T
 
-        twopowminus32_times_numq_cuberoot = 2**-32 * self.qpts.numq ** (-1 / 3)
+        tree = spatial.KDTree(nbhd_cart)
+        arr_index_closest_nbhd_cart = tree.query(arr_pt_cart)[1]
+        arr_pt_cart -= np.take(nbhd_cart, arr_index_closest_nbhd_cart, axis=0)
+        arr_length_shifted = np.linalg.norm(arr_pt_cart + shift_vec_cart, axis=1)
 
-        nsamples = int(nsamples)
-        for _ in range(nsamples):
-            pt_crys = mt19937.random_raw(3) * twopowminus32_times_numq_cuberoot
-
-            pt_cart = self.gspace.recilat.cryst2cart(pt_crys.T).T
-
-            # Shift pt from q-grid zone to WS cell
-            index_closest_nbhd_cart = np.argmin(
-                np.linalg.norm(nbhd_cart - pt_cart, axis=1)
-            )
-            pt_cart -= nbhd_cart[index_closest_nbhd_cart]
-
-            length_shifted = np.linalg.norm(pt_cart + shift_vec_cart)
-            oneoverlength = 1 / length_shifted
-            oneoverq_corr += oneoverlength
+        oneoverq_corr = np.sum(np.reciprocal(arr_length_shifted))
 
         return (8 * np.pi) * oneoverq_corr / nsamples
 
@@ -796,12 +776,13 @@ class Vcoul:
         0.00000000  0.00000000  0.00100000       0      0      0       0.22077974E+08
         0.00000000  0.00000000  0.00100000      -1     -1     -1       0.22092680E+02
 
-        From BGW ``vcoul_generator.f90``:
+        Reference snippet from BGW ``vcoul_generator.f90``:
             write(19,'(3f12.8,1x,3i7,1x,e20.8)') &
                 qvec_mod(:),gvec%components(:,isrtq(ig)),vcoul(ig)
         ...
         """
         # FIXME: Needs Fortran-like 0.xxxx kind of format for vcoul column.
+        res = ""
         if i_q_list is None:
             i_q_list = range(self.qpts.numq)
         for i_q in i_q_list:
@@ -810,10 +791,9 @@ class Vcoul:
                     qvec = self.qpts.q0vec
                 else:
                     qvec = self.qpts.cryst[i_q]
-                # gvec = self
-                print(
-                    f"{qvec[0]:>11.8f} {qvec[1]:>11.8f} {qvec[2]:>11.8f}  {gvec[0]:>6} {gvec[1]:>6} {gvec[2]:>6}       {self.vcoul[i_q][i_g]:<.8E}"
-                )
+                
+                res+=f"{qvec[0]:>11.8f} {qvec[1]:>11.8f} {qvec[2]:>11.8f}  {gvec[0]:>6} {gvec[1]:>6} {gvec[2]:>6}       {self.vcoul[i_q][i_g]:<.7E}\n"
+        return res                
 
     def set_vcoul_and_oneoverq(self, vcoul, oneoverq):
         self.vcoul=vcoul
@@ -831,6 +811,7 @@ class Vcoul:
         return
 
     # METHODS :
+    # @pw_logger.time('Vcoul:calculate_vcoul_single_qpt')
     def calculate_vcoul_single_qpt(self, i_q, averaging_func=None, bare=False, random_avg=True):
         if self.qpts.index_q0 == i_q:
             qvec = np.zeros_like(self.qpts.cryst[i_q])
@@ -885,6 +866,7 @@ class Vcoul:
 
         return vqg, oneoverq
 
+    @pw_logger.time('Vcoul:calculate_vcoul')
     def calculate_vcoul(self, averaging_func=None, bare=False, random_avg=True, parallel=True):
         """Populate the vcoul list vcoul[i_q][i_g].
         The onus of using appropriate vcoul averaging function
@@ -910,7 +892,11 @@ class Vcoul:
             q_indices = np.arange(self.qpts.numq)
             proc_q_indices =  np.array_split(q_indices, self.comm_size)[proc_rank]
             
+            print_condition = (not self.in_parallel) or (self.in_parallel and self.comm.Get_rank()==0)
+            
             for i_q in proc_q_indices:
+                # if print_condition:
+                print(i_q, end=" ", flush=True)
                 vqg, oneoverq = self.calculate_vcoul_single_qpt(i_q, averaging_func, bare, random_avg)
                 proc_vcoul.append(vqg)
                 proc_oneoverq.append(oneoverq)
@@ -928,7 +914,7 @@ class Vcoul:
     ):
         """Populate the vcoul list wcoul[i_q][i_g].
         Use fixwings for q or q'==0
-        Sample wcoul as <eps_head(q) * vcoul(q)> over minibz
+        Sample wcoul as <eps_head(q) * vcoul(q)> over minibz.
         """
         # raise NotImplementedError("Work in progress")
         # print(self.vcoul[0][0])
@@ -968,8 +954,10 @@ if __name__ == "__main__":
     from quantum_masala.gw.io_bgw.inp import read_epsilon_inp
     from quantum_masala.gw.core import QPoints
 
-    wfndata = wfn2py("./test/bgw/WFN.h5")
-    epsdata = read_epsilon_inp()
+    dirname = "./scripts/results/si_4_gw_cohsex_nn25000"
+
+    wfndata = wfn2py(f"{dirname}/WFN.h5")
+    epsdata = read_epsilon_inp(f"{dirname}/epsilon.inp")
 
     qpts = QPoints.from_cryst(wfndata.kpts.recilat, epsdata.is_q0, *epsdata.qpts)
 
