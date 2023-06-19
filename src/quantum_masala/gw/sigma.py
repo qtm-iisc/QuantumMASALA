@@ -11,6 +11,7 @@ Do FIX this later.
 
 
 from importlib.util import find_spec
+from quantum_masala.gw.io_bgw.wfn2py import WfnData
 from quantum_masala.gw.mydebugtoolkit import read_txt
 from quantum_masala.gw.vcoul import Vcoul
 from quantum_masala.core.fft import get_fft_driver
@@ -33,6 +34,7 @@ from quantum_masala.core.gspc.gkspc import GkSpace
 from quantum_masala.gw.core import sort_cryst_like_BGW
 
 from quantum_masala.core.pwcomm import _MPI4PY_INSTALLED
+from quantum_masala.logger import pw_logger
 
 if _MPI4PY_INSTALLED:
     from mpi4py import MPI
@@ -54,11 +56,6 @@ TOLERANCE = 1e-5
 global_test_vcoul = False  # True may not work for now, due to broken sorted-gpts
 global_test_epsinv = global_test_vcoul
 
-
-# dirname = "./test/bgw/"
-dirname = "./scripts/results/si_4_gw_cohsex_nn25000/"  # For GPP: _gpp_skipw0/"
-# old_dirname = "../QE_data/control_scripts/"
-old_dirname = dirname
 
 # Sigma Class
 
@@ -83,10 +80,11 @@ class Sigma:
 
     """
 
-    ryd = 13.605692530000001
+    ryd = 1/ELECTRONVOLT_RYD
     limitone = 1 / TOLERANCE / 4  # limitone=1D0/(TOL_Small*4D0)
     limittwo = 0.25  # limittwo=sig%gamma**2 what is gamma?
     fixwings = not global_test_epsinv
+    autosave = False
 
     def __init__(
         self,
@@ -103,6 +101,9 @@ class Sigma:
         sigmainp: NamedTuple,
         epsinp: NamedTuple,
         l_epsmats: List[np.ndarray],
+        rho: NamedTuple,
+        vxc: NamedTuple,
+        outdir:str=None,
         parallel:bool=True,
     ):
         """Initialize Sigma
@@ -126,6 +127,10 @@ class Sigma:
         self.sigmainp = sigmainp
         self.epsinp = epsinp
         self.l_epsmats = l_epsmats
+        self.rho = rho
+        self.vxc = vxc
+        self.outdir = outdir
+
 
         self.in_parallel = False
         self.comm = None
@@ -137,9 +142,11 @@ class Sigma:
                 if self.comm.Get_size() > 1:
                     self.in_parallel=True
 
+        if self.outdir is None:
+            self.outdir = "./"
+
         # Read RHO.dat file and create hash map for rhogrid
         # TODO: Have the ability to optionally generate `rho` directly from wfndata
-        self.rho = inp.read_rho(old_dirname + "RHO")
         rhogvecs = self.rho.gvecs
         rhogrid = self.gspace.grid_shape
         self.rho_gvecs_hashed = (
@@ -204,17 +211,20 @@ class Sigma:
         for i_q in range(self.qpts.numq):
             # print("i_q", i_q)
             epsinv = self.l_epsmats[i_q]  # [0,0]
+            # epsinv = reorder_2d_matrix_sorted_gvecs(epsinv, self.l_gq[i_q].gk_indices_fromsorted)
 
             # Fix wings (look at Table 2 in BerkeleyGW Paper (2012))
             if self.fixwings:
                 epsinv = self.vcoul.calculate_fixedeps(
                     epsinv, i_q, random_sample=False)
             epsinv_I = epsinv - np.eye(len(epsinv))
+
             self.l_epsinv_I.append(
                 reorder_2d_matrix_sorted_gvecs(
                     epsinv_I, self.l_gq[i_q].gk_indices_fromsorted
                 )
             )
+            # self.l_epsinv_I.append(epsinv_I)
 
         # Deprecated code, used earlier for manual parallelization
         # of sigma calculation over q-points
@@ -231,7 +241,7 @@ class Sigma:
         return
 
     @classmethod
-    def from_data(cls, wfndata, wfnqdata, sigmainp, epsinp, l_epsmats):
+    def from_data(cls, wfndata:WfnData, wfnqdata:WfnData, sigmainp:NamedTuple, epsinp:NamedTuple, l_epsmats: List[np.ndarray], rho:NamedTuple, vxc:NamedTuple, outdir:str=None):
         # FIXME: Needs more robust logic, i.e. read qpts from epsmat.h5 etc. as done by BGW/Sigma
         #        That is, we shouldn't require epsilon.inp file for Sigma calculation.
         #        Ideally, epsmat.h5 should contain all the data that we need,
@@ -255,6 +265,9 @@ class Sigma:
             sigmainp,
             epsinp,
             l_epsmats,
+            rho,
+            vxc,
+            outdir,
         )
 
     # ==================================================================
@@ -331,7 +344,7 @@ class Sigma:
             Indices in g_minusq that corresponds to respective -g vectors.
         """
         # print("map_g_to_g_minusq: started", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        start_time = time.time_ns()
+        # start_time = time.time_ns()
 
         # Initialize indices to -1's, which will indicate "not found" case
         # Not found will never occur because we are using np.argmin to get an index
@@ -371,6 +384,7 @@ class Sigma:
     # ==================================================================
     # Plane wave matrix calculation methods
 
+    @pw_logger.time('sigma:matrix_elements')
     def matrix_elements(
         self,
         i_q,
@@ -492,10 +506,10 @@ class Sigma:
         # k_ket + qpt = k_bra
         pairs_i_k = []
         for i_k_ket in l_k_indices:
-            k_bra_indices = np.where((l_k == l_kplusq[i_k_ket]).all(axis=1))[0]
+            k_bra_indices = np.where((np.isclose(l_k, l_kplusq[i_k_ket], TOLERANCE)).all(axis=1))[0]
             assert (
                 len(k_bra_indices) > 0
-            ), "Could not find k-point in wavefunction k-points that matches k+q"
+            ), f"Could not find k-point in wavefunction k-points that matches k+q.\nHere is the list of k-points:{l_k}\nand here is the k+q vector:{l_kplusq[i_k_ket]}"
             pairs_i_k.append((i_k_ket, k_bra_indices[0]))
         # print("pairs_i_k", pairs_i_k)
 
@@ -507,7 +521,6 @@ class Sigma:
                     self.l_k_indices == i_k_ket)[0][0]
                 for i_b_bra in range(n_bra):
                     E_bra[i_k_ket_in_mtxel_call, i_b_bra] = self.l_wfn[i_k_bra].evl[0][i_b_bra + i_b_bra_beg]
-                    
                 for i_b_ket in range(n_ket):
                     E_ket[i_k_ket_in_mtxel_call, i_b_ket] = self.l_wfn[i_k_ket].evl[0][i_b_ket + i_b_ket_beg]
 
@@ -566,7 +579,8 @@ class Sigma:
             else:
                 yield M
 
-    def matrix_elements_sigma_exact(self, l_g, ket_all_bands=True, bra_all_bands=True):
+    # @pw_logger.time('sigma:matrix_elements_sigma_exact')
+    def matrix_elements_sigma_exact(self, l_g, is_qpt_0=False):
         """
         To Calculate the matrix elements for exact sigma_CH.
 
@@ -581,85 +595,45 @@ class Sigma:
         # k points data -------------------------------------------------
         # ** ALL K POINTS, Q POINTS, G POINTS IN CRYSTAL BASIS **
         n_kpts = self.qpts.numq
-        evl = []
-        evl_q0 = []
-        occ_in = []
-
-        for i_k in range(n_kpts):
-            occ_in.append(self.l_wfn[i_k].occ[0])
-            evl.append(self.l_wfn[i_k].evl)
-            evl_q0.append(self.l_wfnq[i_k].evl)
 
         # list of k-points in crystal coords
         l_k = self.kpts.cryst  # kpoints.rk
 
-        # wavefunction data ----------------------------------------------
-        # gvecs = [self.l_wfn[i_k].gwfc.cryst for i_k in range(n_kpts)]
-
         # Load Sigma.inp data --------------------------------------------
-        number_bands = sigmainp.number_bands
-        l_q = self.qpts.cryst  # list of q-points in crystal coords
-        epsilon_cutoff = epsinp.epsilon_cutoff
 
-        self.sorted_gpts = [
-            (self.l_gq[i_q].cryst, self.l_gq[i_q].norm2)
-            for i_q in range(self.qpts.numq)
-        ]
+        band_index_min = self.sigmainp.band_index_min
+        band_index_max = self.sigmainp.band_index_max
+        number_bands_outer = band_index_max-band_index_min+1
+        
+        # list of q-points in crystal coords
+        l_q = self.qpts.cryst
+        epsilon_cutoff = epsinp.epsilon_cutoff
+        # ecutwfc = self.l_gq[0].ecutwfc
 
         # occupation numbers ------------------------------------------------
-
-        occ_in = np.array(occ_in)
-
-        occ = occ_in[:, 0:number_bands]
-        # indices for ref: [index of kpoint, band index]
-        l_i_v = np.where(occ == 1)  # list of indices of occupied   bands
-        l_i_c = np.where(occ == 0)  # list of indices of unoccupied bands
-
         size = self.gspace.grid_shape
         n123 = np.prod(size)
 
-        n_v_max = max(l_i_v[1]) + 1
-        n_c_beg = min(l_i_c[1])
-        n_c_max = number_bands - min(l_i_c[1])
-
         # Assume q=0 is at index 0 in l_q
-        assert np.linalg.norm(l_q[0]) < TOLERANCE
+        assert np.linalg.norm(l_q[0]) < TOLERANCE, f"Assertion failed: {np.linalg.norm(l_q[0])} < {TOLERANCE}. i.e. qpt is != (0,0,0)"
 
-        if bra_all_bands:
-            l_i_sv_tuple = np.meshgrid(
-                list(range(self.sigmainp.number_bands)), list(range(len(occ)))
-            )
-            l_i_sv = np.array([l_i_sv_tuple[1].flatten(),
-                              l_i_sv_tuple[0].flatten()])
-            l_i_v_m = l_i_sv
-            n_v_m = number_bands
-        else:
-            l_i_v_m = l_i_v
-            n_v_m = n_v_max
+        l_i_sv_tuple = np.meshgrid(list(range(number_bands_outer)), list(range(n_kpts)))
+        l_i_sv = np.array([l_i_sv_tuple[1].flatten(), l_i_sv_tuple[0].flatten()])
+        l_i_v_m = l_i_sv
+        n_v_m = number_bands_outer
 
-        if ket_all_bands:
-            l_i_sc_tuple = np.meshgrid(
-                list(range(self.sigmainp.number_bands)), list(range(len(occ)))
-            )
-            l_i_sc = np.array([l_i_sc_tuple[1].flatten(),
-                              l_i_sc_tuple[0].flatten()])
-            l_i_c_m = l_i_sc
-            n_c_m = number_bands
-            i_b_c_beg = 0  # Index where conduction bands begin
-        else:
-            l_i_c_m = l_i_c
-            n_c_m = n_c_max
-            i_b_c_beg = n_c_beg
+        l_i_sc_tuple = np.meshgrid(list(range(number_bands_outer)), list(range(n_kpts)))
+        l_i_sc = np.array([l_i_sc_tuple[1].flatten(), l_i_sc_tuple[0].flatten()])
+        l_i_c_m = l_i_sc
+        n_c_m = number_bands_outer
 
-        M = np.zeros((self.n_kpts, n_v_m, n_c_m, len(l_g[0])), dtype=complex)
+        M = np.zeros((self.n_kpts, n_v_m, len(l_g[0])), dtype=complex)
 
         # UMKLAPP ----------------------------
 
         # Cycle to peridic image if k-q lies outside k grid (in crystal coords).
         # umklapp is the Correction that is to be added to bring the vector to 1st +BZ
 
-        # umklapp = np.zeros_like(l_k)
-        # umklapp = trunc_bril_legacy_vec(l_k)
         # FIXME: The following is redundant; l_kplusq IS l_k, because q=0 and umklapp=0.
         #        Just replace all l_kplusq with l_k.
         umklapp = -np.floor(np.around(l_k, 5))
@@ -668,15 +642,23 @@ class Sigma:
 
         # For efficiency, caching the valence band ifft's to improve serial performance,
         # but this should be removed later, or a cleaner solution must be found.
-        @lru_cache(maxsize=int(n_v_max))
-        def get_evc_gk_r2g(i_k_v, i_b_v):
-            wfn_v = self.l_wfn[i_k_v]
-            return wfn_v.gkspc.fft_mod.g2r(wfn_v.evc_gk[0, i_b_v, :])
+        # @lru_cache()#maxsize=int(number_bands*len(l_k_indices)*2))
+        # def get_evc_gk_r2g(i_k, i_b, checkq0 = True):
+        #     if is_qpt_0 and checkq0:
+        #         wfn = self.l_wfnq[i_k]
+        #     else:
+        #         wfn = self.l_wfn[i_k]
+        #     return wfn.gkspc.fft_mod.g2r(wfn.evc_gk[0, i_b, :])
+        
+        @lru_cache()
+        def get_evc_gk_r2g(i_k, i_b):
+            wfn_v = self.l_wfn[i_k]
+            return wfn_v.gkspc.fft_mod.g2r(wfn_v.evc_gk[0, i_b, :])
 
         # MATRIX CALCULATION -------------------
 
         prev_i_k_ket = None  # To avoid recalculation for the same value of k
-        for i_c in range(n_kpts * (n_c_m - i_b_c_beg)):
+        for i_c in range(n_kpts * n_c_m):
             i_k_ket = l_i_c_m[0][i_c]  # unoccupied k indices, repeated
             i_b_ket = l_i_c_m[1][i_c]  # unoccupied band indices, repeated
 
@@ -685,13 +667,9 @@ class Sigma:
 
             i_k_c_insigma = np.where(self.l_k_indices == i_k_ket)[0][0]
 
-            # phi_c = self.l_wfn[i_k_c].g2r(
-            #     ([0], [i_b_c])
-            # )  # Fourier transform to real space
-
             wfn_ket = self.l_wfn[i_k_ket]
             phi_ket = wfn_ket.gkspc.fft_mod.g2r(
-                wfn_ket.evc_gk[0, i_b_ket, :]) / n123
+                wfn_ket.evc_gk[0, i_b_ket, :])
 
             if prev_i_k_ket != i_k_ket:  # 'if' to avoid re-calculation
                 prev_i_k_ket = i_k_ket
@@ -726,29 +704,27 @@ class Sigma:
             for i_v in l_i_match:
                 i_k_bra = l_i_v_m[0][i_v]  # occupied k indices, repeated
                 i_b_bra = l_i_v_m[1][i_v]  # occupied band indices
+                if i_b_bra!=i_b_ket:
+                    continue
 
-                # phi_bra = self.l_wfn[i_k_bra].g2r(([0], [i_b_bra]))[0]
-                # prod = np.multiply(np.conj(phi_ket), phi_bra)
-                # fft_prod = self.l_gq[0].fft_dri.r2g(prod, idxgrid=tuple(i_g))
-
-                phi_bra = get_evc_gk_r2g(i_k_bra, i_b_bra) / n123
+                phi_bra = get_evc_gk_r2g(i_k_bra, i_b_bra)
                 prod = np.multiply(np.conj(phi_ket), phi_bra)
                 fft_prod = umklapped_fft_driver.r2g(prod)
 
-                M[
-                    i_k_c_insigma, i_b_bra, i_b_ket - i_b_c_beg
-                ] = fft_prod  # / sqrt_Ec_Ev
+                M[i_k_c_insigma, i_b_bra] = fft_prod
 
+        # FIXME: Decide what to do with this; should we remove the following snippet of code?
         for i, g in enumerate(l_g.T):
-            mag_g = self.gspace.recilat.norm(g) ** 2
-            if mag_g > epsilon_cutoff:
-                M[:, :, :, i] *= 0
+            normsq_g = self.gspace.recilat.norm(g) ** 2
+            # if normsq_g > ecutwfc:
+            if normsq_g > epsilon_cutoff:
+                M[:, :, i] *= 0
 
-        return M * n123
+        return M / n123
 
     # ==================================================================
     # Static Sigma methods
-
+    @pw_logger.time('sigma:sigma_x')
     def sigma_x(self, yielding=True, parallel=True):
         """
         Fock exchange energy term
@@ -817,6 +793,7 @@ class Sigma:
             return sigma_q
         
         if not (self.in_parallel and parallel):
+            proc_q_indices = range(len(l_q))
             for i_q in trange(len(l_q), desc="Sigma_X"):
                 sigma_q = compute_sigma_q(i_q)
                 sigma -= sigma_q
@@ -826,14 +803,22 @@ class Sigma:
             proc_q_indices =  np.array_split(q_indices, self.comm_size)[proc_rank]
             
             for i_q in proc_q_indices:
+                print(f"Rank: {self.comm.Get_rank()}, i_q: {i_q}, {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                 sigma_q = compute_sigma_q(i_q)
                 sigma -= sigma_q
-
             gathered_sigma = self.comm.allgather(sigma)
                 
             sigma = sum(gathered_sigma)
+        
+        if Sigma.autosave:
+            np.save(outdir+f"sigma_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_sigma_x_{proc_q_indices[0]}", sigma)
+
+        if self.print_condition:
+            np.save(outdir+f"sigma_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_sigma_x", sigma)
+        
         return sigma
 
+    @pw_logger.time('sigma:sigma_sx_static')
     def sigma_sx_static(self, yielding=True):
         """
         Static Screened Exchange
@@ -879,7 +864,7 @@ class Sigma:
 
         if not self.in_parallel:
             iterable = trange(len(l_q), desc="Sigma_SX_Static")
-                
+            proc_q_indices = range(len(l_q))
         else:
             proc_rank = self.comm.Get_rank()
             q_indices = np.arange(self.qpts.numq)
@@ -889,6 +874,7 @@ class Sigma:
         for i_q in iterable:
             # Get qpt value
             qpt = l_q[i_q]
+            print(f"Rank: {self.comm.Get_rank()}, i_q: {i_q}, {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
             # Find index of -q
             i_minusq = self.index_minusq(i_q)
@@ -958,9 +944,19 @@ class Sigma:
 
         if self.in_parallel:
             sigma = sum(self.comm.allgather(sigma))
-        return -1 * sigma
 
-    def sigma_ch_static(self, diag=True, yielding=True):
+        sigma *= -1
+
+        if Sigma.autosave:
+            np.save(outdir+f"sigma_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_sigma_sxstatic_{proc_q_indices[0]}", sigma)
+
+        if self.print_condition:
+            np.save(outdir+f"sigma_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_sigma_sxstatic", sigma)
+
+        return sigma
+
+    @pw_logger.time('sigma:sigma_ch_static')
+    def sigma_ch_static(self, yielding=True):
         """
         Static Coulomb Hole (partial sum)
         =================================
@@ -970,20 +966,13 @@ class Sigma:
 
         # Setting einstein summation string for M* M epsinv v
         # Init empty sigma matrix
-        number_bands_inner = self.sigmainp.number_bands
         band_index_min = self.sigmainp.band_index_min
         band_index_max = self.sigmainp.band_index_max
         number_bands_outer = band_index_max-band_index_min+1
 
-        if diag:
-            sigma = np.zeros((self.n_kpts, number_bands_outer), dtype=complex)
-            einstr = "nijk,nijm,mk,m->nj"
-        else:
-            sigma = np.zeros(
-                (self.kpts.numk, number_bands_outer, number_bands_outer), dtype=complex
-            )
-            einstr = "nijm,nilm,m->njl"
-
+        # if diag:
+        sigma = np.zeros((self.n_kpts, number_bands_outer), dtype=complex)
+        einstr = "nijk,nijm,mk,m->nj"
         # n   : k-points
         # i   : valence    states
         # j,l : conduction states
@@ -992,19 +981,15 @@ class Sigma:
 
         l_q = deepcopy(self.qpts.cryst)  # list of q-points in crystal coords
         l_q[self.qpts.index_q0] *= 0
-        # epsilon_cutoff = sigmainp.epsilon_cutoff
 
         g_cryst = [self.l_gq[i_q].g_cryst for i_q in range(self.qpts.numq)]
-        # print("gpts\n", np.array(g_cryst[0]))
-
-        # w0 = w_sph()
 
         # --------------------------------------------------
         # Debugging vcoul: Check with BGW values for vqg
 
         if not self.in_parallel:
             iterable = trange(len(l_q), desc="Sigma_CH_Static_Partial")
-                
+            proc_q_indices = range(len(l_q))
         else:
             proc_rank = self.comm.Get_rank()
             q_indices = np.arange(self.qpts.numq)
@@ -1012,11 +997,9 @@ class Sigma:
             iterable = proc_q_indices
 
         for i_q in iterable:
-        # for i_q in trange(
-        #     self.q_loop_beg, self.q_loop_end, desc="Sigma_CH_Static_Partial"
-        # ):
             # Get qpt value
             qpt = l_q[i_q]
+            print(f"Rank: {self.comm.Get_rank()}, i_q: {i_q}, {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
             # Find index of -q
             i_minusq = self.index_minusq(i_q)
@@ -1031,11 +1014,6 @@ class Sigma:
             g_to_mg = self.map_g_to_g_minusq(g, g_minusq, qpt, mqpt)
 
             epsinv_I = self.l_epsinv_I[i_q]
-
-            # Replace vcoul with BGW vcoul
-            # if test_vcoul_from_bgw:
-            #     vqg = vcoul_bgw[cumsum_ngk[i_q] : cumsum_ngk[i_q] + ngg[i_q]]
-            # else:
 
             # Get ususal Coulomb potential: vqg = vcoulomb(g)
             vqg = self.vcoul.vcoul[i_q]
@@ -1059,11 +1037,11 @@ class Sigma:
             if yielding:
                 einstr = "njk,njm,mk,m->nj"
                 for M in self.matrix_elements(i_minusq, ket_all_bands=True, bra_all_bands=True, yielding=yielding):
-                    M = M[..., g_to_mg]
+                    M_ = M[..., g_to_mg]
                     sigma += np.einsum(
                         einstr,
-                        np.conj(M),
-                        M,
+                        np.conj(M_),
+                        M_,
                         epsinv_I,
                         vqg,
                         optimize=True,
@@ -1089,9 +1067,16 @@ class Sigma:
 
         if self.in_parallel:
             sigma = sum(self.comm.allgather(sigma))
-        return 0.5 * sigma
 
-    def sigma_ch_static_exact(self, diag=True, test_vcoul_from_bgw=global_test_vcoul):
+        sigma *= 0.5
+
+        if Sigma.autosave:
+            np.save(outdir+f"sigma_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_sigma_chstatic_{proc_q_indices[0]}", sigma)
+
+        return sigma
+
+    @pw_logger.time('sigma:sigma_ch_static_exact')
+    def sigma_ch_static_exact(self):
         """
         Static Coulomb Hole (Exact)
         ========================
@@ -1101,55 +1086,17 @@ class Sigma:
         """
 
         # Init empty sigma matrix
-        # number_bands = self.sigmainp.number_bands
-        number_bands_inner = self.sigmainp.number_bands
-        
         band_index_min = self.sigmainp.band_index_min
         band_index_max = self.sigmainp.band_index_max
         number_bands_outer = band_index_max-band_index_min+1
-
-        # Setting einstein summation string for M* M epsinv v
-
-        if diag:
-            sigma = np.zeros((self.n_kpts, number_bands_outer), dtype=complex)
-            einstr = "kijjm,mk,m->ij"
-            # note km -> mk for bgw epsmat
-        else:
-            sigma = np.zeros(
-                (self.kpts.numk, number_bands_outer, number_bands_outer), dtype=complex
-            )
-            einstr = "kijlm,km,m->ijl"
+        sigma = np.zeros((self.n_kpts, number_bands_outer), dtype=complex)
 
         l_q = deepcopy(self.qpts.cryst)  # list of q-points in crystal coords
-        l_q[self.qpts.index_q0] *= 0
-        # epsilon_cutoff = sigmainp.epsilon_cutoff
-
-        sorted_g = [
-            (self.l_gq[i_q].cryst, self.l_gq[i_q].norm2)
-            for i_q in range(self.qpts.numq)
-        ]
-        # w0 = w_sph()
-
-        # --------------------------------------------------
-        # Debugging vcoul: Check with BGW values for vqg
-
-        if test_vcoul_from_bgw:
-            vcoul_bgw = np.array(read_txt(dirname + "vcoul"))
-
-            ngg = []
-            for i_q in range(len(l_q)):
-                ngg.append(len(sorted_g[i_q][0].T))
-            ngg = np.array(ngg)
-
-            cumsum_ngk = np.cumsum(ngg)
-            cumsum_ngk = np.roll(cumsum_ngk, 1)
-            cumsum_ngk[0] = 0
 
         # Assume received epsinv and matrix elements ordered by l_q
-        
         if not self.in_parallel:
             iterable = trange(len(l_q), desc="Sigma_CH_Static_Exact")
-                
+            proc_q_indices = range(len(l_q))                
         else:
             proc_rank = self.comm.Get_rank()
             q_indices = np.arange(self.qpts.numq)
@@ -1157,39 +1104,22 @@ class Sigma:
             iterable = proc_q_indices
 
         for i_q in iterable:
-            # Get qpt value
-            # qpt = l_q[i_q]
-
-            # Find index of -q
-            i_minusq = self.index_minusq(i_q)
-            # mqpt = l_q[i_minusq]
-
-            # Calculate map from G to -G : map_g_to_minusg
-            g = sorted_g[i_q][0].T
-
-            # map from G to -G
-            # g_minusq = sorted_g[i_minusq][0].T
-            g = sorted_g[i_q][0].T
-            # g_to_mg = self.map_g_to_g_minusq(g,g_minusq,qpt,mqpt)
+            
+            # g = self.l_gq[i_q].cryst.T
+            g = self.l_gq[i_q].g_cryst.T
+            
+            # G'-G = gpmg = Gprime minus G
+            gpmg = np.array([[gpvec - gvec for gpvec in g] for gvec in g])
 
             # Get epsinv-I
             epsinv_I = self.l_epsinv_I[i_q]
 
-            # Calculate/Load Coulomb potential
+            # Get ususal Coulomb potential: vqg = vcoulomb(g)
             vqg = self.vcoul.vcoul[i_q]
 
-            # Replace vcoul with BGW vcoul
-            if test_vcoul_from_bgw:
-                vqg = vcoul_bgw[cumsum_ngk[i_q]: cumsum_ngk[i_q] + ngg[i_q]]
-
-            # G'-G = gpmg = Gprime minus G
-            gpmg = np.array([[gpvec - gvec for gpvec in g] for gvec in g])
-
             # Calculate matrix elements
-            M = self.matrix_elements_sigma_exact(
-                np.vstack(gpmg).T, ket_all_bands=True, bra_all_bands=True
-            )
-            # debug('M.shape')
+            # print("self.qpts.is_q0[i_q]", self.qpts.is_q0[i_q])
+            M = self.matrix_elements_sigma_exact(np.vstack(gpmg).T)#, self.qpts.is_q0[i_q])
 
             # Reshape M from all possible (G'-G) to (G',G).
             # We had used vstack with gpmg to create a list of g-vectors
@@ -1199,24 +1129,35 @@ class Sigma:
             # !For now, assuming nothing special is done to cutoff |G'-G|.
 
             len_g = len(g)
-            M = np.array([M[..., len_g * i: len_g * (i + 1)]
-                         for i in range(len_g)])
+            M = np.array([M[..., len_g * i: len_g * (i + 1)] for i in range(len_g)])
 
+            einstr = "kijm,mk,m->ij"
             sigma += np.einsum(einstr, M, epsinv_I, vqg, optimize=True)
-
-            # diag: einstr = "kijjm,mk,m->ij"
-            # i   : valence    states
-            # j,l : conduction states
+            # print("----------------------iq",i_q)
+            # print(vqg[0])
+            # print(np.around(np.column_stack((M[:,0,0,0],epsinv_I[0,:])), 6))
+            # i   : kpoint index
+            # j   : band index
             # k   : G
             # m   : G'
         
         if self.in_parallel:
             sigma = sum(self.comm.allgather(sigma))
-        return 0.5*sigma
+        
+        sigma *=0.5
+
+        if Sigma.autosave:
+            np.save(outdir+f"sigma_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_sigma_chexact_{proc_q_indices[0]}", sigma)
+        
+        if self.print_condition:
+            np.save(outdir+f"sigma_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_sigma_chexact", sigma)
+
+        return sigma
 
     # ==================================================================
     # GPP Sigma methods
 
+    @pw_logger.time('sigma:sigma_gpp_omegas')
     def sigma_gpp_omegas(self, qpt, g, vqg, epsinv_I):
         """GPP Omega Calculator
 
@@ -1260,9 +1201,6 @@ class Sigma:
 
         # RHO data
         rho = self.rho
-
-        # vxc_data = inp.read_vxc(dirname+'vxc.dat')
-        # epsinv_I = epsinv_I.T
 
         # i_g0 = self.find_indices([[0,0,0]], rho.gvecs.tolist())[0]
         i_g0 = i_gmgpvec = self.rho_dict[self.rhohash([0, 0, 0])]
@@ -1405,7 +1343,8 @@ class Sigma:
 
         return omega2, wtilde2
 
-    def sigma_sx_gpp(self, dE=0, diag=True, test_vcoul_from_bgw=global_test_vcoul):
+    @pw_logger.time('sigma:sigma_sx_gpp')
+    def sigma_sx_gpp(self, dE=0, diag=True):
         """
         (H.L.) Plasmon Pole Screened Exchange
         ======================================
@@ -1455,7 +1394,7 @@ class Sigma:
 
         if not self.in_parallel:
             iterable = trange(len(l_q), desc="Sigma_SX_GPP")
-                
+            proc_q_indices = range(len(l_q))
         else:
             proc_rank = self.comm.Get_rank()
             q_indices = np.arange(self.qpts.numq)
@@ -1465,6 +1404,7 @@ class Sigma:
         for i_q in iterable:
             # Get qpt value
             qpt = l_q[i_q]
+            print(f"Rank: {self.comm.Get_rank()}, i_q: {i_q}, {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
             # Find index of -q
             i_minusq = self.index_minusq(i_q)
@@ -1623,8 +1563,18 @@ class Sigma:
 
         if self.in_parallel:
             sigma = sum(self.comm.allgather(sigma))
-        return -sigma
+        
+        sigma *= -1
 
+        if Sigma.autosave:
+            np.save(outdir+f"sigma_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_sigma_sxgpp{'dE' if np.max(np.abs(dE))!=0 else ''}_{'_'.join([str(q_index) for q_index in proc_q_indices])}", sigma)
+        
+        if self.print_condition:
+            np.save(outdir+f"sigma_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_sigma_sxgpp{'dE' if np.max(np.abs(dE))!=0 else ''}", sigma)
+
+        return sigma
+
+    @pw_logger.time('sigma:sigma_ch_gpp')
     def sigma_ch_gpp(self, dE=0, diag=True):
         """
         Plasmon Pole Coulomb Hole (partial sum)
@@ -1644,14 +1594,14 @@ class Sigma:
         number_bands_outer = band_index_max-band_index_min+1
         # print("dE:", dE)
 
-        if diag:
-            sigma = np.zeros((self.n_kpts, number_bands_outer), dtype=complex)
-            # einstr = "kvcg, kvcp, gp, kvcgp, p -> kc"
-            einstr = "kvcg, kvcp, kvcgp, p -> kc"
-            #         M*    M     ssx    V    Σ_n=n',c
-            # denom = 1/((Ev-Ec)^2 - ω~^2)
-        else:
-            raise NotImplementedError
+        # if diag:
+        sigma = np.zeros((self.n_kpts, number_bands_outer), dtype=complex)
+        # einstr = "kvcg, kvcp, gp, kvcgp, p -> kc"
+        einstr = "kvcg, kvcp, kvcgp, p -> kc"
+        #         M*    M     ssx    V    Σ_n=n',c
+        # denom = 1/((Ev-Ec)^2 - ω~^2)
+        # else:
+        #     raise NotImplementedError
 
         # k   : k-point
         # v   : valence    states (bands)
@@ -1673,7 +1623,7 @@ class Sigma:
 
         if not self.in_parallel:
             iterable = trange(len(l_q), desc="Sigma_CH_GPP")
-                
+            proc_q_indices = range(len(l_q))
         else:
             proc_rank = self.comm.Get_rank()
             q_indices = np.arange(self.qpts.numq)
@@ -1683,6 +1633,7 @@ class Sigma:
         for i_q in iterable:
             # Get qpt value
             qpt = l_q[i_q]
+            print(f"Rank: {self.comm.Get_rank()}, i_q: {i_q}, {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
             # Find index of -q
             i_minusq = self.index_minusq(i_q)
@@ -1700,6 +1651,7 @@ class Sigma:
 
             # print("Calculating M")
             # Calculate matrix elements; also returns mean field energy eigenvals for ket states
+            # TODO: Modify this to enable memory-efficient use of matrix_elements `yielding` option.
             M, E_bra, E_ket = next(self.matrix_elements(
                 i_minusq, ket_all_bands=True, bra_all_bands=True, ret_E=True
             ))  # , row_all_bands=True
@@ -1812,11 +1764,21 @@ class Sigma:
 
         if self.in_parallel:
             sigma = sum(self.comm.allgather(sigma))
-        return 0.5 * sigma
+
+        sigma *= 0.5
+
+        if Sigma.autosave:
+            np.save(outdir+f"sigma_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_sigma_chgpp_{'_'.join([str(q_index) for q_index in proc_q_indices])}", sigma)
+
+        if self.print_condition:
+            np.save(outdir+f"sigma_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_sigma_chgpp{'dE' if np.max(np.abs(dE))!=0 else ''}", sigma)
+
+        return sigma
 
     # ==================================================================
     # Methods to run full calculations
 
+    @pw_logger.time('sigma:calculate_static_cohsex')
     def calculate_static_cohsex(self):
         # number_bands = self.sigmainp.number_bands
         band_index_min = self.sigmainp.band_index_min
@@ -1824,52 +1786,103 @@ class Sigma:
         # number_bands_outer = band_index_max-band_index_min+1
 
         # Calculate on-shell QP energy = Emf - Vxc + Sig(Eo)
-        # Vxc data
-        vxc_data = inp.read_vxc(dirname + "vxc.dat")
+        vxc_data = self.vxc
         vxc = np.array(vxc_data.vxc)[self.slice_l_k, band_index_min-1:band_index_max]
 
         # Emf data
         emf_factor = 1/ELECTRONVOLT_RYD
         emf = np.array([self.l_wfn[i_k].evl for i_k in self.l_k_indices])
         emf = np.array(emf[:,0,band_index_min-1:band_index_max]) * emf_factor
-        print("emf\n",emf)
+        # print("emf\n",emf)
         
 
         sigma_x_mat = self.sigma_x()
-        print("Sigma X")
-        print(np.around((sigma_x_mat) * Sigma.sigma_factor, 6))
-        print()
+        if print_condition:
+            print("Sigma X")
+            print(np.around((sigma_x_mat) * Sigma.sigma_factor, 6))
+            print()
 
         sigma_sx_mat = self.sigma_sx_static()
-        print("Sigma SX STATIC")
-        print(np.around((sigma_sx_mat) * Sigma.sigma_factor, 6))
-        print()
+        if print_condition:
+            print("Sigma SX STATIC")
+            print(np.around((sigma_sx_mat) * Sigma.sigma_factor, 6))
+            print()
 
         sigma_ch_mat = self.sigma_ch_static()
-        print("Sigma CH STATIC")
-        print(np.around((sigma_ch_mat) * Sigma.sigma_factor, 6))
-        print()
+        if print_condition:
+            print("Sigma CH STATIC")
+            print(np.around((sigma_ch_mat) * Sigma.sigma_factor, 6))
+            print()
 
         sigma_ch_exact_mat = self.sigma_ch_static_exact()
-        print("Sigma CH EXACT STATIC")
-        print(np.around((sigma_ch_exact_mat) * Sigma.sigma_factor, 6))
-        print()
+        if print_condition:
+            print("Sigma CH EXACT STATIC")
+            print(np.around((sigma_ch_exact_mat) * Sigma.sigma_factor, 6))
+            print()
 
-        sigma_mat = sigma_sx_mat + sigma_ch_exact_mat + sigma_x_mat
-        sigma_mat = np.around((sigma_mat) * Sigma.sigma_factor, 6)
-        print("Sig (Exact):")
-        print(sigma_mat.T)
-        print("Eqp0 (Exact):")
-        print((sigma_mat + emf - vxc).T)
+        sigma_mat_exact = sigma_sx_mat + sigma_ch_exact_mat + sigma_x_mat
+        sigma_mat_exact = np.around((sigma_mat_exact) * Sigma.sigma_factor, 6)
+        if print_condition:
+            print("Sig (Exact):")
+            print(sigma_mat_exact.T)
+            print("Eqp0 (Exact):")
+            print((sigma_mat_exact + emf - vxc).T)
 
+        Eqp0_exact = sigma_mat_exact + emf - vxc
 
         sigma_mat = sigma_sx_mat + sigma_ch_mat + sigma_x_mat
         sigma_mat = np.around((sigma_mat) * Sigma.sigma_factor, 6)
-        print("Sig (Exact):")
-        print(sigma_mat.T)
-        print("Eqp0 (Exact):")
-        print((sigma_mat + emf - vxc).T)
+        if print_condition:
+            print("Sig (Partial):")
+            print(sigma_mat.T)
+            print("Eqp0 (Partial):")
+            print((sigma_mat + emf - vxc).T)
 
+        Eqp0 = sigma_mat + emf - vxc
+
+        
+        print_x = np.real(
+            np.around((sigma_x_mat) * Sigma.sigma_factor, 6)
+        )  # [self.slice_l_k]
+        print_sx = np.real(
+            np.around((sigma_sx_mat) * Sigma.sigma_factor, 6)
+        )  # [self.slice_l_k]
+        print_ch = np.real(
+            np.around((sigma_ch_mat) * Sigma.sigma_factor, 6)
+        )  # [self.slice_l_k]
+        print_exact_ch = np.real(
+            np.around((sigma_ch_exact_mat) * Sigma.sigma_factor, 6)
+        )  # [self.slice_l_k]
+        self.comm.Barrier()
+        if print_condition:        
+            for k in range(3):
+                print(
+                    "   n         Emf          Eo           X        SX-X          CH         Sig         Vxc        Eqp0        Eqp1         CH`        Sig`       Eqp0`       Eqp1`         Znk"
+                )
+                for n in range(self.sigmainp.band_index_min-1, self.sigmainp.band_index_max-self.sigmainp.band_index_min+1):
+                    print(
+                        "{:>4}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}".format(
+                            n,                              # n
+                            emf[k, n],                      # Emf
+                            emf[k, n],                      # Eo
+                            print_x[k, n],                  # X
+                            print_sx[k, n],                 # SX-X
+                            print_exact_ch[k, n],           # CH
+                            np.real(sigma_mat_exact[k, n]), # Sig
+                            np.real(vxc[k, n]),             # Vxc
+                            np.real(Eqp0_exact[k, n]),      # Eqp0        
+                            np.real(Eqp0_exact[k, n]),      # Eqp1
+                            print_ch[k, n],                 # CH'
+                            np.real(sigma_mat[k, n]),       # Sig'
+                            np.real(Eqp0[k, n]),            # Eqp0'
+                            np.real(Eqp0[k, n]),            # Eqp1'
+                            np.real(1),                     # Z
+                        )
+                    )
+                # print(self.vcoul.write_vcoul([0]))
+
+
+    @pw_logger.time('sigma:sigma_gpp')
     def calculate_gpp(self):
         # number_bands = self.sigmainp.number_bands
         band_index_min = self.sigmainp.band_index_min
@@ -1880,7 +1893,8 @@ class Sigma:
 
         # Calculate on-shell QP energy = Emf - Vxc + Sig(Eo)
         # Vxc data
-        vxc_data = inp.read_vxc(dirname + "vxc.dat")
+        # vxc_data = inp.read_vxc(dirname + "vxc.dat")
+        vxc_data = self.vxc
         vxc = np.array(vxc_data.vxc)[self.slice_l_k][:, band_index_min-1:band_index_max]
 
         # Emf data
@@ -1889,8 +1903,8 @@ class Sigma:
 
         emf = np.array([self.l_wfn[i_k].evl for i_k in self.l_k_indices])
         emf = np.array(emf[:,0,band_index_min-1:band_index_max])* emf_factor
-        if print_condition:
-            print("emf\n",emf)
+        # if print_condition:
+        #     print("emf\n",emf)
 
         # before slicing emf, create dE with the correct shape
         dE = np.zeros_like(emf)
@@ -1908,6 +1922,7 @@ class Sigma:
             print()
             # print(sigma_sx_gpp_mat)
             # print()
+        self.comm.Barrier()
 
         sigma_ch_gpp_mat = self.sigma_ch_gpp()
         if print_condition:
@@ -1916,6 +1931,7 @@ class Sigma:
             print()
             # print(sigma_ch_gpp_mat)
             # print()
+        self.comm.Barrier()
 
         sigma_ch_static_mat = self.sigma_ch_static()
         if print_condition:
@@ -1924,6 +1940,7 @@ class Sigma:
             print()
             # print(sigma_ch_static_mat)
             # print()
+        self.comm.Barrier()
 
         sigma_ch_exact_mat = self.sigma_ch_static_exact()
         if print_condition:
@@ -1932,6 +1949,7 @@ class Sigma:
             print()
             # print(sigma_ch_exact_mat)
             # print()
+        self.comm.Barrier()
 
         sigma_x_mat = self.sigma_x()
         if print_condition:
@@ -1940,6 +1958,7 @@ class Sigma:
             print()
             # print(sigma_x_mat)
             # print()
+        self.comm.Barrier()
 
         # Sig without Remainder
         sigma_mat = (
@@ -2062,6 +2081,34 @@ class Sigma:
 
 if __name__ == "__main__":
     
+    # dirname = "./test/bgw/"
+        
+    dirname = "./scripts/results/si_6_nband272_pristine_cohsex/si_6_gw/"
+    outdir="./test/tempdir_20230618_173806/"
+    # outdir = "./test/tempdir_20230616_000120/"
+
+    # dirname = "./scripts/results/si_4_10_ryd_printing/cohsex/"
+    # outdir = "./test/tempdir_20230618_103420/"
+
+    # dirname = "/home/agrimsharma/codes/QuantumMASALA/src/quantum_masala/gw/scripts/results/si_4_nband20_10_ryd_printing/cohsex/"
+    # outdir = "./test/tempdir_20230618_185906/"
+
+    # outdir = "./test/tempdir_20230618_111837/"
+    # outdir = "./test/tempdir_20230614_161555/"
+    # outdir = "./test/tempdir_20230618_113925/"
+    # outdir = "./test/tempdir_20230618_145359/"
+
+    # dirname = "./scripts/results/si_4_20_ryd_pristine/cohsex/"
+    # dirname = "./scripts/results/si_4_20_ryd_pristine/gpp/"
+    # outdir = "./test/tempdir_20230618_114757/"
+
+
+    # dirname = "./scripts/results/si_4_gw_cohsex_nn25000/"  # For GPP: _gpp_skipw0/"
+    # outdir = "./test/tempdir_small/"
+    
+    # old_dirname = "../QE_data/control_scripts/"
+    old_dirname = dirname
+    
     # Load WFN data
 
     from quantum_masala.gw.io_bgw import inp
@@ -2078,51 +2125,69 @@ if __name__ == "__main__":
         print(
             "Sigma script started running : ",
             datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            flush=True,
         )
+        print(f"dirname: {dirname}")
+        print(f"outdir:  {outdir}")
+    print("in_parallel", in_parallel, COMM_WORLD.Get_rank(), flush=True)
 
 
     #Read data and create Sigma object
 
+    # Sigma.inp data
+    if print_condition:
+        print("Reading sigma.inp data", flush=True)
+        # print("sigmainp.__doc__")
+        # print(sigmainp.__doc__)
+        # print(sigmainp.options)
+        # print("sigmainp.kpts:", sigmainp.kpts)
+        # print()
     # sigmainp = inp.read_Sigma_inp()
     sigmainp = inp.read_sigma_inp(filename=dirname + "sigma.inp")
 
-    # Sigma.inp data
-    if print_condition:
-        print("sigmainp.__doc__")
-        print(sigmainp.__doc__)
-        print(sigmainp.options)
-        print("sigmainp.kpts:", sigmainp.kpts)
-        print()
-
-    epsinp = inp.read_epsilon_inp(filename=dirname + "epsilon.inp")
 
     # Epsilon.inp data
     if print_condition:
-        print("epsiloninp.__doc__")
-        print(epsinp.__doc__)
-        print(epsinp.options)
-        print()
+        print("Reading epsilon.inp data", flush=True)
+        # print("epsiloninp.__doc__")
+        # print(epsinp.__doc__)
+        # print(epsinp.options)
+        # print()
+
+    epsinp = inp.read_epsilon_inp(filename=dirname + "epsilon.inp")
 
     # wfn2py
     from quantum_masala.gw.io_bgw.wfn2py import wfn2py
 
+
+    if print_condition:
+        print(f"Reading WFN.h5 from directory: {old_dirname}", flush=True)
+
     wfndata = wfn2py(old_dirname + "WFN.h5")
-    # print(wfndata.__doc__)
+
+    if print_condition:
+        print(f"Reading WFN.h5 from directory: {old_dirname}", flush=True)
 
     wfnqdata = wfn2py(old_dirname + "WFNq.h5")
-    # print(wfnqdata.__doc__)
 
     # To read QTMGW's epsmats:
-    epsmats_dirname = "./test/epsilon/"
+    epsmats_dirname = outdir
     l_epsmats_actual = []
     if print_condition:
-        print(f"Reading qtm's epsilon matrices from directory: {epsmats_dirname}")
-    l_epsmats_actual += read_mats(epsmats_dirname + "eps0mat_qtm.h5")
-    l_epsmats_actual += read_mats(epsmats_dirname + "epsmat_qtm.h5")
+        print(f"Reading qtm's epsilon matrices from directory: {epsmats_dirname}", flush=True)
+    
+    l_epsmats_actual = [read_mats(epsmats_dirname + f"epsmat_{i}_qtm.h5")[0] for i in range(len(epsinp.qpts))]
+    print(len(l_epsmats_actual), COMM_WORLD.Get_rank(), flush=True)
+
+
+    # l_epsmats_actual += read_mats(epsmats_dirname + "eps0mat_qtm.h5")
+    # FIXME: NEEDS TO BE CHANGED FOR NOW!
+    # TODO: FOR THE FINAL RUN, I HAVE NOT SAVED epsmat_qtm.h5
+    # l_epsmats_actual += read_mats(epsmats_dirname + "epsmat_qtm.h5")
 
     l_epsmats_bgw = []
     if print_condition:
-        print(f"Reading reference epsilon matrices from directory: {epsmats_dirname}")
+        print(f"Reading reference epsilon matrices from directory: {epsmats_dirname}", flush=True)
     l_epsmats_bgw += read_mats(dirname + "eps0mat.h5")
     l_epsmats_bgw += read_mats(dirname + "epsmat.h5")
     l_epsmats_bgw = [epsmat[0, 0] for epsmat in l_epsmats_bgw]
@@ -2151,28 +2216,19 @@ if __name__ == "__main__":
     from quantum_masala.gw.io_bgw.sigma_hp_reader import read_sigma_hp
 
     # sigma_dict = read_sigma_hp(dirname+'sigma_hp.log')
-    sigma_dict = read_sigma_hp(old_dirname + "sigma_hp.log")
+    # sigma_dict = read_sigma_hp(old_dirname + "sigma_hp.log")
 
     # QPoints
-    from quantum_masala.gw.core import QPoints
+    # from quantum_masala.gw.core import QPoints
+
+    rho = inp.read_rho(old_dirname + "RHO")
+    vxc = inp.read_vxc(dirname + "vxc.dat")
 
     # qpts = QPoints.from_cryst(wfndata.kpts.recilat, None, *epsinp.qpts)
-    # print("qpts.cryst",qpts.cryst)
 
-    # Sigma = Sigma(
-    #     wfndata.crystal,
-    #     wfndata.grho,
-    #     wfndata.kpts,
-    #     wfnqdata.kpts,
-    #     wfndata.l_wfn,
-    #     wfnqdata.l_wfn,
-    #     wfndata.l_gwfn,
-    #     wfnqdata.l_gwfn,
-    #     qpts,
-    #     sigmainp,
-    # )
-
-
+    COMM_WORLD.Barrier()
+    if print_condition:
+        print(f"Constructing Sigma object", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), flush=True)
         
     sigma = Sigma.from_data(
         wfndata=wfndata,
@@ -2180,8 +2236,13 @@ if __name__ == "__main__":
         sigmainp=sigmainp,
         epsinp=epsinp,
         l_epsmats=l_epsmats,
+        rho=rho,
+        vxc=vxc,
+        outdir=outdir,
     )
 
+    if print_condition:
+        print(f"Constructed Sigma object", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), flush=True)
 
     # Run
 
@@ -2294,8 +2355,11 @@ if __name__ == "__main__":
         sigma.calculate_static_cohsex()
         
     if print_condition:
+        with open(outdir+f"vcoul_sigma_qtm_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt","w") as f:
+            f.write(sigma.vcoul.write_vcoul())
         print(
             "Sigma script finished running : ",
             datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
+        print(pw_logger)
 
