@@ -11,7 +11,9 @@
 # from functools import lru_cache
 import datetime
 import gc
+import os
 import numpy as np
+from quantum_masala import pw_logger
 from quantum_masala.core.pwcomm import _MPI4PY_INSTALLED, COMM_WORLD
 from quantum_masala.gw.h5_io.h5_utils import *
 import sys
@@ -21,15 +23,20 @@ sys.path.append("..")
 sys.path.append(".")
 
 # dirname = "./test/bgw/"
-dirname = "./scripts/results/si_4_gw_cohsex_nn25000/"
+# dirname = "./scripts/results/si_4_gw_cohsex_nn25000/"
 # dirname = "./scripts/results/si_6_nband272/si_6_gw/"
+dirname = "/home/agrimsharma/codes/QuantumMASALA/src/quantum_masala/gw/scripts/results/si_6_nband272_pristine_cohsex/si_6_gw/"
+# dirname = "/home/agrimsharma/codes/QuantumMASALA/src/quantum_masala/gw/scripts/results/si_4_10_ryd_printing/cohsex/"
+# dirname = "/home/agrimsharma/codes/QuantumMASALA/src/quantum_masala/gw/scripts/results/si_4_20_ryd_pristine/cohsex/"
+# dirname = "/home/agrimsharma/codes/QuantumMASALA/src/quantum_masala/gw/scripts/results/si_4_nband20_10_ryd_printing/cohsex/"
+
+# outdir = "./test/epsilon_large/"
+outdir = f"./test/tempdir_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}/" 
+
 
 verify_epsilon = False
 
-# %% [markdown]
-# ### Load WFN data
-
-# %%
+# Load WFN data
 from quantum_masala.gw.io_bgw import inp
 
 if _MPI4PY_INSTALLED and COMM_WORLD.Get_size() > 1:
@@ -45,9 +52,14 @@ print_condition = (not in_parallel) or (in_parallel and COMM_WORLD.Get_rank()==0
 epsinp = inp.read_epsilon_inp(filename=dirname+'epsilon.inp')
 # Use __doc__ to print elements
 if print_condition:
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+    print("outdir", outdir)
     print(epsinp.__doc__)
     print(epsinp.options)
     print()
+COMM_WORLD.Barrier()
+outdir = COMM_WORLD.bcast(outdir, root=0)
 
 
 # Sigma.inp data
@@ -84,9 +96,7 @@ if print_condition:
 # print(*zip(vxc_data.kpts, vxc_data.vxc), sep="\n\n")
 
 
-# ### Initialize Epsilon Class
-
-# %%
+# Initialize Epsilon Class
 from quantum_masala.gw.core import QPoints
 from quantum_masala.gw.epsilon import Epsilon
 
@@ -115,8 +125,6 @@ gc.collect()
 # print(epsinv.shape)
 # print(epsinv[0])
 
-
-# %%
 from tqdm import trange
 from quantum_masala.gw.core import sort_cryst_like_BGW
 
@@ -158,19 +166,25 @@ else:
     iterable = trange(0, epsilon.qpts.numq, desc="Epsilon> q-pt index")
 
 for i_q in iterable:    
+    print(f"Rank: {COMM_WORLD.Get_rank()}, i_q:{i_q} started", flush=True)
     # Create map between BGW's sorting order and QTm's sorting order
-    gkspc  = epsilon.l_gq[i_q]
-    if i_q == epsilon.qpts.index_q0:
-        # gk_cryst = gkspc.gspc.cryst[:,gkspc.idxg]
-        key = gkspc.g_norm2[gkspc.idxg]
-        indices_gspace_sorted = sort_cryst_like_BGW(cryst=gkspc.g_cryst, key_array=key)
-    else:
-        # gk_cryst = gkspc.cryst
-        key = gkspc.norm2
-        indices_gspace_sorted = sort_cryst_like_BGW(cryst=gkspc.cryst, key_array=key)
-    
-    # indices_gspace_sorted = sort_cryst_like_BGW(cryst=gk_cryst, key_array=key)
+    # DEBUG: Original statement was the first branch of `if`
+    # FIXME: Revert back when done
+    if True:
+        gkspc  = epsilon.l_gq[i_q]
+        if i_q == epsilon.qpts.index_q0:
+            # gk_cryst = gkspc.gspc.cryst[:,gkspc.idxg]
+            key = gkspc.g_norm2[gkspc.idxg]
+            indices_gspace_sorted = sort_cryst_like_BGW(cryst=gkspc.g_cryst, key_array=key)
+        else:
+            # gk_cryst = gkspc.cryst
+            key = gkspc.norm2
+            indices_gspace_sorted = sort_cryst_like_BGW(cryst=gkspc.cryst, key_array=key)
         
+        # indices_gspace_sorted = sort_cryst_like_BGW(cryst=gk_cryst, key_array=key)
+    else:
+        gkspc  = epsilon.l_gq[i_q]
+        indices_gspace_sorted = gkspc.gk_indices_fromsorted
 
     # Calculate matrix elements
     # M = next(epsilon.matrix_elements(i_q=i_q))
@@ -192,12 +206,13 @@ for i_q in iterable:
         if verify_epsilon:
             epsref = epsilon.read_epsmat(dirname + "eps0mat.h5")[0][0, 0]
         indices = epsilon.l_gq[i_q].gk_indices_tosorted
-        epsilon.write_epsmat(filename="./test/epsilon/eps0mat_qtm.h5", epsinvmats=[epsinv])
+        epsilon.write_epsmat(filename=outdir+"eps0mat_qtm.h5", epsinvmats=[epsinv])
     else:
         if verify_epsilon:
             epsref = np.array(epsilon.read_epsmat(dirname + "epsmat.h5")[i_q - 1][0, 0])
-        if not in_parallel:
-            epsmats.append(epsinv)
+        # if not in_parallel:
+        epsmats.append(epsinv)
+    epsilon.write_epsmat(filename=outdir+f"epsmat_{i_q}_qtm.h5", epsinvmats=[epsinv])
 
     # Calculate stddev between reference and calculated epsinv matrices
     if verify_epsilon:
@@ -209,21 +224,29 @@ for i_q in iterable:
         if np.abs(std_eps) > epstol:
             print(f"Standard deviation exceeded {epstol} tolerance",std_eps)
             print("i_q",i_q)
-            break
+            # break
 
     print(f"Rank: {COMM_WORLD.Get_rank()}, i_q:{i_q} done", flush=True)
 
+COMM_WORLD.Barrier()
 
 # print_condition = (not in_parallel) or (in_parallel and COMM_WORLD.Get_rank()==0)
 if in_parallel:
-    epsmats = COMM_WORLD.allgather(epsinv)[1:]
+    l_epsmats = COMM_WORLD.allgather(epsmats)
+    epsmats = []
+    for epsmats_proc in l_epsmats:
+        epsmats.extend(epsmats_proc)
+    # print(len(epsmats))
     if COMM_WORLD.Get_rank()==0:
-        epsilon.write_epsmat(filename="test/epsilon/epsmat_qtm.h5", epsinvmats=epsmats)
+        epsilon.write_epsmat(filename=outdir+"epsmat_qtm.h5", epsinvmats=epsmats)
 else:
-    epsilon.write_epsmat(filename="test/epsilon/epsmat_qtm.h5", epsinvmats=epsmats)
+    epsilon.write_epsmat(filename=outdir+"epsmat_qtm.h5", epsinvmats=epsmats)
 
 if print_condition:
+
     print(
         "Epsilon script run completed at:",
         datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     )
+    print(f"Files saved to folder: {outdir}")
+    print(pw_logger)

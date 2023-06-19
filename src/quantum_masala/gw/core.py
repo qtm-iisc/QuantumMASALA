@@ -91,17 +91,43 @@ def sort_cryst_like_BGW(cryst, key_array):
     -----
     In BerkeleyGW sort style, the primary key is dependent on whether q is 0.
     If q is 0 (but the value is slightly shifted, say 0.001), keep crystal ordering for q exactly = 0.
+
+    Reference Snippet from BGW
+    --------------------------
+    call example:
+    ```
+    ! Compute energies: |q+g|**2
+    ! ZL: stored as ekin(ig)
+        if (is_subq) then
+            call kinetic_energies(gvec, crys%bdot, ekin)
+        else
+            call kinetic_energies(gvec, crys%bdot, ekin, qvec = rq(1:3, irq))
+        endif
+
+    ! Sort ekin in ascending order for this q
+    ! The indices are placed in array isrtrq
+        !ZL: Note that ekin of |q+g|**2 is used
+        call sortrx(gvec%ng, ekin, isrtrq, gvec = gvec%components)
+        if ((sig%freq_dep.eq.0.or.sig%exact_ch.eq.1).and.irq_==irq_min) then
+            isrtrqi=0
+            do j=1,gvec%ng
+            if (isrtrq(j).ge.1.and.isrtrq(j).le.gvec%ng) &
+                isrtrqi(isrtrq(j))=j
+            enddo
+        endif
+    ```
     """
     
     # Sorting order same as BerkeleyGW
     # Remember that for np.lexsort, the order of keys in the argument
     # is opposite to priority order, so last key is most important.
+    # TODO: To be sure, provide facility to read gvecs from epsmat.h5 so that BGW epsmat.h5 can be used with sigma.py etc.
     indices_cryst_sorted = np.lexsort(
             (
                 cryst[2, :],
                 cryst[1, :],
                 cryst[0, :],
-                np.around(key_array, 5),
+                np.around(key_array, 10),
             )
         )
     

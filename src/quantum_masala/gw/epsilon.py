@@ -26,7 +26,7 @@ from quantum_masala.gw.io_bgw.epsmat_read_write import read_mats, write_mats
 from quantum_masala.gw.vcoul import Vcoul
 
 
-# @pw_logger.time('epsilon')
+#@pw_logger.time('epsilon')
 class Epsilon:
     """Epsilon Matrix Class
     Generate (optionally frequency dependent) dielectric function and its inverse.
@@ -416,7 +416,8 @@ class Epsilon:
         epsinvmats : List[np.ndarray]
             List of epsilon inverse matrices to be saved.
         """
-        write_mats(filename, epsinvmats)
+        if len(epsinvmats)>0:
+            write_mats(filename, epsinvmats)
 
     def read_epsmat(self, filename: str):
         """Read epsmat from epsmat.h5 file
