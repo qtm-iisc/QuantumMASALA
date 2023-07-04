@@ -18,14 +18,19 @@ from quantum_masala.core.pwcomm import _MPI4PY_INSTALLED, COMM_WORLD
 from quantum_masala.gw.h5_io.h5_utils import *
 import sys
 
+from quantum_masala.gw.io_bgw.epsinp import Epsinp
+from quantum_masala.gw.io_bgw.sigmainp import Sigmainp
+
 
 sys.path.append("..")
 sys.path.append(".")
 
+dirname = "./"
 # dirname = "./test/bgw/"
 # dirname = "./scripts/results/si_4_gw_cohsex_nn25000/"
+# dirname = "./scripts/results/si_4_10_ryd_printing/cohsex/"
 # dirname = "./scripts/results/si_6_nband272/si_6_gw/"
-dirname = "/home/agrimsharma/codes/QuantumMASALA/src/quantum_masala/gw/scripts/results/si_6_nband272_pristine_cohsex/si_6_gw/"
+# dirname = "/home/agrimsharma/codes/QuantumMASALA/src/quantum_masala/gw/scripts/results/si_6_nband272_pristine_cohsex/si_6_gw/"
 # dirname = "/home/agrimsharma/codes/QuantumMASALA/src/quantum_masala/gw/scripts/results/si_4_10_ryd_printing/cohsex/"
 # dirname = "/home/agrimsharma/codes/QuantumMASALA/src/quantum_masala/gw/scripts/results/si_4_20_ryd_pristine/cohsex/"
 # dirname = "/home/agrimsharma/codes/QuantumMASALA/src/quantum_masala/gw/scripts/results/si_4_nband20_10_ryd_printing/cohsex/"
@@ -49,26 +54,24 @@ print_condition = (not in_parallel) or (in_parallel and COMM_WORLD.Get_rank()==0
 
 
 # Epsilon.inp data
-epsinp = inp.read_epsilon_inp(filename=dirname+'epsilon.inp')
+# epsinp = inp.read_epsilon_inp(filename=dirname+'epsilon.inp')
+epsinp = Epsinp.from_epsilon_inp(filename=dirname+'epsilon.inp')
 # Use __doc__ to print elements
 if print_condition:
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     print("outdir", outdir)
-    print(epsinp.__doc__)
-    print(epsinp.options)
-    print()
+    print(epsinp)
 COMM_WORLD.Barrier()
 outdir = COMM_WORLD.bcast(outdir, root=0)
 
 
 # Sigma.inp data
-sigmainp = inp.read_sigma_inp(filename=dirname+'sigma.inp')
+sigmainp = Sigmainp.from_sigma_inp(filename=dirname+'sigma.inp')
+# sigmainp = inp.read_sigma_inp(filename=dirname+'sigma.inp')
 # Use __doc__ to print elements
 if print_condition:
-    print(sigmainp.__doc__)
-    print(sigmainp.options)
-    print()
+    print(sigmainp)
 
 COMM_WORLD.Barrier()
 
@@ -129,22 +132,22 @@ from tqdm import trange
 from quantum_masala.gw.core import sort_cryst_like_BGW
 
 
-def reorder_2d_matrix_sorted_gvecs(a, indices):
+def reorder_2d_matrix_sorted_gvecs(mat, indices):
     """Given a 2-D matrix and listof indices, reorder rows and columns in order of indices
 
     Parameters
     ----------
-    a
+    mat
         The 2-D matrix
     indices
         List of indices
 
     Returns
     -------
-        ``a`` with appropriately ordered rows and coumns.
+        ``mat``, with appropriately ordered rows and coumns.
     """
     tiled_indices = np.tile(indices,(len(indices),1))
-    return np.take_along_axis(np.take_along_axis(a, tiled_indices, 1), tiled_indices.T, 0)
+    return np.take_along_axis(np.take_along_axis(mat, tiled_indices, 1), tiled_indices.T, 0)
 
 epsmats = []
 COMM_WORLD.Barrier()
@@ -186,14 +189,11 @@ for i_q in iterable:
         gkspc  = epsilon.l_gq[i_q]
         indices_gspace_sorted = gkspc.gk_indices_fromsorted
 
-    # Calculate matrix elements
-    # M = next(epsilon.matrix_elements(i_q=i_q))
-    
-    # Calculate polarizability matrix
-    # chimat = 4 * epsilon.polarizability(M)
+    # Calculate matrix elements, followed by polarizability matrix
+    chimat = 4 * epsilon.polarizability(next(epsilon.matrix_elements(i_q=i_q)))
 
     # Calculate polarizability matrix (memory-efficient)
-    chimat = 4 * epsilon.polarizability_active(i_q)
+    # chimat = 4 * epsilon.polarizability_active(i_q)
 
     # Calculate epsilon inverse matrix
     epsinv = epsilon.epsilon_inverse(i_q=i_q, polarizability_matrix=chimat)

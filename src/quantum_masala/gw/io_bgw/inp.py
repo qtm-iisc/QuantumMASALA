@@ -145,6 +145,7 @@ def read_epsilon_inp(filename="./QE_data/control_scripts/epsilon.inp"):
             jsonstr = "{  " # Beginning of JSON string
             qpts = []       # List of qpoints
             is_q0 = []      # List of bools: "is qpt 0?"
+            scale_factor=[]
             options = []    # List of options
 
             for line in file:
@@ -159,8 +160,9 @@ def read_epsilon_inp(filename="./QE_data/control_scripts/epsilon.inp"):
                     linedata = line.strip().split()
                     # Begin reading q-points
                     while linedata[0] != "end":
-                        qpts.append(list(map(float, linedata[:4])))
+                        qpts.append(list(map(float, linedata[:3])))
                         is_q0.append(bool(int(linedata[4])))
+                        scale_factor.append(float(linedata[3]))
                         # Data format: qx qy qz 1/scale_factor is_q0
 
                         line = next(file)
@@ -213,6 +215,7 @@ def read_sigma_inp(filename="./QE_data/control_scripts/sigma.inp"):
             jsonstr = "{  " 
 
             kpts = []       # List of kpoints
+            scale_factor=[]
             options = []    # List of options
 
             for line in file:
@@ -227,8 +230,10 @@ def read_sigma_inp(filename="./QE_data/control_scripts/sigma.inp"):
                     linedata = line.strip().split()
                     # Read k-points
                     while linedata[0] != "end":
-                        kpts.append(list(map(float, linedata[:4])))
+                        kpts.append(list(map(float, linedata[:3])))
                         #  kx  ky  kz  1/scale_factor
+                        scale_factor.append(float(linedata[3]))
+
                         line = next(file)
                         linedata = line.strip().split()
 
