@@ -1,11 +1,11 @@
-from collections import namedtuple
 from typing import List, NamedTuple
-import numpy as np
+
 import h5py
-from quantum_masala.core import RealLattice, AtomBasis, Crystal, GSpace, KList
-from quantum_masala.core import GkSpace  # , WfnK, Wavefun
-from quantum_masala.dft.kswfn import KSWavefun
+import numpy as np
+
 from quantum_masala.constants import RYDBERG
+from quantum_masala.core import AtomBasis, Crystal, GkSpace, GSpace, KList, RealLattice
+from quantum_masala.dft.kswfn import KSWavefun
 
 
 class Symmetry(NamedTuple):
@@ -13,6 +13,7 @@ class Symmetry(NamedTuple):
     cell_symmetry: int
     mtrx: np.ndarray
     tnp: np.ndarray
+
 
 class SymmetrySubgroup(NamedTuple):
     ntran: int
@@ -25,8 +26,6 @@ class SymmetrySubgroup(NamedTuple):
     supergroup: Symmetry
 
 
-
-
 class WfnData(NamedTuple):
     crystal: Crystal
     grho: GSpace
@@ -34,6 +33,7 @@ class WfnData(NamedTuple):
     l_gk: List[GkSpace]
     l_wfn: List[KSWavefun]
     symmetry: Symmetry
+
 
 class UnfoldedWfnData(NamedTuple):
     wfndata: WfnData
@@ -107,7 +107,7 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
     isort = np.argsort(atyp)
     l_typ, l_counts = np.unique(atyp, return_counts=True)
     l_coords = np.split(apos[isort], np.cumsum(l_counts))
-    
+
     l_species = []
     mnband = np.array(kpoints["mnband"])
     occ = np.array(kpoints["occ"])
@@ -223,11 +223,9 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
     # GkSpace
     # =========
     ecutwfc = np.array(kpoints["ecutwfc"])
-
     wfn_gspc = GSpace(
         crystal=crystal, ecut=4 * ecutwfc * RYDBERG, grid_shape=grho.grid_shape
     )
-
     l_gk = [GkSpace(wfn_gspc, k_cryst) for k_cryst in kpts.cryst]
 
     assert np.allclose(
@@ -269,12 +267,19 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
     mnband = np.array(kpoints["mnband"])
     el = np.array(kpoints["el"])
     occ = np.array(kpoints["occ"])
-    is_spin = True if np.array(kpoints["nspin"])>1 else False
+    is_spin = True if np.array(kpoints["nspin"]) > 1 else False
 
     # WfnK = Wavefun(wfn_gspc, int(nspin), int(mnband))
 
     l_wfn = [
-        KSWavefun(gspc=wfn_gspc, k_cryst=k_cryst, k_weight=k_weight, numbnd=int(mnband), is_spin=is_spin, is_noncolin=False)
+        KSWavefun(
+            gspc=wfn_gspc,
+            k_cryst=k_cryst,
+            k_weight=k_weight,
+            numbnd=int(mnband),
+            is_spin=is_spin,
+            is_noncolin=False,
+        )
         for idxk, (k_cryst, k_weight) in enumerate(kpts)
     ]
 
@@ -334,10 +339,12 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
             print()
 
     # Symmetry
-    symmetry = Symmetry(cell_symmetry=np.array(symmetry["cell_symmetry"]),
-                        mtrx = np.array(symmetry["mtrx"]),
-                        ntran = np.array(symmetry["ntran"]),
-                        tnp = np.array(symmetry["tnp"]))
+    symmetry = Symmetry(
+        cell_symmetry=np.array(symmetry["cell_symmetry"]),
+        mtrx=np.array(symmetry["mtrx"]),
+        ntran=np.array(symmetry["ntran"]),
+        tnp=np.array(symmetry["tnp"]),
+    )
 
     if verbose:
         print("Loaded WFC Data")
