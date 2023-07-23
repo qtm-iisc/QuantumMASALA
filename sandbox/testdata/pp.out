@@ -1,0 +1,52 @@
+
+     Program POST-PROC v.7.1 starts on 17Jun2023 at 17:35: 0 
+
+     This program is part of the open-source Quantum ESPRESSO suite
+     for quantum simulation of materials; please cite
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 21 395502 (2009);
+         "P. Giannozzi et al., J. Phys.:Condens. Matter 29 465901 (2017);
+         "P. Giannozzi et al., J. Chem. Phys. 152 154105 (2020);
+          URL http://www.quantum-espresso.org", 
+     in publications or presentations arising from this work. More details at
+     http://www.quantum-espresso.org/quote
+
+     Parallel version (MPI), running on     1 processors
+
+     MPI processes distributed on     1 nodes
+     1901 MiB available memory on the printing compute node when the environment starts
+
+
+     Reading xml data from directory:
+
+     ./iron.save/
+
+     IMPORTANT: XC functional enforced from input :
+     Exchange-correlation= PBE
+                           (   1   4   3   4   0   0   0)
+     Any further DFT definition will be discarded
+     Please, verify this is what you really want
+
+
+     G-vector sticks info
+     --------------------
+     sticks:   dense  smooth     PW     G-vecs:    dense   smooth      PW
+     Sum         229     229     83                 2243     2243     459
+
+     Using Slab Decomposition
+
+
+     Calling punch_plot, plot_num =   0
+     Writing data to file  rhodat
+     Reading data from file  rhodat
+
+     Writing data to be plotted to file rho
+     Plot Type: 3D                     Output format: Gaussian cube
+
+     POST-PROC    :      0.12s CPU      0.14s WALL
+
+
+   This run was terminated on:  17:35: 0  17Jun2023            
+
+=------------------------------------------------------------------------------=
+   JOB DONE.
+=------------------------------------------------------------------------------=

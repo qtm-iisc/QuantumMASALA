@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools", "wheel", "Cython"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quantum_masala"
+version = "0.9.0"
+description = "Plane-Wave, Pseudopotential-based Density Functional Theory (DFT) Framework"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "S Shri Hari", email = "shriharis@iisc.ac.in"},
+    {name = "Agrim Sharma", email = "agrimsharma@iisc.ac.in"},
+    {name = "Manish Jain", email = "mjain@iisc.ac.in"},
+]
+maintainers = [
+    {name = "S Shri Hari", email = "shriharis@iisc.ac.in"},
+    {name = "Manish Jain", email = "mjain@iisc.ac.in"}
+]
+keywords = ["python", "Density Functional Theory", "DFT", "Time-Dependent DFT", "TDDFT"]
+urls = {project-url = "https://www.physics.iisc.ac.in/~mjain/group/"}
+requires-python = ">=3.7"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pyfftw",
+    "spglib",
+]
+
+[project.optional-dependencies]
+parallel = ["mpi4py"]
+gpu = ["cupy"]
+primmme = ["primme"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
