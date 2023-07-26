@@ -1,10 +1,12 @@
 # from __future__ import annotations
 from typing import Optional, Self, Sequence, Any, Union
 from qtm.config import NDArray
-__all__ = ['QTMComm', 'QTMIntracomm',
+__all__ = ['QTMComm', 'QTMComm',
            'BufSpec', 'BufSpecV']
 
 from types import MethodType
+import numpy as np
+
 from qtm.logger import warn
 
 from qtm import qtmconfig
@@ -48,7 +50,7 @@ class QTMComm:
     def __init__(self, comm: Optional[Intracomm],
                  parent_comm: Optional[Self] = None,
                  sync_with_parent: bool = True,
-                 id_: Any = None):
+                 subgrp_idx: Optional[int] = None):
         # Getting installation status of mpi4py
         mpi4py_installed = qtmconfig.mpi4py_installed
 
@@ -118,9 +120,9 @@ class QTMComm:
         self.sync_with_parent: bool = sync_with_parent
         """If True, call ``parent_comm.barrier()`` when exiting context."""
 
-        self.id_: Any = id_
-        """Attribute for labelling the group. When using `Split`, by default
-        this will be the `color` argument.
+        self.subgrp_idx: Optional[int] = subgrp_idx
+        """Color index associated to the subgroup used when the parent comm is
+        split.
         """
 
     def __getattribute__(self, item):
@@ -191,7 +193,7 @@ class QTMComm:
         ))
         return QTMComm(comm_out, self, sync_with_parent)
 
-    def Split(self, color: int, key: int, sync_with_parent: bool = True,
+    def Split(self, color: int, key: int, sync_with_parent: bool = False,
               id_: Optional[Any] = None) -> Self:  # noqa: N802
         """Divides the group into multiple subgroups defined by `color` and
         `key` values.
@@ -271,22 +273,28 @@ class QTMComm:
             self.comm.Allreduce(sendbuf, recvbuf, op=op)
 
 
-class QTMIntracomm(QTMComm):
+def split_comm_pwgrp(comm: QTMComm, pwgrp_size: int = 1):
+    comm_size, comm_rank = comm.size, comm.rank
 
-    def __init__(self, comm: QTMComm, pwgrp_size: int):
-        if not isinstance(comm, QTMComm):
-            raise TypeError("'comm' must be a 'QTMComm' instance. "
-                            f"got '{type(comm)}' instance")
-        if not isinstance(pwgrp_size, int) or pwgrp_size <= 0:
-            raise TypeError("'pwgrp_size' must be a positive integer. "
-                            f"got {pwgrp_size} (type {type(pwgrp_size)}")
-        if comm.size % pwgrp_size != 0:
-            raise ValueError("'pwgrp_size' must divide processes in 'comm' into"
-                             "evenly sized subgroups. "
-                             f"got comm.size = {comm.size}, pwgrp_size={pwgrp_size}")
+    if not isinstance(comm, QTMComm):
+        raise TypeError(f"'comm' must be a '{QTMComm}' instance. "
+                        f"got type {type(comm)}")
 
-        color, key = comm.rank // pwgrp_size, comm.rank % pwgrp_size
-        pwgrp_intracomm = comm.Split(color, key)
-        pwgrp_intercomm = comm.Split()
+    if not isinstance(pwgrp_size, int) or pwgrp_size <= 0:
+        raise ValueError("'pwgrp_size' must be a positive integer. "
+                         f"got {pwgrp_size} (type {type(pwgrp_size)}).")
+
+    if comm_size % pwgrp_size != 0:
+        raise ValueError("'pwgrp_size' must evenly divide 'comm's "
+                         f"{comm_size} processes, but pwgrp_size = {pwgrp_size} "
+                         f"is not a factor of comm.size = {comm_size}")
+
+    n_pwgrp = comm_size // pwgrp_size
+    color = comm_rank // pwgrp_size
+    key = comm_rank % pwgrp_size
+    intracomm = comm.Split(color, key)
 
 
+    intercomm = comm.Split(key, color)
+
+    return intracomm, intercomm
