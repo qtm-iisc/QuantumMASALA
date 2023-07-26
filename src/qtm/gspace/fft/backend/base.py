@@ -65,7 +65,7 @@ class FFTBackend(ABC):
 
     @classmethod
     @abstractmethod
-    def create_buffer(cls, shape: Sequence[int]) -> NDArray:
+    def create_buffer(cls, shape: Union[int, Sequence[int]]) -> NDArray:
         """Create a C-contiguous complex128 buffer compatible for FFT Transforms
 
         Note that the atrribute 'stride' has no impact on this method. The

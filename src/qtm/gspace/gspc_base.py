@@ -1,5 +1,5 @@
 # from __future__ import annotations
-from typing import Optional
+from typing import Optional, Union, Sequence
 from qtm.config import NDArray
 __all__ = ['GSpaceBase', ]
 
@@ -87,7 +87,7 @@ class GSpaceBase:
     def __eq__(self, other) -> bool:
         return other is self
 
-    def create_buffer(self, shape: tuple[int, ...]) -> NDArray:
+    def create_buffer(self, shape: Union[int, Sequence[int]]) -> NDArray:
         """Returns an empty array of given shape.
 
         Parameters
@@ -117,7 +117,7 @@ class GSpaceBase:
         """
         self._fft.check_buffer(arr)
 
-    def create_buffer_r(self, shape: tuple[int, ...]) -> NDArray:
+    def create_buffer_r(self, shape: Union[int, Sequence[int]]) -> NDArray:
         """Returns an empty buffer for storing real-space field of given shape.
 
         Parameters
@@ -136,7 +136,7 @@ class GSpaceBase:
             shape = (shape, )
         return self.create_buffer((*shape, self.size_r))
 
-    def create_buffer_g(self, shape: tuple[int, ...]) -> NDArray:
+    def create_buffer_g(self, shape: Union[int, Sequence[int]]) -> NDArray:
         """Returns an empty buffer for storing g-space field of given shape.
 
         Parameters

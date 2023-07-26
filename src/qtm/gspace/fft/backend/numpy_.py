@@ -17,7 +17,7 @@ class NumPyFFTWrapper(FFTBackend):
         super().set_arr(new_arr)
 
     @classmethod
-    def create_buffer(cls, shape: tuple[int, ...]) -> np.ndarray:
+    def create_buffer(cls, shape: Union[int, Sequence[int]]) -> np.ndarray:
         return np.empty(shape, dtype='c16', order='C')
 
     @classmethod

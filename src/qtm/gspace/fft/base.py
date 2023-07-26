@@ -1,5 +1,5 @@
 # from __future__ import annotations
-from typing import Type, Optional
+from typing import Optional, Union, Sequence
 from qtm.config import NDArray
 __all__ = ['FFT3D', 'get_FFTBackend']
 
@@ -76,13 +76,10 @@ class FFT3D(ABC):
         """
         pass
 
-    def create_buffer(self, shape: tuple[int, ...]) -> NDArray:
+    def create_buffer(self, shape: Union[int, Sequence[int]]) -> NDArray:
         """Alias of ``FFTBackend.create_buffer(shape)``"""
         return self.FFTBackend.create_buffer(shape)
 
     def check_buffer(self, arr: NDArray) -> None:
         """Alias of ``FFTBackend.check_buffer(arr)``"""
         self.FFTBackend.check_buffer(arr)
-
-
-

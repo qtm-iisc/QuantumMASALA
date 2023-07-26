@@ -38,7 +38,7 @@ class PyFFTWFFTWrapper(FFTBackend):
         self.plan_bw.update_arrays(new_arr, new_arr)
 
     @classmethod
-    def create_buffer(cls, shape: tuple[int, ...]) -> np.ndarray:
+    def create_buffer(cls, shape: Union[int, Sequence[int]]) -> np.ndarray:
         return pyfftw.empty_aligned(shape, dtype='c16', order='C')
 
     @classmethod

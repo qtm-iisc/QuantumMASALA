@@ -22,7 +22,7 @@ class CuPyFFTWrapper(FFTBackend):
         super().set_arr(new_arr)
 
     @classmethod
-    def create_buffer(cls, shape: tuple[int, ...]) -> cp.ndarray:
+    def create_buffer(cls, shape: Union[int, Sequence[int]]) -> cp.ndarray:
         return cp.empty(shape, dtype='c16')
 
     @classmethod
