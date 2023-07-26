@@ -8,8 +8,10 @@ import numpy as np
 from qtm.gspace import GSpaceBase, GSpace, GkSpace
 from qtm.mpi import QTMComm
 
-from qtm.mpi.utils import scatter_range, scatter_len
-
+from qtm.mpi.utils import (
+    scatter_slice, scatter_len,
+    gen_subarray_dtypes, gen_vector_dtype
+)
 
 # Creating a Dummy FFT3D class so that no FFT planning is done in GSpaceBase.__init__
 # As DistGSpace implements distributed FFT operations
@@ -39,63 +41,73 @@ class DistGSpaceBase(GSpaceBase):
         grid_shape = gspc.grid_shape
         idxgrid = gspc.idxgrid
 
-        # Finding the (y, z) coordinates of all G-vectors
+        # Finding the (x, y) coordinates of all G-vectors
         nx, ny, nz = grid_shape
         ix, iy, iz = np.unravel_index(idxgrid, grid_shape, order='C')
 
-        # Finding the unique (y, z) points; the sticks span along x-Axis
-        iyz = iy * nz + iz  # Normal ordering with y and z coordinates
-        iyz_sticks = np.unique(iyz)  # 'iyz_sticks' are sorted too
-        numsticks = len(iyz_sticks)
-        iy_sticks = iyz_sticks // nz
-        iz_sticks = iyz_sticks % nz
+        # Finding the unique (x, y) points; the sticks span along z-Axis
+        ixy = ix * ny + iy  # Normal ordering with x and y coordinates
+        ixy_sticks = np.unique(ixy)  # 'ixy_sticks' are sorted too
+        numsticks = len(ixy_sticks)
+        ix_sticks = ixy_sticks // ny
+        iy_sticks = ixy_sticks % ny
 
         self.pwgrp_comm = comm
         self.pwgrp_size, self.pwgrp_rank = self.pwgrp_comm.size, self.pwgrp_comm.rank
 
         # Dividing the sticks across the processes
-        range_loc = scatter_range(range(numsticks), self.pwgrp_size, self.pwgrp_rank)
-        sticks_start, sticks_stop = range_loc.start, range_loc.stop
-        numsticks_loc = sticks_stop - sticks_start
-        iyz_sticks_loc = iyz_sticks[sticks_start:sticks_stop]
+        sl = scatter_slice(numsticks, self.pwgrp_size, self.pwgrp_rank)
+        ixy_sticks_loc = ixy_sticks[sl]
+        numsticks_loc = len(ixy_sticks_loc)
 
         # Finding G-vector along the selected sticks
-        self.ig_loc = np.nonzero(
-            (iyz >= iyz_sticks_loc[0]) * (iyz <= iyz_sticks_loc[-1])
-        )[0]
+        # Since the G-vectors in gspc_glob are ordered lexically
+        # ixy indices are already sorted in ascending order, so searchsorted is
+        # adequate for the purpose
+        self.ig_loc = slice(
+            np.searchsorted(ixy, ixy_sticks_loc[0]),
+            np.searchsorted(ixy, ixy_sticks_loc[-1], 'right')
+        )
 
         # A work array is created to store the values along the selected sticks
-        # And the FFT along X axis is performed
-        self._work_sticks = self.FFTBackend.create_buffer((nx, numsticks_loc))
-        self._fftx = self.FFTBackend(self._work_sticks, (0, ))
+        # And the FFT along Z axis is performed
+        self._work_sticks = self.FFTBackend.create_buffer((nz, numsticks_loc))
+        self._fftz = self.FFTBackend(self._work_sticks, (0, ))
         # Mapping selected G-vectors to the correct position in work_sticks
         # Note that although the work array is 2D, the mapping is to the
         # 1D flattened array with C-ordering
-        self._g2sticks_loc = ix[self.ig_loc] * numsticks_loc \
-            + np.searchsorted(iyz_sticks_loc, iyz[self.ig_loc])
+        self._g2sticks_loc = iz[self.ig_loc] * numsticks_loc + \
+            np.searchsorted(ixy_sticks_loc, ixy[self.ig_loc])
+
+        # Generating MPI Subarrays for all-to-all communication
+        np_dtype = self._work_sticks.dtype
+        self._sticks_subarray = gen_subarray_dtypes(
+            self._work_sticks.shape, 0, np_dtype, self.pwgrp_size)
 
         # After transforming the sticks, the array needs to be transposed
-        # So that the x-axis is split across processes.
-        nx_loc = scatter_len(nx, self.pwgrp_size, self.pwgrp_rank)
+        # So that the z-axis is split across processes.
+        nz_loc = scatter_len(nz, self.pwgrp_size, self.pwgrp_rank)
 
-        # The MPI communication step involves calling MPI_Alltoallv instead
-        # of creating a MPI Subarray type and using MPI_Alltoallw. Don't ask
-        # why I implemented the former. Refer to the '_transpose' method
-        # for the implementation of global array transposition
-
+        # The all-to-all communication redistributes the global (nz, numsticks)
+        # array such that the local arrays that are slices across first dimension
+        # are transformed to arrays that are slices across second dimension
         # Creating a transfer array for communication
-        self._work_transfer = self.FFTBackend.create_buffer((numsticks, nx_loc))
-        # After the data is received, the sticks, now split along its lenght
+        self._work_transfer = self.FFTBackend.create_buffer((nz_loc, numsticks))
+        self._transfer_subarray = gen_subarray_dtypes(
+            self._work_transfer.shape, 1, np_dtype, self.pwgrp_size
+        )
+
+        # After the data is received, the sticks, now split acriss its length
         # are placed at their respective sited and the FFT is performed
-        # across the YZ plane (which are the last two dimensions; the fastest)
-        self._work_full = self.FFTBackend.create_buffer((nx_loc, ny, nz))
-        self._fftyz = self.FFTBackend(self._work_full, (1, 2))
+        # across the XY plane (which are the last two dimensions; the fastest)
+        self._work_full = self.FFTBackend.create_buffer((nz_loc, nx, ny))
+        self._fftxy = self.FFTBackend(self._work_full, (1, 2))
         # The data in transfer array is placed to the 3D slab work array
         # based on the coordinates of the sticks
-        self._transfer2full = iy_sticks * nz + iz_sticks
+        self._transfer2full = ix_sticks * ny + iy_sticks
 
         # Now the GSpaceBase is called with the subset of G-vectors assigned
-        # to the process. Note that we have replaced the FFT3D Class with a
+        # to the process. We have replaced the FFT3D Class with a
         # dummy one, so that the parent __init__ will not have a valid FFT3D
         # instance. We need to overload the corresponding methods
         GSpaceBase.__init__(self, self.gspc_glob.recilat,
@@ -103,79 +115,72 @@ class DistGSpaceBase(GSpaceBase):
                             self.gspc_glob.g_cryst[:, self.ig_loc])
 
         # Some extra attributes for convenience
-        self.nx, self.nx_loc = nx, nx_loc
-        self.nyz = ny * nz
+        self.nz, self.nz_loc = nz, nz_loc
+        self.nxy = nx * ny
         # Some attributes already set by super().__init__ are overwritten as it is
         # incorrect/invalid
-        self.grid_shape = (self.nx_loc, ny, nz)
+        self.grid_shape = (nx, ny, self.nz_loc)
         self.size_r = int(np.prod(self.grid_shape))
         # 'GSpaceBase' attributes that are disabled as they are not defined
         # when distributed
         self.idxgrid, self.idxsort = None, None
 
-        # When reconstructing the serial buffer from parallel instances, we need a
-        # map to rearrange the gathered (scattered) G-vectors to match the
-        # serial (parallel) ordering
-        iyz_key = iyz_sticks[np.cumsum(scatter_len(numsticks, self.pwgrp_size))[:-1]]
-        # IMPORTANT: STABLE SORT ONLY
-        self._glob2gather = np.argsort(np.searchsorted(iyz_key, iyz, 'right'),
-                                       kind='stable')
-        # This one doesn't require it as its input does not have identical entries
-        self._gather2glob = np.argsort(self._glob2gather)
+        # The G-vectors in the global version are simply split to appropriate lengths
+        # and assigned to each process. So scatter/gather processes simply need
+        # buffer send/recv counts
+        self._scatter_g_bufspec = []
+        for rank in range(self.pwgrp_size):
+            sl = scatter_slice(numsticks, self.pwgrp_size, self.pwgrp_rank)
+            ixy_sticks_loc = ixy_sticks[sl]
+            ig_start = np.searchsorted(ixy, ixy_sticks_loc[0])
+            ig_stop = np.searchsorted(ixy, ixy_sticks_loc[-1], 'right')
+            self._scatter_g_bufspec.append(ig_stop - ig_start)
 
-    def _transpose(self, inp: NDArray, out: NDArray):
-        # Starting with an array whose rows are distributed across processes
-        # MPI_Alltoallv will allow transposition of a (A_glob, B_glob) global
-        # array to a (B_glob, A_glob) array again with its rows distributed
-        # Each process distributes its (A_loc, B_glob) array and
-        # receives data to build a (B_loc, A_glob) array
-        # But the order of data received is not correct. Data chunk received
-        # from each process needs to be transformed by transposition
-        # before concatenating in this method.
-        glob_shape = (inp.shape[0], out.shape[0])
-        size, rank = self.pwgrp_size, self.pwgrp_rank
-        sendcount = scatter_len(glob_shape[0], size) \
-            * scatter_len(glob_shape[1], size, rank)
-        recvcount = scatter_len(glob_shape[1], size) \
-            * scatter_len(glob_shape[0], size, rank)
-
-        self.pwgrp_comm.Alltoallv((inp, sendcount), (out.ravel(), recvcount))
-        chunks = tuple(
-            chunk.reshape((scatter_len(glob_shape[0], size, rank), -1)).T
-            for chunk in np.split(out.ravel(), np.cumsum(recvcount[:-1]))
+        # For the real-space, since the 3D FFT array is split across the last dimension
+        # the data to be transferred is not contiguous, hence we need a MPI Vector
+        # Datatype for the communication
+        self._scatter_r_sendbuf = (
+            scatter_len(nz, self.pwgrp_size),
+            gen_vector_dtype(self.gspc_glob.grid_shape, 2, np_dtype)
         )
-        np.concatenate(chunks, axis=0, out=out)
-        # TODO: Need to benchmark this with the Alltoallw + Subarray method
-        # Also, I would be more inclined to the alternative if I can
-        # transpose the transfer array in the same shot
+        self._scatter_r_recvbuf = (
+            gen_vector_dtype(self.grid_shape, 2, np_dtype),
+        )
 
     def _r2g(self, arr_inp: NDArray, arr_out: NDArray) -> None:
         # Similar to FFT3DSticks but with communication between the two FFT
-        self._work_full[:] = arr_inp
-        self._fftyz.fft()
+        self._work_full[:] = arr_inp.transpose((2, 0, 1))
+        self._fftxy.fft()
 
-        work_full = self._work_full.reshape((self.nx_loc, -1)).T
-        work_full.take(self._transfer2full, axis=0, out=self._work_transfer)
-        self._transpose(self._work_transfer, self._work_sticks)
+        work_full = self._work_full.reshape((self.nz_loc, -1))
+        work_full.take(self._transfer2full, axis=1, out=self._work_transfer)
 
-        self._fftx.fft()
+        self.pwgrp_comm.comm.Alltoallw(
+            (self._work_transfer, self._transfer_subarray),
+            (self._work_sticks, self._sticks_subarray)
+        )
+
+        self._fftz.fft()
         self._work_sticks.take(self._g2sticks_loc, out=arr_out)
 
     def _g2r(self, arr_inp: NDArray, arr_out: NDArray) -> None:
         # Similar to FFT3DSticks but with communication between the two FFT
         self._work_sticks.fill(0)
         self._work_sticks.reshape(-1)[self._g2sticks_loc] = arr_inp
-        self._fftx.ifft(self._normalise_idft)
+        self._fftz.ifft(self._normalise_idft)
 
-        self._transpose(self._work_sticks, self._work_transfer)
+        self.pwgrp_comm.comm.Alltoallw(
+            (self._work_sticks, self._sticks_subarray),
+            (self._work_transfer, self._transfer_subarray)
+        )
 
         self._work_full.fill(0)
-        self._work_full.reshape((self.nx_loc, -1))[
+        self._work_full.reshape((self.nz_loc, -1))[
             (slice(None), self._transfer2full)
-        ] = self._work_transfer.T
-        self._fftyz.ifft(self._normalise_idft)
+        ] = self._work_transfer
+        self._fftxy.ifft(self._normalise_idft)
 
-        arr_out[:] = self._work_full
+        arr_out[:] = self._work_full.transpose((1, 2, 0))
 
     def create_buffer(self, shape: tuple[int, ...]) -> NDArray:
         """Modified to prevent accessing the now-DummyFFT instance"""
@@ -211,25 +216,40 @@ class DistGSpaceBase(GSpaceBase):
 
         return arr_r
 
-    def scatter_data_r(self, arr_root=None):
+    def scatter_r(self, arr_root=None):
         shape, sendbuf = None, None
         if self.pwgrp_rank == 0:
             shape = arr_root.shape[:-1]
-            shape = self.pwgrp_comm.bcast(shape)
             sendbuf = arr_root.reshape((-1, self.gspc_glob.size_r))
-        else:
-            shape = self.pwgrp_comm.bcast(shape)
-        sendcounts = scatter_len(self.nx, self.pwgrp_size) * self.nyz
+        shape = self.pwgrp_comm.bcast(shape)
 
         out = self.create_buffer_r(shape)
         recvbuf = out.reshape((-1, self.size_r))
 
         for iarr in range(np.prod(shape)):
             self.pwgrp_comm.comm.Scatterv(
-                (sendbuf[iarr], sendcounts) if self.pwgrp_rank == 0  else None,
+                (sendbuf[iarr], *self._scatter_r_sendbuf)
+                if self.pwgrp_rank == 0 else None,
+                (recvbuf[iarr], *self._scatter_r_recvbuf)
+            )
+        return out
+
+    def scatter_g(self, arr_root=None):
+        shape, sendbuf = None, None
+        if self.pwgrp_rank == 0:
+            shape = arr_root.shape[:-1]
+            sendbuf = arr_root.reshape((-1, self.gspc_glob.size_g))
+        shape = self.pwgrp_comm.bcast(shape)
+
+        out = self.create_buffer_g(shape)
+        recvbuf = out.reshape((-1, self.size_r))
+
+        for iarr in range(np.prod(shape)):
+            self.pwgrp_comm.comm.Scatterv(
+                (sendbuf[iarr], self._scatter_g_bufspec)
+                if self.pwgrp_rank == 0 else None,
                 recvbuf[iarr]
             )
-
         return out
 
 
