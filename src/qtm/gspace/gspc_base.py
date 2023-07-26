@@ -21,7 +21,7 @@ ROUND_PREC: int = 6
 class GSpaceBase:
 
     FFT3D = FFT3DFull
-    normalise_idft = True
+    _normalise_idft = True
 
     def __init__(self, recilat: ReciLattice, grid_shape: tuple[int, int, int],
                  g_cryst: NDArray):
@@ -59,7 +59,7 @@ class GSpaceBase:
         """Differential volume used when evaluating integrals across a unit-cell
         of the real-space lattice"""
         self._fft = self.FFT3D(
-            self.grid_shape, self.idxgrid, normalise_idft=self.normalise_idft
+            self.grid_shape, self.idxgrid, normalise_idft=self._normalise_idft
         )
         """FFT Module"""
 
@@ -85,7 +85,7 @@ class GSpaceBase:
         return np.sqrt(self.g_norm2)
 
     def __eq__(self, other) -> bool:
-        return self is other
+        return other is self
 
     def create_buffer(self, shape: tuple[int, ...]) -> NDArray:
         """Returns an empty array of given shape.
