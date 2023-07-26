@@ -1,30 +1,12 @@
 # from __future__ import annotations
-__all__ = ['Field', 'FieldG', 'FieldR']
+from typing import Union, Sequence
+__all__ = ['FieldG', 'FieldR']
 
 from abc import ABC, abstractmethod
-from .buffer import Buffer
+import numpy as np
+
 from qtm.gspace import GSpaceBase
-
-
-class Field(Buffer, ABC):
-
-    @classmethod
-    @abstractmethod
-    def _get_basis_size(cls, gspc: GSpaceBase) -> int:
-        pass
-
-    @property
-    @abstractmethod
-    def basis_type(self) -> str:
-        pass
-
-    @abstractmethod
-    def to_fieldg(self):
-        pass
-
-    @abstractmethod
-    def to_fieldr(self):
-        pass
+from .buffer import Buffer
 
 
 class FieldG(Buffer):
@@ -37,16 +19,16 @@ class FieldG(Buffer):
     def basis_type(self):
         return 'g'
 
-    def to_fieldr(self):
+    def to_r(self):
         gspc = self.gspc
         data = gspc.g2r(self.data)
         return FieldR(gspc, data)
 
-    def to_fieldg(self):
+    def to_g(self):
         return self
 
 
-class FieldR(Field):
+class FieldR(Buffer):
 
     @classmethod
     def _get_basis_size(cls, gspc: GSpaceBase):
@@ -56,10 +38,16 @@ class FieldR(Field):
     def basis_type(self):
         return 'r'
 
-    def to_fieldr(self):
+    def to_r(self):
         return self
 
-    def to_fieldg(self):
+    def to_g(self):
         gspc = self.gspc
         data = gspc.r2g(self.data)
         return FieldG(gspc, data)
+
+    def integrate_unitcell(self, axis: Union[int, Sequence[int]] = 0):
+        return np.sum(
+            np.sum(self._data, axis=-1),
+            axis=axis
+        ) * self.gspc.reallat_dv
