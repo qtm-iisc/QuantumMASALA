@@ -148,7 +148,6 @@ def check_g_idxgrid(shape: tuple[int, int, int], idxgrid: NDArray):
                          "and less than the product of 'shape'.")
 
 
-# TODO: This function doesn't do what it claims it does. Fix it.
 def idxgrid2cryst(shape: tuple[int, int, int], idxgrid: NDArray) -> NDArray:
     """Inverse routine of ``cryst2idxgrid``
 
@@ -170,4 +169,7 @@ def idxgrid2cryst(shape: tuple[int, int, int], idxgrid: NDArray) -> NDArray:
     g_cryst_2 = idxgrid % (n2 * n3)
     g_cryst_3 = g_cryst_2 % n3
     g_cryst_2 //= n3
+    g_cryst_1 -= n1 * (g_cryst_1 > n1 // 2)
+    g_cryst_2 -= n2 * (g_cryst_2 > n2 // 2)
+    g_cryst_3 -= n3 * (g_cryst_3 > n3 // 2)
     return np.stack((g_cryst_1, g_cryst_2, g_cryst_3))
