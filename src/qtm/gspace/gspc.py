@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional, Type
+from typing import Optional, Sequence
 from qtm.config import NDArray
 __all__ = ['GSpace']
 
@@ -19,56 +19,69 @@ GOOD_PRIMES: list[int] = [2, 3, 5, 7]
 """
 
 
-def gen_grid_shape(recilat, ecut) -> tuple[int, ...]:
-    """Generates optimal FFT grid shape from given cutoff energy
+def _optimal_grid_shape(shape: Sequence[int]) -> tuple[int, ...]:
+    out = []
+    for ni in shape:
+        is_good = False
+        while not is_good:
+            x = ni
+            for prime in GOOD_PRIMES:
+                while x % prime == 0:
+                    x = x / prime
+            if x == 1:
+                is_good = True
+            else:
+                ni += 1
+        out.append(ni)
+    return tuple(out)
+
+
+def minimal_grid_shape(recilat: ReciLattice, ecut: float) -> tuple[int, ...]:
+    """Computes the smallest FFT mesh grid that contains all G-vectors that are
+    within given Kinetic Energy Cutoff.
 
     Parameters
     ----------
     recilat : ReciLattice
-        Reciprocal Lattice
+        Reciprocal Lattice of the System
     ecut : float
         Kinetic Energy cutoff
 
     Returns
     -------
     grid_shape : tuple[int, int, int]
-        FFT Grid Shape
+        Dimensions of the FFT mesh grid that contains all G-vectoors of given
+        'recilat' that are within cutoff 'ecut'
 
-    Notes
-    -----
-    The grid shape is computed via the Nyquist-Shannon Sampling Theorem
-    with the numbers chosen to have only the numbers in ``GOOD_PRIMES`` as
-    their prime factors. This is required as FFT Libraries perform optimally
-    for sizes with only good prime factors (2, 3, 5, 7).
     """
     if not isinstance(recilat, ReciLattice):
-        raise ValueError("'recilat' must be a 'ReciLattice' instance. "
+        raise ValueError(f"'recilat' must be a '{ReciLattice}' instance. "
                          f"got {type(recilat)}")
     if ecut <= 0:
-        raise ValueError(f"'ecut' must be a positive number. got {ecut}")
-
+        raise ValueError("'ecut' must be a positive number. "
+                         f"got {ecut}")
+    # Computing the radius of the G-Sphere
     omega = np.sqrt(2 * ecut)  # ecut = 0.5 * |G_max|^2
-    # Computing 2 \pi / |a_i| where a_i are the basis vectors of the bravais lattice
+
     b1, b2, b3 = recilat.axes_cart
+    # Computing the spacing between lattice planes perpendicular to each basis vector
     r1 = recilat.cellvol / np.linalg.norm(np.cross(b2, b3))
     r2 = recilat.cellvol / np.linalg.norm(np.cross(b1, b3))
     r3 = recilat.cellvol / np.linalg.norm(np.cross(b1, b2))
-    ni = [2*int(np.floor(omega/r)) + 1 for r in [r1, r2, r3]]
-    # Finding 'good' values of `grid_shape`
-    grid_shape = []
-    for x in ni:
-        is_good = False
-        while not is_good:
-            n = x
-            for prime in GOOD_PRIMES:
-                while n % prime == 0:
-                    n = n / prime
-            if n == 1:
-                is_good = True
-            else:
-                x += 1
-        grid_shape.append(x)
-    return tuple(grid_shape)
+    return tuple(2*int(np.floor(omega/r)) + 1 for r in [r1, r2, r3])
+
+
+def check_grid_shape(recilat: ReciLattice, ecut: float,
+                     grid_shape: tuple[int, int, int]):
+    min_grid_shape = minimal_grid_shape(recilat, ecut)
+    check_shape(grid_shape)
+    for idim, ni in enumerate(min_grid_shape):
+        if ni < min_grid_shape[idim]:
+            raise ValueError(
+                "'grid_shape' is too small to fit all the G-vectors within "
+                f"KE cutoff {ecut} Hart. \n"
+                f"Minimal FFT grid required is {min_grid_shape}. got {grid_shape}"
+            )
 
 
 class GSpace(GSpaceBase):
@@ -76,7 +89,7 @@ class GSpace(GSpaceBase):
     def __init__(self, recilat: ReciLattice, ecut: float,
                  grid_shape: Optional[tuple[int, int, int]] = None):
         if not isinstance(recilat, ReciLattice):
-            raise ValueError("'recilat' must be an instance of 'ReciprocalLatvec'. "
+            raise ValueError(f"'recilat' must be a '{ReciLattice}'. "
                              f"got {type(recilat)}")
 
         if ecut <= 0:
@@ -86,9 +99,11 @@ class GSpace(GSpaceBase):
         """
 
         if grid_shape is None:
-            grid_shape = gen_grid_shape(recilat, self.ecut)
+            grid_shape = _optimal_grid_shape(
+                minimal_grid_shape(recilat, self.ecut)
+            )
         else:
-            check_shape(grid_shape)
+            check_grid_shape(grid_shape)
         """Shape of the 3D FFT Grid containing G-vectors
         """
 
@@ -101,7 +116,8 @@ class GSpace(GSpaceBase):
         g_2 = recilat.norm2(g_cryst)
         ke_max = 0.5 * np.amax(g_2)
         if ke_max <= self.ecut:
-            raise ValueError("'ecut' value too large. Largest KE in PW Basis "
+            raise ValueError("'ecut' value too large for given 'grid_shape'. "
+                             f"Largest KE for grid_shape = {grid_shape} "
                              f"is {ke_max} Hart. Given 'ecut'={self.ecut} Hart"
                              )
 
@@ -127,7 +143,7 @@ class GSpace(GSpaceBase):
             return True
 
         # Check if they are also a 'GSpace' instance
-        if not isinstance(other, GSpace):
+        if not isinstance(other, type(self)):
             return False
         # Check if they represent the same lattice
         if other.recilat != self.recilat:
