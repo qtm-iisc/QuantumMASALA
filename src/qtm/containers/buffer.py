@@ -1,5 +1,5 @@
 # from __future__ import annotations
-from typing import Self, Literal, Sequence, Union
+from typing import Self, Literal, Sequence, Union, Optional
 from qtm.config import NDArray
 __all__ = ['Buffer']
 
@@ -7,7 +7,6 @@ from abc import ABC, abstractmethod
 import numpy as np
 from numpy.lib.mixins import NDArrayOperatorsMixin
 from qtm.gspace import GSpaceBase
-from qtm.logger import warn
 
 
 class Buffer(NDArrayOperatorsMixin, ABC):
@@ -21,8 +20,9 @@ class Buffer(NDArrayOperatorsMixin, ABC):
     This class implements the following array-like behaviors:
     1. Indexing and assigning values to indexed arrays
     2. Indexing and assigning across the basis dimension via `BufferView`
-    3. Implementing all NumPy ufuncs which includes most algebraic operation
+    3. Implementing NumPy ufuncs which includes algebraic operation
        such as negation, addition, multiplication, comparision, etc.
+       and scalar functions like exp, sin, cos, tan, etc.
 
     Parameters
     ----------
@@ -38,16 +38,15 @@ class Buffer(NDArrayOperatorsMixin, ABC):
     `numpy.lib.mixins.NDArrayOperatorsMixin`. Refer to:
     https://numpy.org/doc/stable/user/basics.dispatch.html
 
-    .. warning:: Outputs of the ufuncs are cast back to the `Buffer` type
-    (or its subclasses) if and only if the last axis matches the `basis_size`.
-    This may lead to uncasted results if the ufunc involves transposition of
-    axes. But, in the very rare case a buffer has multiple dimensions with the
-    same length as basis_size, a warning is displayed to user indcating that
-    the casting logic might be confused. This is **extremely** important when
-    running in parallel as this class has no logic for performing reduction
-    operations across data across the last index (which is distributed across
-    processes).
+    This class limits the list of supported NumPy Ufuncs to only:
+    1. Scalar Ufuncs that is applied to every element of the (broadcasted)
+    input array arguments
+    2. Ufunc's 'reduce' method, which is applicable to only scalar
+    binary operations.
 
+    When the basis is distibuted across processes, the corresponding
+    'DistBuffer' class will handle reductions across the last dimension,
+    which is now parallelized and thus requires an MPI_ALLreduce operation.
     """
 
     @classmethod
@@ -59,12 +58,17 @@ class Buffer(NDArrayOperatorsMixin, ABC):
 
     def __init__(self, gspc: GSpaceBase, data: NDArray):
         if not isinstance(gspc, GSpaceBase):
-            raise TypeError("'gspc' must be a 'GSpaceBase' instance. "
-                            f"got type {type(gspc)}")
+            raise TypeError(f"'gspc' must be a '{GSpaceBase}' instance. "
+                            f"got '{type(gspc)}'.")
         self._check_data(gspc, data, suppress_exc=False)
 
         self.gspc = gspc
         self._basis_size = self._get_basis_size(gspc)
+        if not isinstance(data, NDArray):
+            raise TypeError("'data' must be an array instance. "
+                            f"got '{type(data)}'.")
+        if data.shape[-1] != self._basis_size:
+            raise ValueError("'")
         self._data = data
 
     @property
@@ -155,14 +159,14 @@ class Buffer(NDArrayOperatorsMixin, ABC):
             if isinstance(item, tuple):
                 raise TypeError(
                     "multidimensional indexing for 'BufferView' is disabled. "
-                    "index is applied only to the last index.")
+                    "index is applied only to the last dimension.")
             return self.data[..., item]
 
         def __setitem__(self, key, value):
             if isinstance(key, tuple):
                 raise TypeError(
                     "multidimensional indexing for 'BufferView' is disabled. "
-                    "index is applied only to the last index.")
+                    "index is applied only to the last dimension.")
             self.data[..., key] = value
 
         def __array__(self, dtype=None):
@@ -195,8 +199,8 @@ class Buffer(NDArrayOperatorsMixin, ABC):
         """Creates a buffer with an empty array of given shape (with the basis
         dimension appended it)"""
         if not isinstance(gspc, GSpaceBase):
-            raise TypeError("'gspc' must be a 'GSpaceBase' instance. "
-                            f"got type {type(gspc)}")
+            raise TypeError(f"'gspc' must be a '{GSpaceBase}' instance. "
+                            f"got '{type(gspc)}'")
         if isinstance(shape, int):
             shape = (shape, )
         basis_size = cls._get_basis_size(gspc)
@@ -214,13 +218,22 @@ class Buffer(NDArrayOperatorsMixin, ABC):
         data = self._data.copy(order='C')
         return self.__class__(self.gspc, data)
 
+    @abstractmethod
+    def to_r(self) -> Self:
+        pass
+
+    @abstractmethod
+    def to_g(self) -> Self:
+        pass
+
     def reshape(self, shape: Sequence[int]) -> Self:
         """Similar implementation to reshaping multidimensional array"""
         try:
             data = self._data.reshape((*shape, self.basis_size))
             return self.__class__(self.gspc, data)
         except Exception as e:
-            raise Exception("reshape failed. refer to below exception: ") from e
+            raise Exception("reshape failed. refer to the rest of the exception "
+                            "for further info.") from e
 
     def _check_slice(self, item):
         if self.rank == 0:
@@ -238,25 +251,10 @@ class Buffer(NDArrayOperatorsMixin, ABC):
                             "instances of 'Buffer' and their subclasses. "
                             f"got {type(self)} and {type(other)}")
         if self.gspc != other.gspc:
-            raise ValueError("'gspc' mismatch between 'Field' instances")
+            raise ValueError("'gspc' mismatch between 'Buffer' instances")
         if self.basis_size != other.basis_size:
-            raise ValueError("'basis_size' mismatch between instances: "
+            raise ValueError("'basis_size' mismatch between 'Buffer' instances: "
                              f"got {self.basis_size} and {other.basis_size}")
-
-    def __len__(self):
-        if self.rank == 0:
-            return 1
-        return self.shape[0]
-
-    def __iter__(self):
-        if self.rank == 0:
-            def generator(obj):
-                yield obj
-        else:
-            def generator(obj):
-                for idx in range(len(obj)):
-                    yield obj[idx]
-        return generator(self)
 
     def __getitem__(self, item) -> Self:
         self._check_slice(item)
@@ -264,109 +262,108 @@ class Buffer(NDArrayOperatorsMixin, ABC):
             data = self._data[item]
             return self.__class__(self.gspc, data)
         except Exception as e:
-            raise Exception("failed to slice field. refer to above exception "
-                            "for further info.") from e
+            raise Exception("failed to slice field. refer to the rest of the "
+                            "exception message for further info.") from e
 
     def __setitem__(self, key, value: Self):
         self._check_slice(key)
         self._check_other(value)
         self._data[key] = value.data
 
-    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        # print('debug1:', ufunc, 'method:', method)
-        # print('inputs: ', inputs)
-        # print('kwargs: ', kwargs)
+    def __len__(self):
+        if self.rank == 0:
+            raise TypeError("'Buffer' instance is scalar (rank=0).")
+        return self.shape[0]
 
-        def cast_inout(args, add_newaxis: bool = True):
-            if not isinstance(args, tuple):
-                args = (args, )
-            args_ndarray = []
-            for arg in args:
-                if isinstance(arg, Buffer):
-                    if arg.gspc != self.gspc:
+    def __iter__(self):
+        if self.rank == 0:
+            raise TypeError("'Buffer' instance is scalar (rank=0).")
+        else:
+            def generator(obj):
+                for idx in range(len(obj)):
+                    yield obj[idx]
+        return generator(self)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        cast_out_to_buffer = True  # If True, the output will be converted to a 'Buffer' instance
+        if method == 'reduce':
+            axis = kwargs.get('axis', None)
+            ndim = self._data.ndim
+            if axis is None:
+                axis = tuple(idim for idim in range(ndim))
+            elif not isinstance(axis, tuple):
+                axis = (axis, )
+            # If last axis representing the basis is reduced, don't cast output to buffer
+            if ndim - 1 in axis or -1 in axis:
+                cast_out_to_buffer = False
+        elif method == '__call__':
+            if ufunc.signature is not None:
+                if ufunc is not np.matmul:
+                    raise NotImplementedError(
+                        "Only scalar ufuncs are supported."
+                    )
+        else:
+            raise NotImplementedError(
+                "'Buffer' instances only support '__call__' and 'reduce' methods "
+                "of NumPy Ufuncs. If needed, you can operate on their data directly "
+                "by accessing its 'data' property, but it might result it "
+                "unexpected behavior when running in parallel."
+            )
+
+        # Iterating through inputs and casting them to NDArrays
+        ufunc_inp = []
+        for inp in inputs:
+            if isinstance(inp, Buffer):
+                if isinstance(inp, Buffer):
+                    if inp.gspc != self.gspc:
                         raise TypeError(
                             "mismatch in 'gspc' between two 'Buffer' instances."
                         )
-                    if arg.basis_type != self.basis_type:
+                    if inp.basis_type != self.basis_type:
                         raise TypeError(
                             "mismatch in 'basis_type' between two 'Buffer' instances."
                         )
-                    if arg.basis_size != self.basis_size:
+                    if inp.basis_size != self.basis_size:
                         raise TypeError(
                             "mismatch in 'basis_size' between two 'Buffer' instances."
                         )
-                    args_ndarray.append(arg.data)
+                    ufunc_inp.append(inp.data)
+            else:
+                ufunc_inp.append(np.asarray(inp)[..., np.newaxis])
+
+        # If kwarg 'out' is given and if any one is a 'Buffer' instance, the
+        # data array is extracted. Unlike in input, no casting is done here
+        outputs = kwargs.get('out', ())
+        ufunc_out = []
+        if outputs:
+            for out in outputs:
+                if isinstance(out, Buffer):
+                    if out.gspc != self.gspc:
+                        raise TypeError(
+                            "mismatch in 'gspc' between two 'Buffer' instances."
+                        )
+                    if out.basis_type != self.basis_type:
+                        raise TypeError(
+                            "mismatch in 'basis_type' between two 'Buffer' instances."
+                        )
+                    if out.basis_size != self.basis_size:
+                        raise TypeError(
+                            "mismatch in 'basis_size' between two 'Buffer' instances."
+                        )
+                    ufunc_out.append(out.data)
                 else:
-                    if add_newaxis:
-                        args_ndarray.append(np.asarray(arg)[...: np.newaxis])
-                    else:
-                        args_ndarray.append(np.asarray(arg))
-            return tuple(args_ndarray)
+                    ufunc_out.append(out)
+            kwargs['out'] = tuple(ufunc_out)
 
-        inputs = cast_inout(inputs, add_newaxis=True)
-
-        for inp in inputs:
-            if self.basis_size in inp.shape[:-1]:
-                warn(
-                    "outputs of ufunc are cast to 'Buffer' instances when the last"
-                    "dimension of the output array matches the size of the basis. "
-                    "In the unlikely chance the input array has any dimension with the "
-                    "same size that is not the last dimension, this warning pops up to "
-                    "highlight a possible place for errors, especially when running "
-                    "in parallel."
-                    "Why do need such a large array/small basis at the first place?"
-                    )
-
-        out = kwargs.get('out', None)
-        if out is not None:
-            kwargs['out'] = cast_inout(kwargs['out'], add_newaxis=False)
-
-        ufunc_out = getattr(ufunc, method)(*inputs, **kwargs)
-
-        if out is not None:
-            return out[0] if ufunc.nout == 1 else out
-
-        if self._check_data(self.gspc, ufunc_out):
-            ufunc_out = self.__class__(self.gspc, ufunc_out)
-        return ufunc_out
-
-    HANDLED_FUNCTIONS = {}
-
-    def __array_function__(self, func, types, args, kwargs):
-        if func not in self.HANDLED_FUNCTIONS:
-            return NotImplemented
-        func, supported_kwargs = self.HANDLED_FUNCTIONS[func]
-        if any(kwarg not in supported_kwargs for kwarg in kwargs):
-            raise NotImplementedError(
-                "implementation only supports the follwing kwargs: "
-                f"{str(supported_kwargs)[1:-1]}"
-            )
-        return func(*args, **kwargs)
-
-    @classmethod
-    def implements(cls, np_function, supported_kwargs):
-        def decorator(func):
-            cls.HANDLED_FUNCTIONS[np_function] = (func, supported_kwargs)
-            return func
-        return decorator
-
-
-@Buffer.implements(np.sum, ('axis',))
-def np_sum(arr: Buffer, axis=None):
-    if axis is None:
-        axis = tuple(range(arr.rank + 1))
-
-    if isinstance(axis, int):
-        axis = (axis, )
-
-    axis = tuple(axis)
-
-    reduce = False
-    if arr.rank in axis or -1 in axis:
-        reduce = True
-    out = np.sum(arr.data, axis)
-
-    if not reduce:
-        return arr.__class__(arr.gspc, out)
-    else:
-        return out
+        ufunc_out = getattr(ufunc, method)(*ufunc_inp, **kwargs)
+        # If 'cast_out_to_buffer' is True, then they are cast to the same type
+        # as self, else they are returned as bare arrays.
+        if isinstance(ufunc_out, tuple):
+            if cast_out_to_buffer:
+                return tuple(type(self)(self.gspc, out) for out in ufunc_out)
+            else:
+                return ufunc_out
+        elif cast_out_to_buffer:
+            return type(self)(self.gspc, ufunc_out)
+        else:
+            return ufunc_out
