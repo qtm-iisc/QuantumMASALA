@@ -1,5 +1,5 @@
 # from __future__ import annotations
-from typing import Self, Literal, Sequence, Union, Optional
+from typing import Self, Literal, Sequence, Union
 from qtm.config import NDArray
 __all__ = ['Buffer']
 
@@ -105,12 +105,12 @@ class Buffer(NDArrayOperatorsMixin, ABC):
             raise ValueError("dtype of 'data' must be 'c16'. "
                              f"got data.dtype = {data.dtype}")
 
-        # if data.strides[-1] != data.dtype.itemsize:
-        #     if suppress_exc:
-        #         return False
-        #     raise ValueError("'data' must be atleast contiguous at the last axis. "
-        #                      f"got data.strides[-1] = {data.strides[-1]} "
-        #                      f"(expected {data.dtype.itemsize})")
+        if data.strides[-1] != data.dtype.itemsize:
+            if suppress_exc:
+                return False
+            raise ValueError("'data' must be atleast contiguous at the last axis. "
+                             f"got data.strides[-1] = {data.strides[-1]} "
+                             f"(expected {data.dtype.itemsize})")
 
         return True
 
@@ -130,69 +130,23 @@ class Buffer(NDArrayOperatorsMixin, ABC):
         """Rank of the array, which equals ``data.ndim - 1``"""
         return self._data.ndim - 1
 
-    class BufferView(NDArrayOperatorsMixin):
-        """Class that provides interface to index the array `data`'s last
-        dimension, allowing to slice by the last axis without determining the
-        full shape of the array.
-
-        Examples
-        --------
-        .. code-block::
-
-            buf = Buffer.empty(gspc, (2, 5))
-            buf.g[4] = 10  # Equivalent to buf.data[:, :, 4] = 10
-            idx = [1, 2, 5]  # A boolean mask with length buf.basis_size also works
-            print(buf.g[idx])  # Equivalent to buf.data[:, :, [1, 2, 5]]
-
-
-        """
-
-        def __init__(self, buffer):
-            self.buffer: Buffer = buffer
-            self.data: NDArray = self.buffer.data
-
-            self.basis_size: int = self.buffer.basis_size
-            self.shape: tuple[int, ...] = self.buffer.data.shape
-            self.rank: int = self.buffer.rank
-
-        def __getitem__(self, item) -> NDArray:
-            if isinstance(item, tuple):
-                raise TypeError(
-                    "multidimensional indexing for 'BufferView' is disabled. "
-                    "index is applied only to the last dimension.")
-            return self.data[..., item]
-
-        def __setitem__(self, key, value):
-            if isinstance(key, tuple):
-                raise TypeError(
-                    "multidimensional indexing for 'BufferView' is disabled. "
-                    "index is applied only to the last dimension.")
-            self.data[..., key] = value
-
-        def __array__(self, dtype=None):
-            if dtype is not None:
-                return NotImplementedError(
-                    "argument 'dtype' is not supported in 'BufferView.__array__. "
-                    f"got {dtype}.")
-            return self.data
-
     @property
-    def r(self) -> BufferView:
-        """If `basis_type` is ``'r'``, returns a ``BufferView`` instance."""
+    def r(self) -> NDArray:
+        """Alias of 'data' if 'buffer_type' is ``'r'``"""
         if self.basis_type != 'r':
             raise AttributeError("'Buffer' property 'r' is undefined when "
                                  "'basis_type' is not 'r'. "
                                  f"got basis_type = {self.basis_type}")
-        return self.BufferView(self)
+        return self.data
 
     @property
-    def g(self) -> BufferView:
-        """If `basis_type` is ``'g'``, returns a ``BufferView`` instance."""
+    def g(self) -> NDArray:
+        """Alias of 'data' if 'buffer_type' is ``'r'``"""
         if self.basis_type != 'g':
             raise AttributeError("'Buffer' property 'g' is undefined when "
                                  "'basis_type' is not 'g'. "
                                  f"got basis_type = {self.basis_type}")
-        return self.BufferView(self)
+        return self.data
 
     @classmethod
     def empty(cls, gspc: GSpaceBase, shape: Union[int, tuple[int, ...]]):
@@ -217,6 +171,9 @@ class Buffer(NDArrayOperatorsMixin, ABC):
         """Makes a copy of itself"""
         data = self._data.copy(order='C')
         return self.__class__(self.gspc, data)
+
+    def conj(self) -> Self:
+        return self.__class__(self.gspc, self._data.conj())
 
     @abstractmethod
     def to_r(self) -> Self:
