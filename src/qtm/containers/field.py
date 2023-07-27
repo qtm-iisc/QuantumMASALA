@@ -48,6 +48,6 @@ class FieldR(Buffer):
 
     def integrate_unitcell(self, axis: Union[int, Sequence[int]] = 0):
         return np.sum(
-            np.sum(self._data, axis=-1),
+            np.sum(self, axis=-1),
             axis=axis
         ) * self.gspc.reallat_dv

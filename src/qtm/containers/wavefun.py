@@ -1,10 +1,11 @@
 # from __future__ import annotations
 from typing import Self
 from qtm.config import NDArray
-__all__ = ['WavefunG', 'WavefunR',
+__all__ = ['Wavefun', 'WavefunG', 'WavefunR',
            'WavefunSpinG', 'WavefunSpinR']
 
-from abc import ABC
+from abc import ABC, abstractmethod
+import numpy as np
 from scipy.linalg.blas import zgemm
 
 from qtm.gspace import GSpace, GkSpace
@@ -22,7 +23,6 @@ class Wavefun(Buffer, ABC):
                             f"got type {type(gkspc)}")
         Buffer.__init__(self, gkspc, data)
         self.gkspc: GkSpace = self.gspc
-        self.gspc: GSpace = self.gkspc.gwfn
 
 
 class WavefunG(Wavefun):
@@ -31,6 +31,12 @@ class WavefunG(Wavefun):
     @classmethod
     def _get_basis_size(cls, gkspc: GkSpace):
         return cls.numspin * gkspc.size_g
+
+    def __init__(self, gkspc: GkSpace, data: NDArray):
+        Wavefun.__init__(self, gkspc, data)
+        self._norm_fac = float(
+            np.sqrt(self.gkspc.reallat_cellvol) / np.prod(self.gspc.grid_shape)
+        )
 
     @property
     def basis_type(self):
@@ -45,6 +51,12 @@ class WavefunG(Wavefun):
 
         data_r = gkspc.g2r(data_g).reshape((*self.shape, -1))
         return WavefunR(gkspc, data_r)
+
+    def norm2(self):
+        return np.add.reduce(self * self.conj(), axis=-1)
+
+    def norm(self):
+        return np.sqrt(self.norm2())
 
     def vdot(self, ket: Self):
         # TODO: Reprofile this and optimize it for memory usage
