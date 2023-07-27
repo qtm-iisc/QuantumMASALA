@@ -36,7 +36,7 @@ c = colors[wrld_rank]
 k = keys[wrld_rank]
 
 with comm_world.Split(c, k) as comm:
-    grp_id = comm.id_
+    grp_id = comm.subgrp_idx
     grp_size, grp_rank = comm.size, comm.rank
     print(f"process #{wrld_rank}/{wrld_size} is assigned to "
           f"subgroup #{grp_id} and its rank is "
