@@ -9,6 +9,7 @@ from typing import Type
 from qtm.config import NDArray
 __all__ = ['check_shape', 'check_g_cryst',
            'cryst2idxgrid', 'check_g_idxgrid', 'idxgrid2cryst',
+           'DummyFFT3D',
            ]
 
 import numpy as np
@@ -173,3 +174,14 @@ def idxgrid2cryst(shape: tuple[int, int, int], idxgrid: NDArray) -> NDArray:
     g_cryst_2 -= n2 * (g_cryst_2 > n2 // 2)
     g_cryst_3 -= n3 * (g_cryst_3 > n3 // 2)
     return np.stack((g_cryst_1, g_cryst_2, g_cryst_3))
+
+
+class DummyFFT3D:
+    """A Dummy `FFT3D` class used as a placeholder for custom 'GSpaceBase'
+    subclasses, allowing one to initialise the FFT object after calling
+    the parent class constructor `GSpaceBase.__init__`
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        pass

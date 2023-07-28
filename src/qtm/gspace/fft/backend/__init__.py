@@ -7,7 +7,7 @@ Supported Libraries are:
 4. NumPy
 5. CuPy (GPU)
 
-The abstract class `FFTBackend` that is defined in ``../gspc_base.py`` describes
+The abstract class `FFTBackend` that is defined in ``../base.py`` describes
 the structure of the wrappers definend here.
 
 Notes
