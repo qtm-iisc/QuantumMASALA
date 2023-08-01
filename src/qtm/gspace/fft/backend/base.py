@@ -1,5 +1,5 @@
 # from __future__ import annotations
-from typing import Union, Sequence, Optional
+from typing import Union, Sequence, Type
 from qtm.config import NDArray
 __all__ = ['FFTBackend', ]
 
@@ -7,61 +7,41 @@ from abc import ABC, abstractmethod
 
 
 class FFTBackend(ABC):
-    """Abstract Base Class that describes the interface to FFT Libraries
+    """Abstract Base Class that describes a common interface to FFT Libraries.
 
-    Specifies a common interface to FFT libraries. Apart from FFT Routines,
-    the class also provides array creation methods, allowing implementation
-    of routines that create optimal buffers for said FFT routines.
+    The FFT's in QuantumMASALA involves out-of-place FFT operations on a
+    pre-defined work area. In-place FFT operationa are not optimal here due
+    to the truncation of fourier space. The interface provides pre-allocated
+    work arrays for input; one forward, one backward.
+    A separate input buffer for backwards FFT saves in zeroing the truncated
+    regions for every backward FFT.
 
     Parameters
     ----------
-    arr : Union[NDArray, Sequence[int]]
-        Input FFT Array for setting shapes and strides. Alternatively, it can
-        also be a sequence of integers which will be interpreted as the shape
-        of a C-contiguous array
+    shape: Sequence[int]
+        Shape of the FFT array(s)
     axes : tuple[int, ...]
         Axes over which to compute the FFT
-
     """
 
-    @abstractmethod
-    def __init__(self, arr: Union[NDArray, Sequence[int]],
-                 axes: tuple[int, ...]):
-        # Validating input 'arr'
-        if isinstance(arr, Sequence):
-            arr = self.create_buffer(arr)
-        self.check_buffer(arr)
+    ndarray: Type[NDArray]
 
-        self._arr: NDArray = arr
-        """Array to operate FFT on"""
-        self.shape: tuple[int, ...] = arr.shape
-        """Shape of the FFT mesh"""
-        self.ndim: int = arr.ndim
-        """Dimension of the mesh"""
-        self.strides: tuple[int, ...] = arr.strides
-        """Strides of data in memory"""
-        self.axes: tuple[int, ...] = axes
-        """Axes over which to compute the FFT"""
+    @abstractmethod
+    def __init__(self, shape: Sequence[int],
+                 axes: Sequence[int]):
+
+        self.shape: Sequence[int] = shape
+        self.axes: Sequence[int] = axes
+        self._inp_fwd = self.create_buffer(self.shape)
+        self._inp_bwd = self.create_buffer(self.shape)
 
     @property
-    def arr(self):
-        return self._arr
+    def inp_fwd(self):
+        return self._inp_fwd
 
-    @arr.setter
-    def arr(self, new_arr):
-        self.set_arr(new_arr)
-
-    @abstractmethod
-    def set_arr(self, new_arr):
-        self._check_arr(new_arr)
-        self._arr = new_arr
-
-    def _check_arr(self, new_arr):
-        self.check_buffer(new_arr)
-        if new_arr.shape != self.shape:
-            raise ValueError("'arr' failed to match 'shape' attribute.")
-        if new_arr.strides != self.strides:
-            raise ValueError("'arr' failed to match 'strides' attribute.")
+    @property
+    def inp_bwd(self):
+        return self._inp_bwd
 
     @classmethod
     @abstractmethod
@@ -84,10 +64,8 @@ class FFTBackend(ABC):
         pass
 
     @classmethod
-    @abstractmethod
     def check_buffer(cls, arr: NDArray) -> None:
-        """Checks if the layout of the buffer is compatible for in-place FFT
-        transforms (contiguous, aligned, etc.)
+        """Checks if the layout of the buffer is of the right type and shape
 
         Parameters
         ----------
@@ -97,18 +75,24 @@ class FFTBackend(ABC):
         Raises
         ------
         ValueError
-            Raised if 'arr' is incompatible
+            Raised if 'arr' fails to match the type `ndarray` or array datatype
+            ``'c16'``.
         """
-        pass
+        if not isinstance(arr, cls.ndarray):
+            raise TypeError(f"'arr' must be a {cls.ndarray} instance. "
+                            f"got {type(arr)}")
+        if arr.dtype != 'c16':
+            raise ValueError(f"'dtype' of 'arr' must be 'c16'. "
+                             f"got arr.dtype = {arr.dtype}.")
 
     @abstractmethod
-    def fft(self) -> None:
+    def fft(self) -> NDArray:
         """Performs in-place forward FFT operation on `arr`
         """
         pass
 
     @abstractmethod
-    def ifft(self, normalise_idft: bool = False) -> None:
+    def ifft(self, normalise_idft: bool = False) -> NDArray:
         """Performs in-place backwards FFT operation on `arr
 
         Parameters

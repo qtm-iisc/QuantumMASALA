@@ -31,9 +31,9 @@ if qtmconfig.mkl_fft_installed:
     from .mklfft_ import MKLFFTWrapper
     __all__.append('MKLFFTWrapper')
 if qtmconfig.cupy_installed:
-    qtmconfig.check_cupy()
-    from qtm.gspace.fft.backend.cupy_ import CuPyFFTWrapper
-    __all__.append('CuPyFFTWrapper')
+    if qtmconfig.check_cupy(suppress_exception=True):
+        from qtm.gspace.fft.backend.cupy_ import CuPyFFTWrapper
+        __all__.append('CuPyFFTWrapper')
 
 
 def get_FFTBackend(backend: str):
