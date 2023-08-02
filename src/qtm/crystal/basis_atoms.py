@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Optional
+from qtm.typing import Optional
 __all__ = ['BasisAtoms', 'PseudoPotFile']
 
 import os

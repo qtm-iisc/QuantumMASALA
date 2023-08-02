@@ -1,5 +1,5 @@
 # from __future__ import annotations
-from typing import Self, Literal, Sequence, Union
+from qtm.typing import Self, Literal, Sequence, Union
 from qtm.config import NDArray
 __all__ = ['Buffer']
 

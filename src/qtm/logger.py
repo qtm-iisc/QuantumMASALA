@@ -11,7 +11,7 @@ prevent exceptions due to improper timer usage like, for example,
 stopping an already stopped timer, accessing a non-existing timer, etc.
 """
 # from __future__ import annotations
-from typing import Optional
+from qtm.typing import Optional
 __all__ = ['LOGGER_NAME', 'LOG_FORMAT', 'qtmlogger',
            'qtmlogger_set_filehandle',
            'QTMTimer', 'QTMCounter', 'QTMLogger', 'warn',

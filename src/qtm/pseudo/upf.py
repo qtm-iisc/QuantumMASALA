@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import copy
 import numpy as np
 from dataclasses import dataclass
-from typing import Optional
+from qtm.typing import Optional
 
 from qtm.crystal.basis_atoms import PseudoPotFile
 from qtm.constants import RYDBERG

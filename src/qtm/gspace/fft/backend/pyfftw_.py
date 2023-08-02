@@ -1,5 +1,5 @@
 # from __future__ import annotations
-from typing import Union, Sequence
+from qtm.typing import Union, Sequence
 from qtm.config import NDArray
 __all__ = ['PyFFTWFFTWrapper']
 import pyfftw

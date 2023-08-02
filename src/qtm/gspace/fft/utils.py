@@ -5,7 +5,7 @@ instantiating ``GSpace`` instances.
 
 """
 # from __future__ import annotations
-from typing import Type
+from qtm.typing import Type
 from qtm.config import NDArray
 __all__ = ['check_shape', 'check_g_cryst',
            'cryst2idxgrid', 'check_g_idxgrid', 'idxgrid2cryst',

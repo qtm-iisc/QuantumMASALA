@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Union, Sequence, Self
+from qtm.typing import Union, Sequence, Self
 __all__ = ['FieldG', 'FieldR']
 
 import numpy as np

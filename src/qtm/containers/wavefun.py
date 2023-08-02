@@ -1,5 +1,5 @@
 # from __future__ import annotations
-from typing import Self
+from qtm.typing import Self
 from qtm.config import NDArray
 __all__ = ['Wavefun', 'WavefunG', 'WavefunR',
            'WavefunSpinG', 'WavefunSpinR']

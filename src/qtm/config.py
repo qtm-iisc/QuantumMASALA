@@ -2,7 +2,7 @@
 
 """
 # from __future__ import annotations
-from typing import Union, Any, Type
+from qtm.typing import Union, Any, Type
 __all__ = ['QTMConfig', 'qtmconfig', 'NDArray']
 
 import numpy as np
@@ -196,7 +196,7 @@ class QTMConfig:
                              f"{str(available_planners)[1:-1]}. got {val}")
         self._pyfftw_planner = val
 
-    pyfftw_flags: tuple[str, ...] = ('FFTW_DESTROY_INPUT', )
+    pyfftw_flags: tuple[str, ...] = ()
     """Additional flags to be passed to FFTW Planner routines
     """
 

@@ -1,5 +1,5 @@
 # from __future__ import annotations
-from typing import Optional
+from qtm.typing import Optional
 from qtm.config import NDArray
 __all__ = ['FFT3DSticks']
 

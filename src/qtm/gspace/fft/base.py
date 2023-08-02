@@ -1,5 +1,5 @@
 # from __future__ import annotations
-from typing import Optional, Union, Sequence
+from qtm.typing import Optional, Union, Sequence
 from qtm.config import NDArray
 __all__ = ['FFT3D', 'get_FFTBackend']
 

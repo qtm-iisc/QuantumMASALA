@@ -1,6 +1,6 @@
 # TODO: Use CuFFT directly to implement in-place operations
 # from __future__ import annotations
-from typing import Union, Sequence
+from qtm.typing import Union, Sequence
 from qtm.config import NDArray
 __all__ = ['CuPyFFTWrapper']
 import cupy as cp

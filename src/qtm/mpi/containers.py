@@ -1,5 +1,5 @@
 # from __future__ import annotations
-from typing import Self
+from qtm.typing import Self, Optional
 from qtm.config import NDArray
 
 from abc import ABC
@@ -15,8 +15,9 @@ from .gspace import DistGSpaceBase, DistGkSpace
 
 
 class DistBuffer(Buffer, ABC):
-
+    BufferType = Buffer
     gspc: DistGSpaceBase
+
 
     _mpi_op_map = {
         np.add: MPI.SUM, np.prod: MPI.PROD,
@@ -31,6 +32,40 @@ class DistBuffer(Buffer, ABC):
             raise TypeError(f"'dist_gspc' must be a '{DistGSpaceBase}' instance. "
                             f"got '{type(dist_gspc)}'")
         Buffer.__init__(self, dist_gspc, data)
+
+    @classmethod
+    def scatter(cls, dist_gspc: DistGSpaceBase,
+                buffer_glob: Optional[Buffer]) -> Self:
+        pwgrp_comm = dist_gspc.pwgrp_comm
+        is_root = pwgrp_comm.rank == 0
+
+        if is_root:
+            dist_gspc.check_gspc_glob(buffer_glob.gspc)
+        basis_type = dist_gspc.pwgrp_comm.bcast(
+            buffer_glob.basis_type
+        )
+        if basis_type == 'r':
+            data_loc = dist_gspc.scatter_r(buffer_glob.data if is_root else None)
+        else:  # basis_type == 'g'
+            data_loc = dist_gspc.scatter_g(buffer_glob.data if is_root else None)
+        return cls(dist_gspc, data_loc)
+
+    def gather(self) -> BufferType:
+        if self.basis_type == 'r':
+            data_glob = self.gspc.gather_r(self.data)
+        else:  # self.basis_type == 'g'
+            data_glob = self.gspc.gather_g(self.data)
+        gspc_glob = self.gspc.gspc_glob
+        if self.gspc.pwgrp_rank == 0:
+            return self.BufferType(gspc_glob, data_glob)
+
+    def allgather(self) -> BufferType:
+        if self.basis_type == 'r':
+            data_glob = self.gspc.gather_r(self.data)
+        else:  # self.basis_type == 'g'
+            data_glob = self.gspc.gather_g(self.data)
+        gspc_glob = self.gspc.gspc_glob
+        return self.BufferType(gspc_glob, data_glob)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         out = Buffer.__array_ufunc__(self, ufunc, method, *inputs, **kwargs)
@@ -56,6 +91,7 @@ class DistBuffer(Buffer, ABC):
 
 
 class DistFieldG(DistBuffer, FieldG):
+    BufferType = FieldG
 
     def __init__(self, dist_gspc: DistGSpaceBase, data: NDArray):
         DistBuffer.__init__(self, dist_gspc, data)
@@ -67,6 +103,7 @@ class DistFieldG(DistBuffer, FieldG):
 
 
 class DistFieldR(DistBuffer, FieldR):
+    BufferType = FieldR
 
     def __init__(self, dist_gspc: DistGSpaceBase, data: NDArray):
         DistBuffer.__init__(self, dist_gspc, data)
@@ -91,6 +128,8 @@ class DistWavefun(DistBuffer, Wavefun, ABC):
 
 class DistWavefunG(DistWavefun, WavefunG):
 
+    BufferType = WavefunG
+
     def __init__(self, dist_gkspc: DistGkSpace, data: NDArray):
         DistWavefun.__init__(self, dist_gkspc, data)
         self._norm_fac = float(
@@ -113,6 +152,8 @@ class DistWavefunG(DistWavefun, WavefunG):
 
 class DistWavefunR(DistWavefun, WavefunR):
 
+    BufferType = WavefunR
+
     def __init__(self, dist_gkspc: DistGkSpace, data: NDArray):
         DistWavefun.__init__(self, dist_gkspc, data)
 
@@ -125,6 +166,7 @@ class DistWavefunR(DistWavefun, WavefunR):
 
 
 class DistWavefunSpinG(DistWavefunG):
+    BufferType = WavefunSpinG
     numspin = 2
 
     def to_r(self):
@@ -136,6 +178,7 @@ class DistWavefunSpinG(DistWavefunG):
 
 
 class DistWavefunSpinR(DistWavefunR):
+    BufferType = WavefunSpinR
     numspin = 2
 
     def to_g(self):

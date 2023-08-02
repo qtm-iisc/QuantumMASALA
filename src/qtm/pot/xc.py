@@ -64,7 +64,7 @@ def _get_sigma(rhoaux: FieldG) -> np.ndarray:
     """
     grho = rhoaux.gspc
     numspin = rhoaux.shape[0]
-    grad_rhoaux = fieldg_grad(rhoaux).to_fieldr()
+    grad_rhoaux = fieldg_grad(rhoaux).to_r()
 
     sigma_r = np.empty((2*numspin - 1, grho.size_r), dtype='f8')
     sigma_r[0] = np.sum(grad_rhoaux[0].r * grad_rhoaux[0].r, axis=0).real
@@ -123,7 +123,7 @@ def compute(rho: FieldG, rhocore: FieldG,
     )
     grad_rho = None
     if need_grad:
-        grad_rho = fieldg_grad(rho).to_fieldr()
+        grad_rho = fieldg_grad(rho).to_r()
 
     # for xcfunc in [exch_func, corr_func]:
     #     if xcfunc.get_family() == xc_flags.XC_FAMILY_LDA:
@@ -132,7 +132,7 @@ def compute(rho: FieldG, rhocore: FieldG,
     #         xcfunc.set_dens_threshold(config.libxc_thr_gga_rho)
     #         xcfunc.set_sigma_threshold(config.libxc_thr_gga_sig)
 
-    rho = rho.to_fieldr()
+    rho = rho.to_r()
     xc_inp = {"rho": np.copy(np.abs(rho.r[:]).T, "C")}
     if need_grad:
         xc_inp["sigma"] = _get_sigma(rhoaux)
@@ -145,7 +145,7 @@ def compute(rho: FieldG, rhocore: FieldG,
         zk_r = xcfunc_out['zk'].T
         v_r = np.reshape(xcfunc_out['vrho'].T, (numspin, -1))
         v_xc.r[:] += v_r
-        en_xc += np.sum(rho * zk_r) * grho.reallat_dv
+        en_xc += np.sum(rho.r * zk_r) * grho.reallat_dv
 
         if need_grad:
             vsig_r = FieldR(
@@ -158,7 +158,7 @@ def compute(rho: FieldG, rhocore: FieldG,
             else:
                 h_r[0] = 2*vsig_r[0]*grad_rho[0].r + vsig_r[1]*grad_rho[1].r
                 h_r[1] = 2*vsig_r[2]*grad_rho[1].r + vsig_r[1]*grad_rho[0].r
-            div_h = fieldg_div(h_r.to_fieldg()).to_fieldr()
+            div_h = fieldg_div(h_r.to_g()).to_r()
             print(div_h.shape, div_h.r.shape)
             v_xc -= div_h
 

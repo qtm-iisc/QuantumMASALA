@@ -16,4 +16,4 @@ def compute(rho: FieldG) -> FieldR:
     else:
         v_g /= gspc.g_norm2[1:]
 
-    return v_g.to_fieldr()
+    return v_g.to_r()
