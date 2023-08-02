@@ -27,13 +27,13 @@ class FFTBackend(ABC):
     ndarray: Type[NDArray]
 
     @abstractmethod
-    def __init__(self, shape: Sequence[int],
-                 axes: Sequence[int]):
+    def __init__(self, shape: tuple[int, ...],
+                 axes: tuple[int, ...]):
 
-        self.shape: Sequence[int] = shape
-        self.axes: Sequence[int] = axes
-        self._inp_fwd = self.create_buffer(self.shape)
-        self._inp_bwd = self.create_buffer(self.shape)
+        self.shape: tuple[int, ...] = shape
+        self.axes: tuple[int, ...] = axes
+        self._inp_fwd: NDArray = self.create_buffer(self.shape)
+        self._inp_bwd: NDArray = self.create_buffer(self.shape)
 
     @property
     def inp_fwd(self):

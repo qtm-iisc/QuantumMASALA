@@ -12,12 +12,19 @@ from .base import FFTBackend
 
 class PyFFTWFFTWrapper(FFTBackend):
 
-    def __init__(self, arr: Union[NDArray, Sequence[int]],
+    ndarray = np.ndarray
+
+    def __init__(self, arr: tuple[int, ...],
                  axes: tuple[int, ...]):
         super().__init__(arr, axes)
         self._out = self.create_buffer(self.shape)
 
         fftw_flags = (qtmconfig.pyfftw_planner, *qtmconfig.pyfftw_flags)
+        if 'FFTW_DESTROY_INPUT' in fftw_flags:
+            raise ValueError("FFTW flag 'FFTW_DESTROY_INPUT' is not supported"
+                             "by QTM. Please remove the flag from"
+                             "'qtm.qtmconfig.pyfftw_flags' which is set to: "
+                             f"{qtmconfig.pyfftw_flags}")
         fft_threads = qtmconfig.fft_threads
 
         self.plan_fw = pyfftw.FFTW(self._inp_fwd, self._out, self.axes,

@@ -11,7 +11,9 @@ from .base import FFTBackend
 
 class SciPyFFTWrapper(FFTBackend):
 
-    def __init__(self, arr: Sequence[int],
+    ndarray = np.ndarray
+
+    def __init__(self, arr: tuple[int, ...],
                  axes: tuple[int, ...]):
         super().__init__(arr, axes)
 

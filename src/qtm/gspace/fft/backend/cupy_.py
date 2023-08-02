@@ -3,7 +3,6 @@
 from typing import Union, Sequence
 from qtm.config import NDArray
 __all__ = ['CuPyFFTWrapper']
-import numpy as np
 import cupy as cp
 from cupyx.scipy.fft import get_fft_plan, fftn, ifftn
 
@@ -12,7 +11,9 @@ from qtm.gspace.fft.backend.base import FFTBackend
 
 class CuPyFFTWrapper(FFTBackend):
 
-    def __init__(self, arr: Union[NDArray, Sequence[int]],
+    ndarray = cp.ndarray
+
+    def __init__(self, arr: tuple[int, ...],
                  axes: tuple[int, ...]):
         super().__init__(arr, axes)
         arr = self.create_buffer(self.shape)
