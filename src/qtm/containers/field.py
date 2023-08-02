@@ -1,8 +1,7 @@
-# from __future__ import annotations
-from typing import Union, Sequence
+from __future__ import annotations
+from typing import Union, Sequence, Self
 __all__ = ['FieldG', 'FieldR']
 
-from abc import ABC, abstractmethod
 import numpy as np
 
 from qtm.gspace import GSpaceBase
@@ -19,12 +18,12 @@ class FieldG(Buffer):
     def basis_type(self):
         return 'g'
 
-    def to_r(self):
+    def to_r(self) -> FieldR:
         gspc = self.gspc
         data = gspc.g2r(self.data)
         return FieldR(gspc, data)
 
-    def to_g(self):
+    def to_g(self) -> Self:
         return self
 
 
@@ -38,10 +37,10 @@ class FieldR(Buffer):
     def basis_type(self):
         return 'r'
 
-    def to_r(self):
+    def to_r(self) -> Self:
         return self
 
-    def to_g(self):
+    def to_g(self) -> FieldG:
         gspc = self.gspc
         data = gspc.r2g(self.data)
         return FieldG(gspc, data)
