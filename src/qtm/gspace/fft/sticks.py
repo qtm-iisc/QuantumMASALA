@@ -26,24 +26,23 @@ class FFT3DSticks(FFT3D):
         self.numsticks = len(iyz_sticks)
         iy_sticks = iyz_sticks // nz
         iz_sticks = iyz_sticks % nz
-        self.g2sticks = ix * self.numsticks + np.searchsorted(iyz_sticks, iyz)
+
+        self.g2sticks = nx * np.searchsorted(iyz_sticks, iyz) + ix
+        self.fftx = self.FFTBackend((self.numsticks, nx), (1, ))
+        self.fftx.inp_bwd[:] = 0
 
         self.sticks2full = iy_sticks * nz + iz_sticks
-        self.work_sticks = self.FFTBackend.create_buffer((nx, self.numsticks))
-        self.fftx = self.FFTBackend(self.work_sticks, (0, ))
-
-        self.work_full = self.FFTBackend.create_buffer((nx, ny, nz))
-        self.fftyz = self.FFTBackend(self.work_full, (1, 2))
+        self.fftyz = self.FFTBackend((nx, ny, nz), (1, 2))
+        self.fftyz.inp_bwd[:] = 0
 
     def r2g(self, arr_inp: NDArray, arr_out: NDArray) -> None:
-        self.work_full[:] = arr_inp
-        self.fftyz.fft()
+        self.fftyz.inp_fwd[:] = arr_inp
+        work_full = self.fftyz.fft().reshape((self.shape[0], -1)).T
 
-        work_full = self.work_full.reshape((self.shape[0], -1))
-        work_full.take(self.sticks2full, axis=1, out=self.work_sticks, mode='clip')
-        self.fftx.fft()
-
-        self.work_sticks.take(self.g2sticks, out=arr_out, mode='clip')
+        work_sticks = self.fftx.inp_fwd
+        work_full.take(self.sticks2full, axis=0, out=work_sticks)
+        work_sticks = self.fftx.fft()
+        work_sticks.take(self.g2sticks, out=arr_out, mode='clip')
 
     def g2r(self, arr_inp: NDArray, arr_out: NDArray) -> None:
         # Performance reduction here due to the way we fill the array
@@ -54,14 +53,10 @@ class FFT3DSticks(FFT3D):
         # fill it at specific sites with values. Resulting in double traversal
         # This is where we are losing all our theoretical performance gains
         # when performing sticks FFT.
-        self.work_sticks.fill(0)
-        self.work_sticks.reshape(-1)[self.g2sticks] = arr_inp
-        self.fftx.ifft(self.normalise_idft)
 
-        self.work_full.fill(0)
-        self.work_full.reshape((self.shape[0], -1))[
-            (slice(None), self.sticks2full)
-        ] = self.work_sticks
-        self.fftyz.ifft(self.normalise_idft)
+        self.fftx.inp_bwd.reshape(-1)[self.g2sticks] = arr_inp
+        work_sticks = self.fftx.ifft(self.normalise_idft)
 
-        arr_out[:] = self.work_full
+        work_full = self.fftyz.inp_bwd.reshape((self.shape[0], -1)).T
+        work_full[self.sticks2full] = work_sticks
+        arr_out[:] = self.fftyz.ifft(self.normalise_idft)

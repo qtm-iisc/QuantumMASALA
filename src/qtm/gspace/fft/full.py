@@ -12,17 +12,14 @@ class FFT3DFull(FFT3D):
                  idxgrid: NDArray, normalise_idft: bool,
                  backend: Optional[str] = None):
         super().__init__(shape, idxgrid, normalise_idft, backend)
-
-        self._work: NDArray = self.FFTBackend.create_buffer(self.shape)
-        self.worker = self.FFTBackend(self._work, (0, 1, 2),)
+        self.worker = self.FFTBackend(self.shape, (0, 1, 2),)
+        self.worker.inp_bwd[:] = 0
 
     def r2g(self, arr_inp: NDArray, arr_out: NDArray) -> None:
-        self._work[:] = arr_inp
-        self.worker.fft()
-        self._work.take(self.idxgrid, out=arr_out, mode='clip')
+        self.worker.inp_fwd[:] = arr_inp
+        out = self.worker.fft()
+        out.take(self.idxgrid, out=arr_out, mode='clip')
 
     def g2r(self, arr_inp: NDArray, arr_out: NDArray) -> None:
-        self._work[:].fill(0)
-        self._work.put(self.idxgrid, arr_inp)
-        self.worker.ifft(self.normalise_idft)
-        arr_out[:] = self._work
+        self.worker.inp_bwd.put(self.idxgrid, arr_inp)
+        arr_out[:] = self.worker.ifft(self.normalise_idft)
