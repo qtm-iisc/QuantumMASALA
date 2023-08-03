@@ -15,12 +15,20 @@ class GkSpace(GSpaceBase):
 
     FFT3D = FFT3DSticks
 
-    def __init__(self, gwfn: GSpace, k_cryst: tuple[float, float, float]):
+    def __init__(self, gwfn: GSpace, k_cryst: tuple[float, float, float], ecutwfn:float=None):
         if not isinstance(gwfn, GSpace):
             raise TypeError("'gwfn' must be a 'GSpace' instance. "
                             f"got '{type(gwfn)}'")
         self.gwfn = gwfn
-        self.ecutwfn = self.gwfn.ecut / 4
+        # self.ecutwfn = self.gwfn.ecut / 4
+
+        # AS: Suggestion : Rename ecutwfc to ecut. ecutwfc makes sense in dft context, but in general, 
+        #     it is just the cutoff for a shifted G-grid, which may correspond to anything.
+        if ecutwfn==None:
+            self.ecutwfn = self.gwfn.ecut / 4
+        else:
+            self.ecutwfn = ecutwfn
+            
 
         self.k_cryst = tuple(k_cryst)
         gk_cryst = self.gwfn.g_cryst.copy().astype('f8')

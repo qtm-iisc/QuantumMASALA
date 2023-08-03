@@ -1,5 +1,5 @@
 from __future__ import annotations
-from qtm.typing import Optional, Sequence
+from typing import Optional, Sequence
 from qtm.config import NDArray
 __all__ = ['GSpace']
 
@@ -89,8 +89,7 @@ class GSpace(GSpaceBase):
     def __init__(self, recilat: ReciLattice, ecut: float,
                  grid_shape: Optional[tuple[int, int, int]] = None):
         if not isinstance(recilat, ReciLattice):
-            raise ValueError(f"'recilat' must be a '{ReciLattice}'. "
-                             f"got {type(recilat)}")
+            raise ValueError(f"'recilat' must be a {ReciLattice}. Got {type(recilat)}")
 
         if ecut <= 0:
             raise ValueError(f"'ecut' must be positive. Got: {ecut}")
@@ -103,7 +102,7 @@ class GSpace(GSpaceBase):
                 minimal_grid_shape(recilat, self.ecut)
             )
         else:
-            check_grid_shape(grid_shape)
+            check_grid_shape(recilat, ecut, grid_shape)
         """Shape of the 3D FFT Grid containing G-vectors
         """
 
