@@ -18,6 +18,25 @@ ROUND_PREC: int = 6
 """
 
 
+def _sort_g(grid_shape: tuple[int, int, int], idxgrid: NDArray) -> NDArray:
+    """Returns the optimal sorting of G-vectors
+
+    The optimal sort is defined based on its location on the 3D Grid.
+    The points are ordered such that points lying on a parallel to the
+    X Axis are grouped together. The groups are indexed by the remaining
+    coordinates (y, z) and within each group, the points are sorted in
+    ascending order of x coordinate.
+
+    This is done because when distributing the 3D space across processes,
+    the array must be sliced across the X-Axis so that the data local
+    to each process is a contiguous chunk of the global memory.
+    This requires the G-vectors to be grouped into sticks that are
+    parallel to X-axis and distributed as evenly as possibly.
+    """
+    ix, iy, iz = np.unravel_index(idxgrid, grid_shape, order='C')
+    return np.lexsort((ix, iz, iy))
+
+
 class GSpaceBase:
 
     FFT3D = FFT3DFull
@@ -33,7 +52,7 @@ class GSpaceBase:
         """3D FFT Mesh dimensions"""
 
         idxgrid = cryst2idxgrid(self.grid_shape, g_cryst)
-        idxsort = np.argsort(idxgrid)
+        idxsort = _sort_g(self.grid_shape, idxgrid)
 
         self.g_cryst: NDArray = g_cryst[(slice(None), idxsort)].copy()
         """(``(size, 3)``, ``'i8'``) Crystal coordinates of the G vectors/
