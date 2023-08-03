@@ -22,7 +22,7 @@ class PyFFTWFFTWrapper(FFTBackend):
         fftw_flags = (qtmconfig.pyfftw_planner, *qtmconfig.pyfftw_flags)
         if 'FFTW_DESTROY_INPUT' in fftw_flags:
             raise ValueError("FFTW flag 'FFTW_DESTROY_INPUT' is not supported"
-                             "by QTM. Please remove the flag from"
+                             "by QTM. Please remove the flag from "
                              "'qtm.qtmconfig.pyfftw_flags' which is set to: "
                              f"{qtmconfig.pyfftw_flags}")
         fft_threads = qtmconfig.fft_threads
