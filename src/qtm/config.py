@@ -2,7 +2,7 @@
 
 """
 # from __future__ import annotations
-from qtm.typing import Union, Any, Type
+from typing import Union, Any, Type
 __all__ = ['QTMConfig', 'qtmconfig', 'NDArray']
 
 import numpy as np
@@ -10,6 +10,7 @@ from importlib.util import find_spec
 
 from qtm import logger
 
+fft_use_sticks = False
 
 class QTMConfig:
     """QuantumMASALA's configuration Manager.

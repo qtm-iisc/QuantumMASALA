@@ -33,7 +33,11 @@ class KSWavefun:
         self.evc: Union[WavefunG, WavefunSpinG] = evc
 
         self.evl: NDArray = self.gkspc.create_buffer(self.numbnd)
-        self.occ: NDArray = self.gkspc.create_buffer(self.numbnd)
+        # self.occ: NDArray = self.gkspc.create_buffer(self.numbnd)
+        
+        self.occ: np.ndarray = np.empty((1, self.numbnd), dtype='f8')
+        """(``(1+self.is_spin, self.numbnd)``, ``'f8'``) List of occupation numbers
+        """
 
     def normalize(self):
         self.evc /= self.evc.norm()

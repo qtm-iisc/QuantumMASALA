@@ -5,7 +5,7 @@ instantiating ``GSpace`` instances.
 
 """
 # from __future__ import annotations
-from qtm.typing import Type
+from typing import Type
 from qtm.config import NDArray
 __all__ = ['check_shape', 'check_g_cryst',
            'cryst2idxgrid', 'check_g_idxgrid', 'idxgrid2cryst',
@@ -29,9 +29,8 @@ def check_shape(shape: tuple[int, int, int]) -> None:
         Raised if input argument is not a tuple of three positive integers.
     """
     shape = tuple(shape)
-    if not (len(shape) == 3 and all(isinstance(ni, int) and ni > 0 for ni in shape)):
-        raise ValueError("'shape' must be a tuple containing 3 positive integers. "
-                         f"got {shape} (type {type(shape)})")
+    if not (len(shape) == 3 and all((isinstance(ni, np.integer) or isinstance(ni, int)) and ni > 0 for ni in shape)):
+        raise ValueError(f"'shape' must be a tuple containing 3 positive integers. Got {shape} (type {type(shape)})")
 
 
 def check_g_cryst(shape: tuple[int, int, int], g_cryst: NDArray) -> None:
@@ -107,6 +106,7 @@ def cryst2idxgrid(shape: tuple[int, int, int], g_cryst: NDArray) -> NDArray:
     check_g_cryst(shape, g_cryst)
     n1, n2, n3 = shape
     i1, i2, i3 = g_cryst
+    # print(i1)
     idxgrid = n2 * n3 * (i1 + n1 * (i1 < 0)) \
         + n3 * (i2 + n2 * (i2 < 0)) \
         + (i3 + n3 * (i3 < 0))
