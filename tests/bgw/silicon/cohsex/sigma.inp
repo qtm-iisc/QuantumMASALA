@@ -1,0 +1,20 @@
+band_index_min 1
+band_index_max 8
+
+number_bands 8
+
+use_wfn_hdf5
+frequency_dependence 0
+write_vcoul
+exact_static_ch 0
+bare_coulomb_cutoff 10.0
+screened_coulomb_cutoff 10.0
+tol_degeneracy 0
+
+
+
+begin kpoints
+  0.000000000  0.000000000  0.000000000  1.0
+  0.500000000  0.500000000  0.000000000  1.0
+  0.000000000  0.500000000  0.000000000  1.0
+end
