@@ -339,7 +339,7 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
         # print(l_coeffs[ik][:, :, gk.idxbgw2pw])
         # exit()
         wfn.evc._data[...] = l_coeffs[ik][:, :, gk.idxbgw2pw]
-        print(wfn.evc._data[0,:5])
+        # print(wfn.evc._data[0,:5])
         # print(l_coeffs.shape)
 
         assert np.allclose(
