@@ -374,7 +374,7 @@ class Epsilon:
         polarizability_matrix = -np.einsum("ijkl,ijkm->lm", np.conj(M), M)
 
         return (
-            (4*13824**4) * polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
+            (4*np.prod(self.gspace.grid_shape)**4) * polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
         )
 
     #@pw_logger.time("Epsilon:polarizability_active")
@@ -395,7 +395,7 @@ class Epsilon:
             polarizability_matrix += -np.einsum("l,m->lm", np.conj(M), M)
 
         return (
-            (4*13824**4) * polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
+            (4*np.prod(self.gspace.grid_shape)**4) * polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
         )
 
     # EPSILON INVERSE ===========================================================================
