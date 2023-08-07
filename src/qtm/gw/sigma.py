@@ -1850,8 +1850,8 @@ class Sigma:
                     print(
                         "{:>4}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}".format(
                             n,  # n
-                            emf[k, n],  # Emf
-                            emf[k, n],  # Eo
+                            np.real(emf[k, n]),  # Emf
+                            np.real(emf[k, n]),  # Eo
                             print_x[k, n],  # X
                             print_sx[k, n],  # SX-X
                             print_exact_ch[k, n],  # CH
@@ -1900,22 +1900,22 @@ class Sigma:
 
         sigma_x_mat = self.sigma_x()
         if self.print_condition:
-            print("Sigma X GPP")
-            print(np.around((sigma_x_mat) * self.sigma_factor, 6), end="\n")
+            print("Sigma X GPP", flush=True)
+            print(np.around((sigma_x_mat) * self.sigma_factor, 6), end="\n", flush=True)
         if self.in_parallel:
             self.comm.Barrier()
 
         sigma_ch_static_mat = self.sigma_ch_static()
         if self.print_condition:
-            print("Sigma CH STATIC COHSEX")
-            print(np.around((sigma_ch_static_mat) * self.sigma_factor, 6), end="\n")
+            print("Sigma CH STATIC COHSEX", flush=True)
+            print(np.around((sigma_ch_static_mat) * self.sigma_factor, 6), end="\n", flush=True)
         if self.in_parallel:
             self.comm.Barrier()
 
         sigma_ch_exact_mat = self.sigma_ch_static_exact()
         if self.print_condition:
-            print("Sigma CH STATIC EXACT")
-            print(np.around((sigma_ch_exact_mat) * self.sigma_factor, 6), end="\n")
+            print("Sigma CH STATIC EXACT", flush=True)
+            print(np.around((sigma_ch_exact_mat) * self.sigma_factor, 6), end="\n", flush=True)
         if self.in_parallel:
             self.comm.Barrier()
 
@@ -1925,16 +1925,16 @@ class Sigma:
             )
         sigma_sx_gpp_mat = self.sigma_sx_gpp()
         if self.print_condition:
-            print("Sigma SX GPP")
-            print(np.around((sigma_sx_gpp_mat) * self.sigma_factor, 6), end="\n")
+            print("Sigma SX GPP", flush=True)
+            print(np.around((sigma_sx_gpp_mat) * self.sigma_factor, 6), end="\n", flush=True)
         if self.in_parallel:
             self.comm.Barrier()
 
-        sigma_ch_gpp_mat, sigma_ch_static_mat = self.sigma_ch_gpp()
+        sigma_ch_gpp_mat, _ = self.sigma_ch_gpp()
         if self.print_condition:
-            print("Sigma CH GPP")
+            print("Sigma CH GPP", flush=True)
             print(type(sigma_ch_gpp_mat))
-            print(np.around(sigma_ch_gpp_mat * self.sigma_factor, 6), end="\n")
+            print(np.around(sigma_ch_gpp_mat * self.sigma_factor, 6), end="\n", flush=True)
             # print(sigma_ch_gpp_mat)
             # print()
         if self.in_parallel:
@@ -1954,9 +1954,9 @@ class Sigma:
         )
         sigma_mat = np.around((sigma_mat) * self.sigma_factor, 6)
         if self.print_condition:
-            print("Sig GPP:")
+            print("Sig GPP:", flush=True)
             print(sigma_mat.T)
-            print("Eqp0")
+            print("Eqp0", flush=True)
         if self.in_parallel:
             self.comm.Barrier()
 
@@ -1965,7 +1965,7 @@ class Sigma:
 
         # Eqp0 += Eqp0 + 0.5*(sigma_ch_exact_mat-sigma_ch_static_mat)[self.slice_l_k]* self.sigma_factor
         if self.print_condition:
-            print(Eqp0_prime.T)
+            print(Eqp0_prime.T, flush=True)
 
         # Calculate Eqp1
         # ==============
@@ -2048,8 +2048,8 @@ class Sigma:
                     print(
                         "{:>4}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}{:12.6f}".format(
                             n,
-                            emf[k, n],
-                            emf[k, n],
+                            np.real(emf[k, n]),
+                            np.real(emf[k, n]),
                             print_x[k, n],
                             print_sx[k, n],
                             print_ch[k, n],
@@ -2069,14 +2069,11 @@ class Sigma:
 if __name__ == "__main__":
     # dirname = "./test/bgw/"
 
-    # dirname = "./scripts/results/si_6_nband272_pristine_cohsex/si_6_gw/"
-    # outdir = "./test/tempdir_20230618_173806/"
+    dirname = "../../../tests/bgw/silicon/cohsex/"
+    outdir = f"./test/tempdir_20230805_113833/"
 
-    dirname = "./scripts/results/si_4_10_ryd_printing/cohsex/"
-    outdir = "./test/tempdir_20230618_103420/"
-
-    # old_dirname = "../QE_data/control_scripts/"
-    old_dirname = dirname
+    # dirname = "/home/agrimsharma/codes/rcQTM/QuantumMASALA/tests/benchmark_silicon/si_6_nband272_cohsex/si_6_gw/"
+    # outdir = "./test/tempdir_20230806_215443/"
 
     # Load WFN data
 
@@ -2117,29 +2114,34 @@ if __name__ == "__main__":
     from qtm.gw.io_bgw.wfn2py import wfn2py
 
     if print_condition:
-        print(f"Reading WFN.h5 from directory: {old_dirname}", flush=True)
+        print(f"Reading WFN.h5 from directory: {dirname}", flush=True)
 
-    wfndata = wfn2py(old_dirname + "WFN.h5")
+    wfndata = wfn2py(dirname + "WFN.h5")
 
     if print_condition:
-        print(f"Reading WFN.h5 from directory: {old_dirname}", flush=True)
+        print(f"Reading WFNq.h5 from directory: {dirname}", flush=True)
 
-    wfnqdata = wfn2py(old_dirname + "WFNq.h5")
+    wfnqdata = wfn2py(dirname + "WFNq.h5")
 
     # To read QTMGW's epsmats:
     epsmats_dirname = outdir
-    l_epsmats_actual = []
     if print_condition:
         print(
             f"Reading qtm's epsilon matrices from directory: {epsmats_dirname}",
             flush=True,
         )
 
-    l_epsmats_actual = [
-        read_mats(epsmats_dirname + f"epsmat_{i}_qtm.h5")[0]
-        for i in range(len(epsinp.qpts))
-    ]
-    print(len(l_epsmats_actual), COMM_WORLD.Get_rank(), flush=True)
+    # l_epsmats_actual = [
+    #     read_mats(epsmats_dirname + f"epsmat_{i}_qtm.h5")[0]
+    #     for i in range(len(epsinp.qpts))
+    # ]
+    
+    l_epsmats_actual = []
+    l_epsmats_actual += read_mats(outdir + "eps0mat_qtm.h5")
+    l_epsmats_actual += read_mats(outdir + "epsmat_qtm.h5")
+    # l_epsmats_actual = [epsmat[0, 0] for epsmat in l_epsmats_actual]
+    print(len(l_epsmats_actual), COMM_WORLD.Get_rank(), l_epsmats_actual[0].shape, flush=True)
+    # print(l_epsmats_actual[0])
 
     # l_epsmats_actual += read_mats(epsmats_dirname + "eps0mat_qtm.h5")
     # FIXME: NEEDS TO BE CHANGED FOR NOW!
@@ -2168,7 +2170,7 @@ if __name__ == "__main__":
 
     from qtm.gw.io_bgw.sigma_hp_reader import read_sigma_hp
 
-    rho = inp.read_rho(old_dirname + "RHO")
+    rho = inp.read_rho(dirname + "RHO")
     vxc = inp.read_vxc(dirname + "vxc.dat")
 
     # if sigma.in_parallel:

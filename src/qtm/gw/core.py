@@ -137,9 +137,29 @@ def sort_cryst_like_BGW(cryst, key_array):
 
 # Helpers
 
-def reorder_2d_matrix_sorted_gvecs(a, indices):
-    """Given a 2-D matrix and listof indices, reorder rows and columns in order of indices"""
+# def reorder_2d_matrix_sorted_gvecs(a, indices):
+#     """Given a 2-D matrix and listof indices, reorder rows and columns in order of indices"""
+#     tiled_indices = np.tile(indices, (len(indices), 1))
+#     return np.take_along_axis(
+#         np.take_along_axis(a, tiled_indices, 1), tiled_indices.T, 0
+#     )
+
+
+def reorder_2d_matrix_sorted_gvecs(mat, indices):
+    """Given a 2-D matrix and listof indices, reorder rows and columns in order of indices
+
+    Parameters
+    ----------
+    mat
+        The 2-D matrix
+    indices
+        List of indices
+
+    Returns
+    -------
+        ``mat``, with appropriately ordered rows and coumns.
+    """
     tiled_indices = np.tile(indices, (len(indices), 1))
     return np.take_along_axis(
-        np.take_along_axis(a, tiled_indices, 1), tiled_indices.T, 0
+        np.take_along_axis(mat, tiled_indices, 1), tiled_indices.T, 0
     )

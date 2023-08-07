@@ -295,6 +295,7 @@ class Epsilon:
                 # Do FFT
                 fft_prod = np.zeros(umklapped_fft_driver.idxgrid.shape, dtype=complex)
                 umklapped_fft_driver.r2g(prod, fft_prod)
+                fft_prod*=np.prod(self.gspace.grid_shape)**2
                 # The FFT result will be cut-off according to umklapped_fft_driver's cryst
                 sqrt_Ec_Ev = np.sqrt(evl_c[i_k_c][i_b_c] - evl_v[i_k_v][i_b_v])
 
@@ -374,7 +375,7 @@ class Epsilon:
         polarizability_matrix = -np.einsum("ijkl,ijkm->lm", np.conj(M), M)
 
         return (
-            (4*np.prod(self.gspace.grid_shape)**4) * polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
+            4 * polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
         )
 
     #@pw_logger.time("Epsilon:polarizability_active")
@@ -395,7 +396,7 @@ class Epsilon:
             polarizability_matrix += -np.einsum("l,m->lm", np.conj(M), M)
 
         return (
-            (4*np.prod(self.gspace.grid_shape)**4) * polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
+            (4) * polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
         )
 
     # EPSILON INVERSE ===========================================================================
