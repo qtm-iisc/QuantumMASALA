@@ -64,15 +64,14 @@ def _get_sigma(rhoaux: FieldG) -> np.ndarray:
     """
     grho = rhoaux.gspc
     numspin = rhoaux.shape[0]
-    grad_rhoaux = fieldg_grad(rhoaux).to_fieldr()
+    grad_rhoaux = fieldg_grad(rhoaux).to_r()
 
-    sigma_r = np.empty((2*numspin - 1, grho.size_r), dtype='f8')
-    sigma_r[0] = np.sum(grad_rhoaux[0].r * grad_rhoaux[0].r, axis=0).real
+    sigma = np.empty((grho.size_r, 2*numspin - 1), dtype='f8')
+    sigma[:, 0] = np.sum(grad_rhoaux[0] * grad_rhoaux[0], axis=0).data.real
     if numspin == 2:
-        sigma_r[1] = np.sum(grad_rhoaux[0].r * grad_rhoaux[1].r, axis=0).real
-        sigma_r[2] = np.sum(grad_rhoaux[1].r * grad_rhoaux[1].r, axis=0).real
-
-    return np.copy(sigma_r.T, order='C')
+        sigma[:, 1] = np.sum(grad_rhoaux[0] * grad_rhoaux[1], axis=0).data.real
+        sigma[:, 2] = np.sum(grad_rhoaux[1] * grad_rhoaux[1], axis=0).data.real
+    return sigma
 
 
 @qtmlogger.time('xc_compute')
@@ -85,9 +84,9 @@ def compute(rho: FieldG, rhocore: FieldG,
 
     Parameters
     ----------
-    rho : GField
+    rho : FieldG
         Input electron density
-    rhocore : GField
+    rhocore : FieldG
         Core electron density. Generated from pseudopotential data
     exch_name : str
         Name of Exchange Functional
@@ -108,8 +107,6 @@ def compute(rho: FieldG, rhocore: FieldG,
 
     grho = rho.gspc
     numspin = rho.shape[0]
-    print(rhocore)
-    print(numspin)
     rhoaux = rho + (1. / numspin) * rhocore
 
     exch_func = LibXCFunctional(exch_name, numspin)
@@ -123,43 +120,36 @@ def compute(rho: FieldG, rhocore: FieldG,
     )
     grad_rho = None
     if need_grad:
-        grad_rho = fieldg_grad(rho).to_fieldr()
+        grad_rho = fieldg_grad(rho).to_r()
 
-    # for xcfunc in [exch_func, corr_func]:
-    #     if xcfunc.get_family() == xc_flags.XC_FAMILY_LDA:
-    #         xcfunc.set_dens_threshold(config.libxc_thr_lda_rho)
-    #     elif xcfunc.get_family() == xc_flags.XC_FAMILY_GGA:
-    #         xcfunc.set_dens_threshold(config.libxc_thr_gga_rho)
-    #         xcfunc.set_sigma_threshold(config.libxc_thr_gga_sig)
-
-    rho = rho.to_fieldr()
-    xc_inp = {"rho": np.copy(np.abs(rho.r[:]).T, "C")}
+    rho = rho.to_r()
+    xc_inp = {"rho": np.copy(np.abs(rho.data).T, "C")}
     if need_grad:
         xc_inp["sigma"] = _get_sigma(rhoaux)
 
     v_xc = FieldR.zeros(grho, numspin)
     en_xc = 0
-    print('b4 loop', v_xc.r.shape)
+
     for xcfunc in [exch_func, corr_func]:
         xcfunc_out = xcfunc.compute(xc_inp)
-        zk_r = xcfunc_out['zk'].T
-        v_r = np.reshape(xcfunc_out['vrho'].T, (numspin, -1))
-        v_xc.r[:] += v_r
-        en_xc += np.sum(rho * zk_r) * grho.reallat_dv
+        zk_r = FieldR.from_array(grho, xcfunc_out['zk'].T)
+        v_r = FieldR.from_array(grho, xcfunc_out['vrho'].T.reshape((numspin, -1)))
+        v_xc += v_r
+        en_xc += (rho * zk_r).integrate_unitcell()
 
         if need_grad:
-            vsig_r = FieldR(
-                grho, xcfunc_out['vsigma'].T.reshape((-1, grho.size_r)).astype('c16')
+            vsig_r = FieldR.from_array(
+                grho, xcfunc_out['vsigma'].T.reshape((-1, grho.size_r))
             )
             # h_r = np.empty((numspin, 3, grho.size_r), dtype='c16')
             h_r = FieldR.empty(grho, (numspin, 3))
             if numspin == 1:
-                h_r[0] = 2*vsig_r[0]*grad_rho[0].r
+                h_r[0] = 2*vsig_r[0]*grad_rho[0]
             else:
-                h_r[0] = 2*vsig_r[0]*grad_rho[0].r + vsig_r[1]*grad_rho[1].r
-                h_r[1] = 2*vsig_r[2]*grad_rho[1].r + vsig_r[1]*grad_rho[0].r
-            div_h = fieldg_div(h_r.to_fieldg()).to_fieldr()
-            print(div_h.shape, div_h.r.shape)
+                h_r[0] = 2*vsig_r[0] * grad_rho[0] + vsig_r[1] * grad_rho[1]
+                h_r[1] = 2*vsig_r[2] * grad_rho[1] + vsig_r[1] * grad_rho[0]
+            div_h = fieldg_div(h_r.to_g()).to_r()
+
             v_xc -= div_h
 
     return v_xc, en_xc.real

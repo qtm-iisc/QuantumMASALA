@@ -1,19 +1,37 @@
-# from __future__ import annotations
+from __future__ import annotations
 __all__ = ['compute']
 
-from qtm.containers import FieldR, FieldG
+import numpy as np
+from qtm.containers import FieldG, FieldR
 from qtm.constants import FPI
 from .utils import check_rho
 
 
-def compute(rho: FieldG) -> FieldR:
+def compute(rho: FieldG) -> tuple[FieldR, float]:
+    """Computes the Hartree Potential and the corresponding interaction energy
+    per unit cell for input charge.
+
+    Parameters
+    ----------
+    rho : FieldG
+        Input Charge density. `rho.shape` must be ``(2, )`` or ``(1, )``
+    Returns
+    -------
+    v_hart : FieldR
+        Hartree Potential. Is a scalar field as it is spin independent
+    en_hart : float
+        Interaction Energy per unit cell
+    """
     check_rho(rho)
     gspc = rho.gspc
-    v_g: FieldG = FPI * sum(rho)
+    rho = sum(rho)
+    v_g = FPI * rho
+    with np.errstate(divide='ignore'):
+        v_g /= gspc.g_norm2
     if gspc.has_g0:
-        v_g.g[0] = 0
-        v_g.g[1:] /= gspc.g_norm2[1:]
-    else:
-        v_g /= gspc.g_norm2[1:]
+        v_g.data[..., 0] = 0
 
-    return v_g.to_fieldr()
+    en_hart = 0.5 * np.sum(rho.conj() * v_g)
+    en_hart *= gspc.reallat_dv / np.prod(gspc.grid_shape)
+
+    return v_g.to_r(), en_hart.real

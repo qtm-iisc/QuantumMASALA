@@ -20,8 +20,8 @@ def fieldg_grad(field_g: FieldG) -> FieldG:
         raise TypeError("'field' must be a 'FieldG' instance. "
                         f"got type {type(field_g)}.")
     gspc = field_g.gspc
-    gfield = field_g.to_fieldg()
-    grad_g = np.expand_dims(gfield.g[:], axis=-2) * 1j * gspc.g_cart
+    gfield = field_g.to_g()
+    grad_g = np.expand_dims(gfield.data, axis=-2) * 1j * gspc.g_cart
     return FieldG(gspc, grad_g)
 
 
@@ -38,6 +38,6 @@ def fieldg_div(field_g: FieldG, axis: int = -1) -> FieldG:
                          f"axis = {axis}")
 
     gspc = field_g.gspc
-    div_g = np.sum(field_g.g[:] * 1j * gspc.g_cart, axis=axis - 1)
+    div_g = np.sum(field_g.data * 1j * gspc.g_cart, axis=axis - 1)
     return FieldG(gspc, div_g)
 
