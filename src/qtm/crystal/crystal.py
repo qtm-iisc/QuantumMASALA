@@ -1,4 +1,4 @@
-# from __future__ import annotations
+from __future__ import annotations
 __all__ = ['Crystal', 'CrystalSymm']
 
 import numpy as np
@@ -7,35 +7,56 @@ from spglib import get_symmetry
 from qtm.lattice import RealLattice, ReciLattice
 from qtm.crystal.basis_atoms import BasisAtoms
 
+from qtm.msg_format import *
+
 
 class Crystal:
+    """Represents the structure of a Crystal in QuantumMASALA
 
-    def __init__(self, reallat, l_atoms: list[BasisAtoms]):
+    Parameters
+    ----------
+    reallat : RealLattice
+        Represents the crystal's lattice in real space
+    l_atoms : sequence of BasisAtoms
+        Represents the crystal's atom basis where each element represents
+        a subset of basis atoms belonging to the same species
+    """
+    def __init__(self, reallat: RealLattice, l_atoms: list[BasisAtoms]):
+        if not isinstance(reallat, RealLattice):
+            raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
         self.reallat: RealLattice = reallat
+        """Represents the crystal's lattice in real space"""
         self.recilat: ReciLattice = ReciLattice.from_reallat(self.reallat)
+        """Represents the crystal's lattice in reciprocal space"""
 
+        if not all(isinstance(sp, BasisAtoms) for sp in l_atoms):
+            raise TypeError(type_mismatch_seq_msg('l_atoms', l_atoms, BasisAtoms))
         self.l_atoms: list[BasisAtoms] = l_atoms
+        """Represents the crystal's atom basis where each element represents
+        a subset of basis atoms belonging to the same species"""
         self.symm: CrystalSymm = CrystalSymm(self)
+        """Symmetry module of the Crystal"""
 
     @property
     def numel(self) -> int:
-        numel = 0
-        for sp in self.l_atoms:
-            if sp.ppdata is None:
-                raise ValueError("cannot compute 'numel' without 'ppdata' "
-                                 "specified for all atoms")
-            numel += sp.ppdata.valence * sp.numatoms
-        return round(numel)
+        """Total number of valence elecrons per unit cell in crystal"""
+        return sum(sp.valence for sp in self.l_atoms)
 
-    def gen_supercell(self, repeats: tuple[int, int, int]):
-        repeats = tuple(repeats)
+    def gen_supercell(self, repeats: tuple[int, int, int]) -> Crystal:
+        """Generates a supercell """
+        try:
+            repeats = tuple(repeats)
+            for ni in repeats:
+                if not isinstance(ni, int) or ni < 0:
+                    raise TypeError
+        except TypeError as e:
+            raise TypeError(
+                type_mismatch_seq_msg('repeats', repeats, 'positive integers')
+            ) from e
+
         if len(repeats) != 3:
-            raise ValueError("length of 'repeats' must be 3. "
+            raise ValueError("'repeats' must contain 3 elements. "
                              f"got {len(repeats)}")
-        for i, ni in enumerate(repeats):
-            if not isinstance(ni, int) or ni < 1:
-                raise ValueError(f"'repeats' must be a tuple of 3 positive integers. "
-                                 f"Got repeats[{i}] = {ni} (type {type(ni)})")
 
         xi = [np.arange(n, dtype='i8') for n in repeats]
         grid = np.array(np.meshgrid(*xi, indexing='ij')).reshape((3, -1, 1))
@@ -46,17 +67,18 @@ class Crystal:
         reallat_sup = RealLattice(alat_sup, latvec_sup)
         l_atoms_sup = []
         for sp in self.l_atoms:
-            cryst = (grid + sp.cryst.reshape((3, 1, -1))).reshape(3, -1)
-            cart_sup = reallat.cryst2cart(cryst)
-            cryst_sup = reallat_sup.cart2cryst(cart_sup)
+            r_cryst = (grid + sp.r_cryst.reshape((3, 1, -1))).reshape(3, -1)
+            r_cart_sup = reallat.cryst2cart(r_cryst)
+            r_cryst_sup = reallat_sup.cart2cryst(r_cart_sup)
             l_atoms_sup.append(
-                BasisAtoms(sp.label, sp.mass, sp.ppdata, reallat_sup, cryst_sup)
+                BasisAtoms(sp.label, sp.ppdata, reallat_sup, r_cryst_sup, sp.mass)
             )
 
         return Crystal(reallat_sup, l_atoms_sup)
 
 
 class CrystalSymm:
+    """Module for working with symmetries of given crystal"""
 
     symprec: float = 1E-5
     check_supercell: bool = True
@@ -64,8 +86,10 @@ class CrystalSymm:
     use_all_frac: bool = False
 
     def __init__(self, crystal: Crystal):
+        assert isinstance(crystal, Crystal)
+
         lattice = crystal.reallat.latvec.T
-        positions = [sp.cryst.T for sp in crystal.l_atoms]
+        positions = [sp.r_cryst.T for sp in crystal.l_atoms]
         numbers = np.repeat(range(len(positions)),
                             [len(pos) for pos in positions])
         positions = np.concatenate(positions, axis=0)
@@ -94,7 +118,7 @@ class CrystalSymm:
         ).astype('i4')
 
         numsymm = len(reallat_symm['rotations'])
-        self.symm = np.array(
+        self.symm: np.ndarray = np.array(
             [
                 (reallat_symm['rotations'][i], reallat_symm['translations'][i],
                  recilat_symm[i]) for i in range(numsymm)
@@ -102,7 +126,9 @@ class CrystalSymm:
             dtype=[('reallat_rot', 'i4', (3, 3)), ('reallat_trans', 'f8', (3,)),
                    ('recilat_rot', 'i4', (3, 3))]
         )
-        self.numsymm = len(self.symm)
+        """List of Symmetry operations of input crystal"""
+        self.numsymm: int = len(self.symm)
+        """Total number of crystal symmetries"""
 
     @property
     def reallat_rot(self):
