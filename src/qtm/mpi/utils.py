@@ -1,5 +1,5 @@
 # from __future__ import annotations
-from typing import Optional, Union, Sequence
+from qtm.typing import Optional, Union, Sequence
 __all__ = ['scatter_range', 'scatter_slice', 'scatter_len',
            'gen_subarray_dtypes', 'gen_vector_dtype']
 

@@ -1,5 +1,5 @@
 # from __future__ import annotations
-from typing import Optional, Self, Sequence, Any, Union
+from qtm.typing import Optional, Self, Sequence, Any, Union
 from qtm.config import NDArray
 __all__ = ['QTMComm', 'QTMComm',
            'BufSpec', 'BufSpecV']
@@ -298,3 +298,31 @@ def split_comm_pwgrp(comm: QTMComm, pwgrp_size: int = 1):
     intercomm = comm.Split(key, color)
 
     return intracomm, intercomm
+
+
+class CommMod:
+
+    def __init__(self, comm, pwgrp_size: int = 1):
+        comm_size, comm_rank = comm.size, comm.rank
+
+        if not isinstance(comm, QTMComm):
+            raise TypeError(f"'comm' must be a '{QTMComm}' instance. "
+                            f"got type {type(comm)}")
+
+        if not isinstance(pwgrp_size, int) or pwgrp_size <= 0:
+            raise ValueError("'pwgrp_size' must be a positive integer. "
+                             f"got {pwgrp_size} (type {type(pwgrp_size)}).")
+
+        if comm_size % pwgrp_size != 0:
+            raise ValueError("'pwgrp_size' must evenly divide 'comm's "
+                             f"{comm_size} processes, but pwgrp_size = {pwgrp_size} "
+                             f"is not a factor of comm.size = {comm_size}")
+
+        self.parent_comm = comm
+        self.numpwgrp = comm_size // pwgrp_size
+        self.idxpwgrp = comm_rank // pwgrp_size
+        self.pwgrp_rank = comm_rank % pwgrp_size
+
+        self.pwgrp_comm = self.parent_comm.Split(self.idxpwgrp, self.pwgrp_rank)
+        self.intercomm = self.parent_comm.Split(self.pwgrp_rank, self.idxpwgrp)
+
