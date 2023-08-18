@@ -1,39 +1,55 @@
-# from __future__ import annotations
-from typing import Optional
-from qtm.config import NDArray
+from __future__ import annotations
 __all__ = ['FFT3DSticks']
 
 import numpy as np
 
 from .base import FFT3D
+from qtm.config import NDArray
 
 
 class FFT3DSticks(FFT3D):
-
+    """Provides FFT routines that involve skipping FFT operations along 1D
+    'sticks' that are not within the list of points in the 3D grid, `idxgrid`.
+    This can result in faster FFT operations in a truncated Fourier Space
+    that is compact (like for instance a sphere of points within the
+    3D box)
+    """
     def __init__(self, shape: tuple[int, int, int],
                  idxgrid: NDArray, normalise_idft: bool,
-                 backend: Optional[str] = None):
+                 backend: str | None = None):
         super().__init__(shape, idxgrid, normalise_idft, backend)
         if self.idxgrid is None:
             raise Exception("'idxgrid' is None. Use 'FFT3DSlab' instead")
 
+        # Getting the x, y, z indices from flattened indices
         idxgrid = np.unravel_index(self.idxgrid, self.shape, order='C')
         nx, ny, nz = self.shape
         ix, iy, iz = idxgrid
 
+        # The (y, z) coordinates of all the sticks are determined
         iyz = iy * nz + iz
         iyz_sticks = np.unique(iyz)
         self.numsticks = len(iyz_sticks)
         iy_sticks = iyz_sticks // nz
         iz_sticks = iyz_sticks % nz
 
+        # Mapping from the input G-vector to the 2D array holding the list
+        # of sticks is generated
         self.g2sticks = nx * np.searchsorted(iyz_sticks, iyz) + ix
+        # FFT is performed along the length of the stick, which corresponds
+        # to 3D arrays FFT along X-Axis
         self.fftx = self.FFTBackend((self.numsticks, nx), (1, ))
-        self.fftx.inp_bwd[:] = 0
+        # Zeroing out ifft input array after initializing
+        self.fftx.inp_bwd = 0
+        # Points lying outside 'g2sticks' will not be accessed and thus will
+        # remain zero throughout the instance's lifetime
 
+        # Mapping from the sticks to the final 3D FFT array
         self.sticks2full = iy_sticks * nz + iz_sticks
+        # FFT is performed along Y and Z directions now
         self.fftyz = self.FFTBackend((nx, ny, nz), (1, 2))
-        self.fftyz.inp_bwd[:] = 0
+        # Zeroing out ifft input array after initializing
+        self.fftyz.inp_bwd = 0
 
     def r2g(self, arr_inp: NDArray, arr_out: NDArray) -> None:
         self.fftyz.inp_fwd[:] = arr_inp
@@ -45,15 +61,6 @@ class FFT3DSticks(FFT3D):
         work_sticks.take(self.g2sticks, out=arr_out, mode='clip')
 
     def g2r(self, arr_inp: NDArray, arr_out: NDArray) -> None:
-        # Performance reduction here due to the way we fill the array
-        # Ideally, we traverse the work arrays once, filling it with
-        # input values wherever necessary and rest we zero out (as it is not
-        # already)
-        # Instead, we have to first zero out the entire array and then
-        # fill it at specific sites with values. Resulting in double traversal
-        # This is where we are losing all our theoretical performance gains
-        # when performing sticks FFT.
-
         self.fftx.inp_bwd.reshape(-1)[self.g2sticks] = arr_inp
         work_sticks = self.fftx.ifft(self.normalise_idft)
 
