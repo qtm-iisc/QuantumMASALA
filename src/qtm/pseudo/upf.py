@@ -1,12 +1,10 @@
-# from __future__ import annotations
+from __future__ import annotations
 __all__ = ["UPFv2Data"]
 
 import xml.etree.ElementTree as ET
-
 import copy
 import numpy as np
 from dataclasses import dataclass
-from typing import Optional
 
 from qtm.crystal.basis_atoms import PseudoPotFile
 from qtm.constants import RYDBERG
@@ -26,8 +24,8 @@ class UPFv2Data(PseudoPotFile):
 
     Notes
     -----
-    As `QuantumMASALA does not support PAW or Ultrasoft Pseudopotentials, they are omitted in this
-    implementation.
+    As `QuantumMASALA does not support PAW or Ultrasoft Pseudopotentials,
+    they are omitted in this implementation.
     """
 
     # Fields in 'PP_HEADER'.
@@ -61,7 +59,7 @@ class UPFv2Data(PseudoPotFile):
     r_ab: np.ndarray
 
     # Fields in 'PP_NLCC'.
-    rho_atc: Optional[np.ndarray]
+    rho_atc: np.ndarray | None
 
     # Fields in 'PP_LOCAL'.
     vloc: np.ndarray
@@ -75,13 +73,11 @@ class UPFv2Data(PseudoPotFile):
     rhoatom: np.ndarray
 
     @classmethod
-    def from_file(cls, label: str, dirname: str):
+    def from_file(cls, dirname: str):
         """Factory Method to parse UPFv2 files into `UPFv2Data` instances.
 
         Parameters
         ----------
-        label : str
-            Label of the atom type.
         dirname : str
             Path of the input file.
         """

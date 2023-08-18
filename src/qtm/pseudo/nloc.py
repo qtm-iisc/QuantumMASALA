@@ -1,3 +1,4 @@
+from __future__ import annotations
 __all__ = ["NonlocGenerator"]
 
 import numpy as np
@@ -9,7 +10,12 @@ from qtm.gspace import GSpace, GkSpace
 from qtm.containers import WavefunG
 from .upf import UPFv2Data
 
+from qtm.config import NDArray
+from qtm.msg_format import value_mismatch_msg
 from qtm.logger import qtmlogger
+
+from qtm.constants import FPI, TPIJ
+
 
 DEL_Q = 1e-2
 
@@ -28,17 +34,19 @@ class NonlocGenerator:
     """
 
     @qtmlogger.time('nloc:init')
-    def __init__(self, sp: BasisAtoms, gspc: GSpace):
+    def __init__(self, sp: BasisAtoms, ecutwfn: float):
         # Setting Up
         if sp.ppdata is None:
-            raise ValueError("'sp.ppdata' must not be None.")
+            raise ValueError(f"{BasisAtoms} instance 'sp' does not have "
+                             f"pseudopotential data i.e 'sp.ppdata' is None.")
         if not isinstance(sp.ppdata, UPFv2Data):
             raise NotImplementedError("only 'UPFv2Data' supported")
+        if not isinstance(ecutwfn, float) or ecutwfn <= 0:
+            raise ValueError(
+                value_mismatch_msg('ecutwfn', ecutwfn, "a positive number")
+            )
         self.species: BasisAtoms = sp
-        self.ecut: float = gspc.ecut / 4
-
-        cellvol = gspc.reallat_cellvol
-        _4pibsqv = 4 * np.pi / np.sqrt(cellvol)
+        self.ecut: float = ecutwfn
 
         ppdata: UPFv2Data = self.species.ppdata
         # Radial Mesh specified in Pseudopotential Data
@@ -68,7 +76,8 @@ class NonlocGenerator:
             for ibeta in range(self.numbeta):
                 l, rbeta = self.beta_l[ibeta], l_kb_rbeta[ibeta]
                 sph_jl_qr = spherical_jn(l, q * r)
-                self.beta_q[ibeta, iq] = _4pibsqv * simpson(rbeta * r * sph_jl_qr)
+                # 4 pi / sqrt(cellvol) prefactor will be multipled later
+                self.beta_q[ibeta, iq] = simpson(rbeta * r * sph_jl_qr)
 
         # Generating mappings between KB projectors and quantum numbers
         self.vkb_idxbeta = np.concatenate(
@@ -88,7 +97,7 @@ class NonlocGenerator:
         self.dij_beta = ppdata.dij
 
     @qtmlogger.time('nloc:gen_vkb_dij')
-    def gen_vkb_dij(self, gkspc: GkSpace) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def gen_vkb_dij(self, gkspc: GkSpace) -> tuple[WavefunG, NDArray, WavefunG]:
         r"""Computes the Nonlocal Operator as a set of Beta Projectors and a
         transformation matrix
 
@@ -111,14 +120,14 @@ class NonlocGenerator:
         gk_cryst = gkspc.gk_cryst
         gk_x, gk_y, gk_z = gkspc.gk_cart
         gk_norm = gkspc.gk_norm
+        beta_fac = FPI / np.sqrt(gkspc.reallat_cellvol)
 
         theta = np.arccos(
             np.divide(gk_z, gk_norm, out=np.zeros_like(gk_z), where=gk_norm > 1e-7)
         )
         phi = np.arctan2(gk_y, gk_x)
 
-        l_vkb_atom = np.empty((self.numvkb, numgk), dtype="c16")
-        dij_atom = np.zeros((self.numvkb, self.numvkb), dtype="c16")
+        l_vkb_atom = gkspc.allocate_array((self.numvkb, numgk))
         idx_gk = np.rint(gk_norm / DEL_Q).astype("i8")
         xmin0 = gk_norm / DEL_Q - idx_gk
         xmin1 = xmin0 - 1
@@ -129,7 +138,7 @@ class NonlocGenerator:
         # Constructing KB Projectors for a single atom
         for idxbeta in range(self.numbeta):
             # Lagrange Interpolation for radial part
-            beta_gk = (
+            beta_gk = beta_fac * (
                 self.beta_q[idxbeta][idx_gk + 0]
                 * xmin1
                 * xmin2
@@ -169,6 +178,8 @@ class NonlocGenerator:
                 idxvkb += 1
 
         # Constructing `dij` matrix
+        dij_atom = gkspc.allocate_array((self.numvkb, self.numvkb))
+        dij_atom[:] = 0
         for i1 in range(self.numvkb):
             for i2 in range(self.numvkb):
                 if (
@@ -182,17 +193,15 @@ class NonlocGenerator:
         numatoms = self.species.numatoms
 
         # Generating KB Projectors corresponding to all atoms
-        l_vkb_full = np.empty((numatoms * self.numvkb, numgk), dtype="c16")
-        l_vkb_full = WavefunG(gkspc, numatoms * self.numvkb)
-        vkb_diag = np.zeros(numgk, dtype='c16')
-        vkb_diag = WavefunG(gkspc, 1)
-        for iat, pos_cryst in enumerate(self.species.cryst.T):
-            phase = np.exp((-2 * np.pi * 1j) * (pos_cryst @ gk_cryst))
+        l_vkb_full = WavefunG.empty(gkspc, numatoms * self.numvkb)
+        vkb_diag = WavefunG.zeros(gkspc, None)
+        for iat, pos_cryst in enumerate(self.species.r_cryst.T):
+            phase = np.exp(-TPIJ * (pos_cryst @ gk_cryst))
             l_vkb_iat = l_vkb_full[iat*self.numvkb: (iat+1)*self.numvkb]
-            l_vkb_iat[:] = (
+            l_vkb_iat.data[:] = (
                 phase * l_vkb_atom * (-(1j**self.vkb_l)).reshape(-1, 1)
             )
-            vkb_diag += np.sum(l_vkb_iat * (dij_atom @ l_vkb_iat.g[:].conj()), axis=0)
+            vkb_diag += np.sum(l_vkb_iat * (dij_atom @ l_vkb_iat.conj()), axis=0)
         dij_full = block_diag(*[dij_atom for _ in range(numatoms)])
 
         return l_vkb_full, dij_full, vkb_diag
