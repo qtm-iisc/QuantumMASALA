@@ -1,5 +1,4 @@
 from __future__ import annotations
-from typing import Optional
 __all__ = ['BasisAtoms', 'PseudoPotFile']
 
 import os
@@ -9,7 +8,55 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
 from qtm.lattice import RealLattice
+
+from qtm.config import NDArray
+from qtm.msg_format import *
+
 from qtm.constants import ANGSTROM
+
+
+@dataclass
+class PseudoPotFile(ABC):
+    """Template for Pseudopotential Data container with attached reader
+    routines.
+
+    Pseudopotential data containers will inherit this class and implement
+    `from_file` method for reading pseudopotential files.
+    """
+
+    dirname: str
+    """Path of the data file."""
+    filename: str = field(init=False)
+    """ Name of the file `os.path.basename`."""
+    md5_checksum: str = field(init=False)
+    """MD5 Hash of the data file."""
+    valence: int
+    """Number of valence electrons per atom according to pseudopotential"""
+    libxc_func: tuple[str, str]
+    """Pair of strings used to select the exchange and the correlation functionals
+    respectively in the libxc library for computing XC Potentials"""
+
+    @classmethod
+    @abstractmethod
+    def from_file(cls, dirname: str) -> PseudoPotFile:
+        """Method to parse input files and generate `PseudoPotFile` instances
+        containing its data.
+
+        Parameters
+        ----------
+        dirname : str
+            Path of the input file.
+        """
+        pass
+
+    def __post_init__(self):
+        self.filename = os.path.basename(self.dirname)
+
+        hash_md5 = md5()
+        with open(self.dirname, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+        self.md5_checksum = hash_md5.hexdigest()
 
 
 class BasisAtoms:
@@ -20,117 +67,144 @@ class BasisAtoms:
     ----------
     label : str
         Label assigned to the atomic species
-    mass : Optional[float]
-        Atomic Mass of the species
-    ppdata : PseudoPotFile
-        Pseudo potential data of the species
+    ppdata : PseudoPotFile | int
+        Pseudopotential data of the species. For routines where pseudopotentials
+        are not involed the number of valence electrons of input species can
+        be given instead.
     reallat : RealLattice
-        Real Lattice of the crystal
-    cryst : numpy.ndarray
-        (``(3, numatoms)``) Crystal Coordinates of atoms in unit cell
+        Real Lattice of the crystal.
+    r_cryst : NDArray
+        (``(3, numatoms)``) Crystal Coordinates of atoms in unit cell.
+    mass : float | None, default=None
+        Atomic Mass of the species.
     """
 
-    def __init__(self, label: str, mass: Optional[float], ppdata: PseudoPotFile,
-                 reallat: RealLattice,
-                 cryst: np.ndarray, valence: float = None):
+    def __init__(self, label: str, ppdata: PseudoPotFile | int,
+                 reallat: RealLattice, r_cryst: NDArray,
+                 mass: float | None = None,
+                 ):
         self.label: str = label
-        self.mass: Optional[float] = mass
-        self.ppdata: PseudoPotFile = ppdata
-        if ppdata is not None:
-            self.valence: float = self.ppdata.valence
-        elif valence is not None:
-            self.valence: float = valence
-        else:
-            raise ValueError("'valence' needs to be specified when pseudopotential "
-                             "data 'ppdata' is None. ")
+        """Label assigned to the atomic species."""
 
+        if not isinstance(reallat, RealLattice):
+            raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
         self.reallat: RealLattice = reallat
-        if cryst.ndim != 2 or cryst.shape[0] != 3:
-            raise ValueError("'cryst' must be a 2D array with `shape[0] == 3`. "
-                             f"Got {cryst.shape}")
-        self.cryst: np.ndarray = np.array(cryst, dtype='f8')
-        self.numatoms: int = self.cryst.shape[1]
+        """Real Lattice of the crystal"""
+
+        if isinstance(ppdata, int):
+            valence = ppdata
+            ppdata = None
+        elif isinstance(ppdata, PseudoPotFile):
+            valence = ppdata.valence
+        else:
+            raise TypeError(type_mismatch_msg('ppdata', ppdata, [PseudoPotFile, int]))
+        self.valence: int = valence
+        """Number of valence electrons per atom."""
+        self.ppdata: PseudoPotFile | None = ppdata
+        """ Pseudopotential data of the species."""
+
+        try:
+            r_cryst = np.copy(r_cryst, like=self.reallat.latvec)
+        except Exception as e:
+            raise TypeError(type_mismatch_msg('r_cryst', r_cryst, NDArray)) from e
+        if r_cryst.ndim != 2:
+            raise ValueError(value_mismatch_msg('r_cryst.ndim', r_cryst.ndim, 2))
+        if r_cryst.shape[0] != 3:
+            raise ValueError(
+                value_mismatch_msg('r_cryst.shape[0]', r_cryst.shape[0], 3)
+            )
+        self.r_cryst: NDArray = np.copy(r_cryst, dtype='f8', like=self.reallat.latvec)
+        """(``(3, self.numatoms)``) Crystal Coordinates of atoms in unit cell"""
+        self.numatoms: int = self.r_cryst.shape[1]
+        """Number of atoms per unit cell belonging to the species"""
+
+        if mass is not None:
+            if not isinstance(mass, float) or mass < 0:
+                raise TypeError(type_mismatch_msg('mass', mass, "a positive float"))
+        self.mass: float | None = mass
+        """Mass of the atomic species in a.m.u."""
 
     @property
-    def cart(self) -> np.ndarray:
-        """numpy.ndarray: (``(3, self.numatoms)``) Cartesian Coords of the
+    def cart(self) -> NDArray:
+        """(``(3, self.numatoms)``) Cartesian Coords of the
         atoms in atomic units"""
-        return self.reallat.cryst2cart(self.cryst)
+        return self.reallat.cryst2cart(self.r_cryst)
 
     @property
-    def alat(self) -> np.ndarray:
-        """numpy.ndarray: (``(3, self.numatoms)``) Cartesian Coords of the
+    def alat(self) -> NDArray:
+        """(``(3, self.numatoms)``) Cartesian Coords of the
         atoms in 'alat' units"""
-        return self.reallat.cryst2alat(self.cryst)
+        return self.reallat.cryst2alat(self.r_cryst)
 
     @classmethod
-    def from_cart(cls, label, mass, ppdata, reallat, *l_pos_cart):
-        cart = np.array(l_pos_cart).T
-        cryst = reallat.cart2cryst(cart)
-        return cls(label, mass, ppdata, reallat, cryst)
+    def from_cart(cls, label: str, ppdata: PseudoPotFile | int,
+                  reallat: RealLattice, *r_cart,
+                  mass: float | None = None) -> BasisAtoms:
+        """Generates `BasisAtoms` instance from cartesian coordinates
+
+        Parameters
+        ----------
+        label : str
+            Label assigned to the atomic species
+        ppdata : PseudoPotFile | int
+            Pseudopotential data of the species. Alternatively, the number of
+            valence electrons of input species can be given instead for routines
+            where Pseudopotentials are not involved.
+        reallat : RealLattice
+            Real Lattice of the crystal
+        *r_cart : tuple of coordinates
+            Cartesian Coordinates of atoms in unit cell, each given by a
+            3-element sequence of numbers.
+        mass : float | None, default=None
+            Atomic Mass of the species
+        """
+        if not isinstance(reallat, RealLattice):
+            raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
+        r_cart = np.array(r_cart, dtype='f8', like=reallat.latvec).T
+        r_cryst = reallat.cart2cryst(r_cart)
+        return cls(label, ppdata, reallat, r_cryst, mass)
 
     @classmethod
-    def from_cryst(cls, label, mass, ppdata, reallat, *l_pos_cryst):
-        cryst = np.array(l_pos_cryst).T
-        return cls(label, mass, ppdata, reallat, cryst)
+    def from_cryst(cls, label: str, ppdata: PseudoPotFile | int,
+                   reallat: RealLattice, *r_cryst,
+                   mass: float | None = None) -> BasisAtoms:
+        """Generates `BasisAtoms` instance from crystal coordinates.
+        Refer to `from_cart` for a descripton of the input
+        arguments"""
+        if not isinstance(reallat, RealLattice):
+            raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
+        r_cryst = np.array(r_cryst, dtype='f8', like=reallat.latvec).T
+        return cls(label, ppdata, reallat, r_cryst, mass)
 
     @classmethod
-    def from_alat(cls, label, mass, ppdata, reallat, *l_pos_alat, valence=None):
-        alat = np.array(l_pos_alat).T
-        cryst = reallat.alat2cryst(alat)
-        return cls(label, mass, ppdata, reallat, cryst, valence)
+    def from_alat(cls, label: str, ppdata: PseudoPotFile | int,
+                  reallat: RealLattice, r_alat,
+                  mass: float | None = None) -> BasisAtoms:
+        """Generates `BasisAtoms` instance from cartesian coordinates in
+        alat units. Refer to `from_cart` for a descripton of the input
+        arguments"""
+        if not isinstance(reallat, RealLattice):
+            raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
+        r_alat = np.array(r_alat, dtype='f8', like=reallat.latvec).T
+        r_cryst = reallat.alat2cryst(r_alat)
+        return cls(label, ppdata, reallat, r_cryst, mass)
 
     @classmethod
-    def from_angstrom(cls, label, mass, ppdata, reallat, *l_pos_ang):
-        cart = np.array(l_pos_ang).T * ANGSTROM
-        cryst = reallat.cart2cryst(cart)
-        return cls(label, mass, ppdata, reallat, cryst)
+    def from_angstrom(cls, label: str, ppdata: PseudoPotFile | int,
+                      reallat: RealLattice, *r_ang,
+                      mass: float | None = None) -> BasisAtoms:
+        """Generates `BasisAtoms` instance from cartesian coordinates in
+        angstrom units. Refer to `from_cart` for a descripton of the input
+        arguments"""
+        if not isinstance(reallat, RealLattice):
+            raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
+        r_cart = np.array(r_ang, dtype='f8', like=reallat.latvec).T * ANGSTROM
+        r_cryst = reallat.cart2cryst(r_cart)
+        return cls(label, ppdata, reallat, r_cryst, mass)
 
     @classmethod
-    def from_bohr(cls, label, mass, ppdata, reallat, *l_pos_bohr):
-        return cls.from_cart(label, mass, ppdata, reallat, *l_pos_bohr)
-
-
-@dataclass
-class PseudoPotFile(ABC):
-    """Abstract Base class as template for Pseudopotential Reader.
-
-    Pseudopotential readers will inherit this class and implement
-    `read(dirname)` method for reading pseudopotential files.
-
-    Attributes
-    ----------
-    dirname : str
-        Path of the data file.
-    filename : str
-        Name of the file `os.path.basename`.
-    md5_checksum :
-        MD5 Hash of the data file.
-
-    valence : int
-        Number of valence electrons in the species according to pseudopotential.
-    libxc_func: tuple[str, str]
-        Pair of strings used to select the exchange and the correlation
-        functionals respectively in the libxc library for computing
-        XC Potentials.
-    """
-    dirname: str
-    filename: str = field(init=False)
-    md5_checksum: str = field(init=False)
-
-    valence: int
-    libxc_func: tuple[str, str]
-
-    @classmethod
-    @abstractmethod
-    def from_file(cls, dirname: str, valence: int):
-        return
-
-    def __post_init__(self):
-        self.filename = os.path.basename(self.dirname)
-
-        hash_md5 = md5()
-        with open(self.dirname, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                hash_md5.update(chunk)
-        self.md5_checksum = hash_md5.hexdigest()
+    def from_bohr(cls, label: str, ppdata: PseudoPotFile | int,
+                  reallat: RealLattice, *r_cart,
+                  mass: float | None = None) -> BasisAtoms:
+        """Alias of `from_cart` classmethod"""
+        return cls.from_cart(label, ppdata, reallat, *r_cart, mass=mass)
