@@ -1,19 +1,19 @@
 from __future__ import annotations
-from qtm.config import NDArray
 __all__ = ['GkSpace']
 
 import numpy as np
 
-from .gspc_base import GSpaceBase
+from .base import GSpaceBase
 from .gspc import GSpace
-from .fft import FFT3DSticks
+from qtm.fft import FFT3DSticks
 
-from qtm.constants import EPS
+from qtm.config import NDArray
 
 
 class GkSpace(GSpaceBase):
 
     FFT3D = FFT3DSticks
+    _normalise_idft = False
 
     def __init__(self, gwfn: GSpace, k_cryst: tuple[float, float, float]):
         if not isinstance(gwfn, GSpace):
@@ -23,36 +23,15 @@ class GkSpace(GSpaceBase):
         self.ecutwfn = self.gwfn.ecut / 4
 
         self.k_cryst = tuple(k_cryst)
-        gk_cryst = self.gwfn.g_cryst.copy().astype('f8')
+        g_cryst = self.gwfn.g_cryst[:, self.gwfn.idxsort]
+        gk_cryst = g_cryst.astype('f8')
         for ipol in range(3):
             gk_cryst[ipol] += self.k_cryst[ipol]
         gk_norm2 = self.gwfn.recilat.norm2(gk_cryst)
         self.idxgk = np.nonzero(gk_norm2 <= 2 * self.ecutwfn)[0]
         super().__init__(self.gwfn.recilat, self.gwfn.grid_shape,
-                         self.gwfn.g_cryst[(slice(None), self.idxgk)],
+                         g_cryst[:, self.idxgk],
                          )
-
-    def create_buffer_gk(self, shape: tuple[int, ...], is_noncolin: bool) -> NDArray:
-        if isinstance(shape, int):
-            shape = (shape, )
-        if not isinstance(is_noncolin, bool):
-            raise TypeError("'is_noncolin' must be a boolean. "
-                            f"got type {type(is_noncolin)}")
-        return self.create_buffer((*shape, (1 + is_noncolin) * self.size_g))
-
-    def check_buffer_gk(self, arr: NDArray, is_noncolin: bool):
-        self.check_buffer(arr)
-        if not isinstance(is_noncolin, bool):
-            raise TypeError("'is_noncolin' must be a boolean. "
-                            f"got type {type(is_noncolin)}")
-
-        size_gk = (1 + is_noncolin) * self.size_g
-        if not (arr.ndim >= 1 and arr.shape[-1] == size_gk):
-            raise ValueError("shape of 'arr' invalid. "
-                             f"got: arr.shape = {arr.shape}, "
-                             f"is_noncolin = {is_noncolin}\n"
-                             f"expected: arr.shape = {(..., size_gk)}"
-                             )
 
     @property
     def gk_cryst(self) -> NDArray:
@@ -81,14 +60,3 @@ class GkSpace(GSpaceBase):
     def gk_norm(self) -> NDArray:
         """(``(size, )``, ``'f8'``) Norm of G+k vectors."""
         return np.sqrt(self.gk_norm2)
-
-    def __eq__(self, other) -> bool:
-        if other is self:
-            return True
-        if not isinstance(other, type(self)):
-            return False
-        if self.gwfn != other.gwfn:
-            return False
-        return np.sqrt(sum(
-                (self.k_cryst[ipol] - other.k_cryst[ipol])**2 for ipol in range(3)
-        )) < EPS

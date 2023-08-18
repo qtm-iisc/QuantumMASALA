@@ -1,15 +1,15 @@
 from __future__ import annotations
-from typing import Optional, Sequence
-from qtm.config import NDArray
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Sequence
 __all__ = ['GSpace']
 
 import numpy as np
 
 from qtm.lattice import ReciLattice
+from .base import GSpaceBase
 
-from .gspc_base import GSpaceBase
-from .fft.utils import check_shape
-
+from qtm.msg_format import value_mismatch_msg
 
 ROUND_PREC: int = 6
 """Rounding precision of float used when sorting.
@@ -19,7 +19,7 @@ GOOD_PRIMES: list[int] = [2, 3, 5, 7]
 """
 
 
-def _optimal_grid_shape(shape: Sequence[int]) -> tuple[int, ...]:
+def optimal_grid_shape(shape: Sequence[int]) -> tuple[int, ...]:
     out = []
     for ni in shape:
         is_good = False
@@ -36,7 +36,7 @@ def _optimal_grid_shape(shape: Sequence[int]) -> tuple[int, ...]:
     return tuple(out)
 
 
-def minimal_grid_shape(recilat: ReciLattice, ecut: float) -> tuple[int, ...]:
+def minimal_grid_shape(recilat: ReciLattice, ecut: float) -> tuple[int, int, int]:
     """Computes the smallest FFT mesh grid that contains all G-vectors that are
     within given Kinetic Energy Cutoff.
 
@@ -74,7 +74,8 @@ def minimal_grid_shape(recilat: ReciLattice, ecut: float) -> tuple[int, ...]:
 def check_grid_shape(recilat: ReciLattice, ecut: float,
                      grid_shape: tuple[int, int, int]):
     min_grid_shape = minimal_grid_shape(recilat, ecut)
-    check_shape(grid_shape)
+    assert isinstance(grid_shape, tuple)
+    assert all(isinstance(ni, int) and ni > 0 for ni in grid_shape)
     for idim, ni in enumerate(min_grid_shape):
         if ni < min_grid_shape[idim]:
             raise ValueError(
@@ -87,7 +88,7 @@ def check_grid_shape(recilat: ReciLattice, ecut: float,
 class GSpace(GSpaceBase):
 
     def __init__(self, recilat: ReciLattice, ecut: float,
-                 grid_shape: Optional[tuple[int, int, int]] = None):
+                 grid_shape: tuple[int, int, int] | None = None):
         if not isinstance(recilat, ReciLattice):
             raise ValueError(f"'recilat' must be a '{ReciLattice}'. "
                              f"got {type(recilat)}")
@@ -99,13 +100,14 @@ class GSpace(GSpaceBase):
         """
 
         if grid_shape is None:
-            grid_shape = _optimal_grid_shape(
-                minimal_grid_shape(recilat, self.ecut)
-            )
+            grid_shape = optimal_grid_shape(minimal_grid_shape(recilat, self.ecut))
         else:
-            check_grid_shape(grid_shape)
-        """Shape of the 3D FFT Grid containing G-vectors
-        """
+            grid_shape = tuple(grid_shape)
+            if not all(isinstance(ni, int) and ni > 0 for ni in grid_shape):
+                raise ValueError(value_mismatch_msg(
+                    'grid_shape', grid_shape, 'a tuple of 3 positive integers')
+                )
+            check_grid_shape(recilat, ecut, grid_shape)
 
         # Generating all points in FFT grid
         xi = [np.arange(-(n//2), (n + 1)//2) for n in grid_shape]
@@ -126,7 +128,7 @@ class GSpace(GSpaceBase):
         if len(icut) < 2:
             raise ValueError("'ecut' value too small. "
                              f"Only {len(icut)} points within "
-                             f"'euct'={self.ecut} Hart")
+                             f"'ecut'={self.ecut} Hart")
 
         # Ordering G-vectors in ascending order of lengths
         tpiba = recilat.tpiba
@@ -136,21 +138,3 @@ class GSpace(GSpaceBase):
 
         g_cryst = g_cryst[(slice(None), icut)]
         super().__init__(recilat, grid_shape, g_cryst)
-
-    def __eq__(self, other):
-        # Check if both reference the same object
-        if other is self:
-            return True
-
-        # Check if they are also a 'GSpace' instance
-        if not isinstance(other, type(self)):
-            return False
-        # Check if they represent the same lattice
-        if other.recilat != self.recilat:
-            return False
-        # Check if they have same cutoff
-        if other.ecut != self.ecut:
-            return False
-        # By here both should contain the same list of G-vectors.
-        # But, the FFT grid shape can be different, if user specified.
-        return other.grid_shape == self.grid_shape

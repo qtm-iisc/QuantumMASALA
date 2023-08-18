@@ -1,14 +1,12 @@
 # from __future__ import annotations
-from typing import Optional, Union, Sequence
-from qtm.config import NDArray
+from qtm.typing import Optional, Union, Sequence, NDArray
 __all__ = ['GSpaceBase', ]
 
 import numpy as np
 
 from qtm.lattice import ReciLattice
-
-from .fft import FFT3DFull
-from .fft.utils import check_g_cryst, cryst2idxgrid
+from qtm.fft import FFT3DFull
+from qtm.msg_format import value_mismatch_msg
 
 from qtm.constants import TPI
 
@@ -16,6 +14,68 @@ from qtm.constants import TPI
 ROUND_PREC: int = 6
 """Rounding precision of float used when sorting.
 """
+
+
+def check_g_cryst(shape: tuple[int, int, int], g_cryst: NDArray) -> None:
+    """Function to validate a given array containing G-vectors in crystal
+    coordinates
+
+    The input list of G-vectors `g_cryst` must be an ``'i8'`` array of shape
+    ``(3, numg)``. All vectors must lie within the FFT grid of shape `shape`
+    i.e ``g_cryst[idim, :]`` must be within the range
+    :math:`[-(shape[idim]//2), (shape[idim]+1)//2)`
+
+    Parameters
+    ----------
+    shape : tuple[int, int, int]
+        Dimensions of the FFT grid
+    g_cryst : NDArray
+        (``(3, -1)``, ``'i8'``) Input list of G-vectors
+    """
+    # Validate 'shape' param
+    assert isinstance(shape, tuple)
+    assert len(shape) == 3
+    assert all(isinstance(ni, int) and ni > 0 for ni in shape)
+
+    # Check if 'g_cryst' is an array with correct shape and dtype
+    assert isinstance(g_cryst, NDArray)
+    assert g_cryst.ndim == 2
+    assert g_cryst.dtype == 'i8'
+    assert g_cryst.shape[0] == 3
+
+    # Check if values are within bounds
+    for idim, n in enumerate(shape):
+        assert np.all(g_cryst[idim] >= -(n // 2)) \
+            and np.all(g_cryst[idim] < (n + 1) // 2), \
+            f"'g_cryst' has points that lie outside of the FFT grid"
+
+
+def cryst2idxgrid(shape: tuple[int, int, int], g_cryst: NDArray) -> NDArray:
+    """Converts input list of G-vectors in crystal coordinates to a 1D array of
+    indices that is used to take/put corresponding values from/to a 3D grid
+    with dimensions ``shape``
+
+    Parameters
+    ----------
+    shape : tuple[int, int, int]
+        Dimensions of the FFT Grid
+    g_cryst : NDArray
+        (``(3, -1)``, ``'i8'``) Input list of G-vectors. Refer to
+        ``check_g_cryst``
+    Returns
+    -------
+    idxgrid : NDArray
+        A (``(g_cryst.shape[0], )``, ``'i8'``) array that can be used to index
+        the corresponding values of ``g_cryst`` in a flattened 3D array with
+        dimensions ``shape``
+    """
+    check_g_cryst(shape, g_cryst)
+    n1, n2, n3 = shape
+    i1, i2, i3 = g_cryst
+    idxgrid = n2 * n3 * (i1 + n1 * (i1 < 0)) \
+        + n3 * (i2 + n2 * (i2 < 0)) \
+        + (i3 + n3 * (i3 < 0))
+    return idxgrid
 
 
 def _sort_g(grid_shape: tuple[int, int, int], idxgrid: NDArray) -> NDArray:
@@ -103,97 +163,93 @@ class GSpaceBase:
         """(``(size, )``, ``'f8'``) Norm of G vectors."""
         return np.sqrt(self.g_norm2)
 
-    def __eq__(self, other) -> bool:
-        return other is self
-
-    def create_buffer(self, shape: Union[int, Sequence[int]]) -> NDArray:
-        """Returns an empty array of given shape.
+    def allocate_array(self, shape: Union[int, Sequence[int]],
+                       dtype: str = 'c16') -> NDArray:
+        """Returns an empty C-contiguous array of given shape and dtype.
 
         Parameters
         ----------
-        shape : tuple[int, ...]
-            shape of the array to create
+        shape : Union[int, Sequence[int]]
+            Shape of the array to create.
+        dtype : str, default='c16'
+            String representing the array dtype to be allocated.
 
         Returns
         -------
         NDArray
-            Empty buffer of given shape
+            Empty array of given shape and dtye
         """
-        return self._fft.create_buffer(shape)
+        return self._fft.allocate_array(shape, dtype)
 
-    def check_buffer(self, arr: NDArray) -> None:
-        """Checks if input buffer is of right type, contiguous, etc.
+    def check_array_type(self, arr: NDArray) -> None:
+        """Checks if input array type is compatible with the `GSpace` instance.
+
+        Alias of `qtm.gspace.fft.backend.FFTBackend.check_array_type`
 
         Parameters
         ----------
         arr : NDArray
-            Input buffer to be validated.
+            Input array to be validated.
 
         Raises
         -------
         ValueError
             Raised if input buffer fails any checks
         """
-        self._fft.check_buffer(arr)
+        self._fft.check_array_type(arr)
 
-    def create_buffer_r(self, shape: Union[int, Sequence[int]]) -> NDArray:
-        """Returns an empty buffer for storing real-space field of given shape.
-
-        Parameters
-        ----------
-        shape : tuple[int, ...]
-            shape of the list of real-space buffers
-
-        Returns
-        -------
-        NDArray
-            Empty buffer of shape ``(*shape, *grid_shape)``
-        """
-        if shape == ():
-            return self.create_buffer((self.size_r, ))
-        if isinstance(shape, int):
-            shape = (shape, )
-        return self.create_buffer((*shape, self.size_r))
-
-    def create_buffer_g(self, shape: Union[int, Sequence[int]]) -> NDArray:
-        """Returns an empty buffer for storing g-space field of given shape.
+    def check_array_r(self, arr: NDArray) -> None:
+        """Checks if last axis of input array has length `size_r`
 
         Parameters
         ----------
-        shape : tuple[int, ...]
-            shape of the list of g-space buffers
+        arr : NDArray
+            Input array to be validated.
 
-        Returns
+        Raises
         -------
-        NDArray
-            Empty buffer of shape ``(*shape, size)``
+        ValueError
+            Raised if input array fails checks
         """
-        if shape == ():
-            return self.create_buffer((self.size_g, ))
-        if isinstance(shape, int):
-            shape = (shape, )
-        return self.create_buffer((*shape, self.size_g))
+        self.check_array_type(arr)
+        if arr.ndim == 0:
+            raise ValueError(value_mismatch_msg(
+                'arr.ndim', arr.ndim, 'a positive integer'
+            ))
+        if arr.shape[-1] != self.size_r:
+            raise ValueError(value_mismatch_msg(
+                'arr.shape', arr.shape, (..., self.size_r)
+            ))
 
-    def check_buffer_r(self, arr: NDArray) -> None:
-        self.check_buffer(arr)
-        if not (arr.ndim >= 1 and arr.shape[-1] == self.size_r):
-            raise ValueError("shape of 'arr' invalid. "
-                             f"expected: {(..., self.size_r)}, "
-                             f"got: {arr.shape}")
+    def check_array_g(self, arr: NDArray) -> None:
+        """Checks if last axis of input array has length `size_g`
 
-    def check_buffer_g(self, arr: NDArray) -> None:
-        self.check_buffer(arr)
-        if not (arr.ndim >= 1 and arr.shape[-1] == self.size_g):
-            raise ValueError("shape of 'arr' invalid. "
-                             f"expected: {(..., self.size_g)}, "
-                             f"got: {arr.shape}")
+        Parameters
+        ----------
+        arr : NDArray
+            Input array to be validated.
+
+        Raises
+        -------
+        ValueError
+            Raised if input array fails checks
+        """
+        self.check_array_type(arr)
+        if arr.ndim == 0:
+            raise ValueError(value_mismatch_msg(
+                'arr.ndim', arr.ndim, 'a positive integer'
+            ))
+        if arr.shape[-1] != self.size_g:
+            raise ValueError(value_mismatch_msg(
+                'arr.shape', arr.shape, (..., self.size_g)
+            ))
 
     def r2g(self, arr_r: NDArray, arr_g: Optional[NDArray] = None) -> NDArray:
-        self.check_buffer_r(arr_r)
+        self.check_array_r(arr_r)
         if arr_g is not None:
-            self.check_buffer_g(arr_g)
+            self.check_array_g(arr_g)
         else:
-            arr_g = self.create_buffer_g(arr_r.shape[:-1])
+            arr_g = self.allocate_array((*arr_r.shape[:-1], self.size_g))
 
         for inp, out in zip(arr_r.reshape(-1, *self.grid_shape),
                             arr_g.reshape(-1, self.size_g)):
@@ -202,11 +258,11 @@ class GSpaceBase:
         return arr_g
 
     def g2r(self, arr_g: NDArray, arr_r: Optional[NDArray] = None) -> NDArray:
-        self.check_buffer_g(arr_g)
+        self.check_array_g(arr_g)
         if arr_r is not None:
-            self.check_buffer_r(arr_r)
+            self.check_array_r(arr_r)
         else:
-            arr_r = self.create_buffer_r(arr_g.shape[:-1])
+            arr_r = self.allocate_array((*arr_g.shape[:-1], self.size_r))
 
         for inp, out in zip(arr_g.reshape(-1, self.size_g),
                             arr_r.reshape(-1, *self.grid_shape)):
