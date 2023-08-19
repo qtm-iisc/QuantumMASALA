@@ -2,62 +2,61 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Literal, Protocol
-__all__ = ['ZGEMMWrapper', 'get_zgemm']
+__all__ = ['get_zgemm']
 
 import numpy as np
-
 from qtm import qtmconfig
-
 from qtm.config import NDArray
 
 
-class ZGEMMWrapper(Protocol):
-    """Wraps ZGEMM function calls defined in Linear Algebra libraries
+if TYPE_CHECKING:
+    class ZGEMMWrapper(Protocol):
+        """Wraps ZGEMM function calls defined in Linear Algebra libraries
 
-    ZGEMM calls are preferred over `numpy.matmul` and its analogues in
-    situations where the operands require (hermitian) transposition
-    before matrix multiplying. Using matmul in such cases would require
-    creating extra array to store the intermediate (hermitian) transpose,
-    wheras ZGEMM can save memory on such operations. ZGEMM also saves on
-    creating an intermediate matmul result array before scaling and
-    adding to an output array.
+        ZGEMM calls are preferred over `numpy.matmul` and its analogues in
+        situations where the operands require (hermitian) transposition
+        before matrix multiplying. Using matmul in such cases would require
+        creating extra array to store the intermediate (hermitian) transpose,
+        wheras ZGEMM can save memory on such operations. ZGEMM also saves on
+        creating an intermediate matmul result array before scaling and
+        adding to an output array.
 
-    NOTE: The wrapper does very little checks on the input arguments and
-    might not behave as expected in some situations. Test thorougly before
-    using it in production
-    """
-
-    def __call__(self, a: NDArray, b: NDArray, trans_a: Literal[0, 1, 2] = 0,
-                 trans_b: Literal[0, 1, 2] = 0, alpha: complex = 1.0,
-                 c: NDArray | None = None, beta: complex = 0.0) -> NDArray:
-        """Implements C := alpha*op( A )*op( B ) + beta*C, where op( X ) is
-        one of: op( X ) = X or op( X ) = X**T or op( X ) = X**H
-
-        Array arguments are expected to be in Fortran contiguous order.
-        `trans_a` and `trans_b` take 0, 1 or 2 where:
-          * 0 -> op( X ) = X
-          * 1 -> op( X ) = X**T (transpose)
-          * 2 -> op( X ) = X**H (transpose conjugate)
-
-        Parameters
-        ----------
-        a : NDArray
-        b : NDArray
-        trans_a: Literal[0, 1, 2], default=0
-        trans_b: Literal[0, 1, 2], default=0
-        alpha: complex, default=1.0
-        c: Optional[NDArray], default=None
-            If None, a new array is allocated and C above is taken to be zero
-        beta: complex, default=0.0
-
-        Returns
-        -------
-        c : NDarray
+        NOTE: The wrapper does very little checks on the input arguments and
+        might not behave as expected in some situations. Test thorougly before
+        using it in production
         """
-    pass
+
+        def __call__(self, a: NDArray, b: NDArray, trans_a: Literal[0, 1, 2] = 0,
+                     trans_b: Literal[0, 1, 2] = 0, alpha: complex = 1.0,
+                     c: NDArray | None = None, beta: complex = 0.0) -> NDArray:
+            """Implements C := alpha*op( A )*op( B ) + beta*C, where op( X ) is
+            one of: op( X ) = X or op( X ) = X**T or op( X ) = X**H
+
+            Array arguments are expected to be in Fortran contiguous order.
+            `trans_a` and `trans_b` take 0, 1 or 2 where:
+              * 0 -> op( X ) = X
+              * 1 -> op( X ) = X**T (transpose)
+              * 2 -> op( X ) = X**H (transpose conjugate)
+
+            Parameters
+            ----------
+            a : NDArray
+            b : NDArray
+            trans_a: Literal[0, 1, 2], default=0
+            trans_b: Literal[0, 1, 2], default=0
+            alpha: complex, default=1.0
+            c: Optional[NDArray], default=None
+                If None, a new array is allocated and C above is taken to be zero
+            beta: complex, default=0.0
+
+            Returns
+            -------
+            c : NDarray
+            """
+        pass
 
 
-def get_zgemm(arr_type: type):
+def get_zgemm(arr_type: type) -> ZGEMMWrapper:
     if arr_type is np.ndarray:
         from scipy.linalg.blas import zgemm
 

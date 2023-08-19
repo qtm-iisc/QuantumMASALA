@@ -8,7 +8,7 @@ import numpy as np
 from qtm.gspace import GkSpace
 from .buffer import Buffer
 from .field import FieldR
-from .gemm_wrappers import ZGEMMWrapper, get_zgemm
+from .gemm_wrappers import get_zgemm
 from qtm import qtmconfig
 
 from qtm.config import NDArray
@@ -40,7 +40,7 @@ class Wavefun(Buffer, ABC):
         Buffer.__init__(self, gkspc, data)
         self.gkspc: GkSpace = self.gspc
         """Alias of `gspc`"""
-        self._zgemm: ZGEMMWrapper = get_zgemm(type(data))
+        self._zgemm = get_zgemm(type(data))
         """Wrapper to ZGEMM BLAS routine. Refer to 
         `qtm.containers.gemm_wrappers.ZGEMMWrapper` for further info"""
 
