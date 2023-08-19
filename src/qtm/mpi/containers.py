@@ -1,23 +1,30 @@
-# from __future__ import annotations
-from qtm.typing import Self, Optional
-from qtm.config import NDArray
-
+from __future__ import annotations
+__all__ = [
+    'Buffer', 'Field', 'FieldG', 'FieldR', 'Wavefun', 'WavefunG', 'WavefunR',
+    'WavefunSpinG', 'WavefunSpinR',
+    'DistBuffer', 'DistField', 'DistFieldG', 'DistFieldR', 'DistWavefun',
+    'DistWavefunG', 'DistWavefunR', 'DistWavefunSpinG', 'DistWavefunSpinR'
+]
 from abc import ABC
 import numpy as np
 from mpi4py import MPI
 
 from qtm.containers import (
-    Buffer, FieldR, FieldG,
+    Buffer, Field, FieldR, FieldG,
     Wavefun, WavefunG, WavefunR,
     WavefunSpinG, WavefunSpinR
 )
-from .gspace import DistGSpaceBase, DistGkSpace
+from qtm.containers.gemm_wrappers import get_zgemm
+from .gspace import DistGSpaceBase, DistGSpace, DistGkSpace
+
+from qtm.config import NDArray
+from qtm.msg_format import type_mismatch_msg
 
 
 class DistBuffer(Buffer, ABC):
-    BufferType = Buffer
-    gspc: DistGSpaceBase
 
+    gspc: DistGSpaceBase
+    BufferType: type[Buffer]
 
     _mpi_op_map = {
         np.add: MPI.SUM, np.prod: MPI.PROD,
@@ -32,40 +39,6 @@ class DistBuffer(Buffer, ABC):
             raise TypeError(f"'dist_gspc' must be a '{DistGSpaceBase}' instance. "
                             f"got '{type(dist_gspc)}'")
         Buffer.__init__(self, dist_gspc, data)
-
-    @classmethod
-    def scatter(cls, dist_gspc: DistGSpaceBase,
-                buffer_glob: Optional[Buffer]) -> Self:
-        pwgrp_comm = dist_gspc.pwgrp_comm
-        is_root = pwgrp_comm.rank == 0
-
-        if is_root:
-            dist_gspc.check_gspc_glob(buffer_glob.gspc)
-        basis_type = dist_gspc.pwgrp_comm.bcast(
-            buffer_glob.basis_type
-        )
-        if basis_type == 'r':
-            data_loc = dist_gspc.scatter_r(buffer_glob.data if is_root else None)
-        else:  # basis_type == 'g'
-            data_loc = dist_gspc.scatter_g(buffer_glob.data if is_root else None)
-        return cls(dist_gspc, data_loc)
-
-    def gather(self) -> BufferType:
-        if self.basis_type == 'r':
-            data_glob = self.gspc.gather_r(self.data)
-        else:  # self.basis_type == 'g'
-            data_glob = self.gspc.gather_g(self.data)
-        gspc_glob = self.gspc.gspc_glob
-        if self.gspc.pwgrp_rank == 0:
-            return self.BufferType(gspc_glob, data_glob)
-
-    def allgather(self) -> BufferType:
-        if self.basis_type == 'r':
-            data_glob = self.gspc.gather_r(self.data)
-        else:  # self.basis_type == 'g'
-            data_glob = self.gspc.gather_g(self.data)
-        gspc_glob = self.gspc.gspc_glob
-        return self.BufferType(gspc_glob, data_glob)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         out = Buffer.__array_ufunc__(self, ufunc, method, *inputs, **kwargs)
@@ -84,39 +57,100 @@ class DistBuffer(Buffer, ABC):
                 outbuf = np.frombuffer(outbuf, dtype='c16')
                 ufunc(inpbuf, outbuf, out=outbuf)
             mpi_op = MPI.Op.Create(new_op, False)
-            self._mpi_op_map[ufunc] = mpi_op
+            DistBuffer._mpi_op_map[ufunc] = mpi_op
 
+        # mpi4py does not treat NumPy scalars as buffer-like, so they are
+        # reshaped to single-element arrays before comm and back after
+        is_scalar = False
+        if out.shape == ():
+            is_scalar = True
+            out = out.reshape((-1, ))
         self.gspc.pwgrp_comm.Allreduce(MPI.IN_PLACE, out, self._mpi_op_map[ufunc])
-        return out
+        return out if not is_scalar else out[0]
+
+    def gather(self, allgather: bool) -> Buffer | None:
+        if not isinstance(allgather, bool):
+            raise TypeError(type_mismatch_msg('allgather', allgather, bool))
+
+        buftype = self.BufferType
+        if issubclass(buftype, Wavefun):
+            data = self.data.reshape((self.shape, self.numspin, -1))
+        else:
+            data = self.data
+
+        if self.basis_type == 'r':
+            data_glob = self.gspc.gather_r(data, allgather)
+        else:  # if self.basis_type == 'g'
+            data_glob = self.gspc.gather_g(data, allgather)
+
+        gspc_glob = self.gspc.gspc_glob
+        if allgather or self.gspc.pwgrp_rank == 0:
+            return buftype(gspc_glob, data_glob.reshape((self.shape, -1)))
+
+    def allgather(self) -> Buffer:
+        return self.gather(allgather=True)
+
+    @classmethod
+    def scatter(cls, dist_gspc: DistGSpaceBase, buf_glob: Buffer) -> DistBuffer:
+        if not isinstance(dist_gspc, DistGSpaceBase):
+            raise TypeError(type_mismatch_msg(
+                'dist_gspc', dist_gspc, DistGSpaceBase
+            ))
+
+        with dist_gspc.pwgrp_comm as comm:
+            is_root = comm.rank == 0
+            if is_root:
+                if type(buf_glob) is not cls.BufferType:
+                    raise TypeError()
+                if dist_gspc.gspc_glob is not buf_glob.gspc:
+                    raise ValueError()
+
+            shape = comm.bcast(buf_glob.shape if is_root else None)
+            basis_type = comm.bcast(buf_glob.basis_type if is_root else None)
+            data_glob = buf_glob.data if is_root else None
+            if is_root and issubclass(cls.BufferType, Wavefun):
+                data_glob = data_glob.reshape(
+                    (*buf_glob.shape, buf_glob.numspin, -1)
+                )
+
+            if basis_type == 'g':
+                data_loc = dist_gspc.scatter_g(data_glob)
+            else:  # if basis_type == 'r':
+                data_loc = dist_gspc.scatter_r(data_glob)
+            return cls(dist_gspc, data_loc.reshape((*shape, -1)))
 
 
-class DistFieldG(DistBuffer, FieldG):
+class DistField(DistBuffer, Field, ABC):
+
+    gspc: DistGSpace
+
+    def __init__(self, dist_gspc: DistGSpace, data: NDArray):
+        if not isinstance(dist_gspc, DistGSpace):
+            raise TypeError(f"'dist_gspc' must be a '{DistGSpace}' instance. "
+                            f"got type {type(dist_gspc)}")
+        DistBuffer.__init__(self, dist_gspc, data)
+
+
+class DistFieldG(DistField, FieldG):
+
     BufferType = FieldG
 
-    def __init__(self, dist_gspc: DistGSpaceBase, data: NDArray):
-        DistBuffer.__init__(self, dist_gspc, data)
-
-    def to_r(self):
-        gspc = self.gspc
-        data = gspc.g2r(self.data)
-        return DistFieldR(gspc, data)
+    def __init__(self, dist_gspc: DistGSpace, data: NDArray):
+        DistField.__init__(self, dist_gspc, data)
 
 
-class DistFieldR(DistBuffer, FieldR):
+class DistFieldR(DistField, FieldR):
+
     BufferType = FieldR
 
-    def __init__(self, dist_gspc: DistGSpaceBase, data: NDArray):
-        DistBuffer.__init__(self, dist_gspc, data)
-
-    def to_g(self):
-        gspc = self.gspc
-        data = gspc.r2g(self.data)
-        return DistFieldG(gspc, data)
+    def __init__(self, dist_gspc: DistGSpace, data: NDArray):
+        DistField.__init__(self, dist_gspc, data)
 
 
 class DistWavefun(DistBuffer, Wavefun, ABC):
 
     gspc: DistGkSpace
+    gkspc: DistGkSpace
 
     def __init__(self, dist_gkspc: DistGkSpace, data: NDArray):
         if not isinstance(dist_gkspc, DistGkSpace):
@@ -124,6 +158,7 @@ class DistWavefun(DistBuffer, Wavefun, ABC):
                             f"got type {type(dist_gkspc)}")
         DistBuffer.__init__(self, dist_gkspc, data)
         self.gkspc = self.gspc
+        self._zgemm = get_zgemm(type(data))
 
 
 class DistWavefunG(DistWavefun, WavefunG):
@@ -132,18 +167,8 @@ class DistWavefunG(DistWavefun, WavefunG):
 
     def __init__(self, dist_gkspc: DistGkSpace, data: NDArray):
         DistWavefun.__init__(self, dist_gkspc, data)
-        self._norm_fac = float(
-            np.sqrt(self.gkspc.reallat_cellvol) / np.prod(self.gspc.grid_shape)
-        )
 
-    def to_r(self):
-        gkspc = self.gkspc
-        data_g = self.data.reshape((*self.shape, self.numspin, -1))
-
-        data_r = gkspc.g2r(data_g).reshape((*self.shape, -1))
-        return DistWavefunR(gkspc, data_r)
-
-    def vdot(self, ket: Self):
+    def vdot(self, ket: DistWavefunG) -> NDArray:
         out = WavefunG.vdot(self, ket)
         comm = self.gkspc.pwgrp_comm
         comm.Allreduce(comm.IN_PLACE, out, comm.SUM)
@@ -157,33 +182,18 @@ class DistWavefunR(DistWavefun, WavefunR):
     def __init__(self, dist_gkspc: DistGkSpace, data: NDArray):
         DistWavefun.__init__(self, dist_gkspc, data)
 
-    def to_g(self):
-        gkspc = self.gkspc
-        data_r = self.data.reshape((*self.shape, self.numspin, -1))
 
-        data_g = gkspc.r2g(data_r).reshape((*self.shape, -1))
-        return WavefunG(gkspc, data_g)
+class DistWavefunSpinG(DistWavefun, WavefunSpinG):
 
-
-class DistWavefunSpinG(DistWavefunG):
     BufferType = WavefunSpinG
-    numspin = 2
 
-    def to_r(self):
-        gkspc = self.gkspc
-        data_g = self.data.reshape((*self.shape, self.numspin, -1))
-
-        data_r = gkspc.g2r(data_g).reshape((*self.shape, -1))
-        return DistWavefunSpinR(gkspc, data_r)
+    def __init__(self, dist_gkspc: DistGkSpace, data: NDArray):
+        DistWavefun.__init__(self, dist_gkspc, data)
 
 
-class DistWavefunSpinR(DistWavefunR):
+class DistWavefunSpinR(DistWavefun, WavefunSpinR):
+
     BufferType = WavefunSpinR
-    numspin = 2
 
-    def to_g(self):
-        gkspc = self.gkspc
-        data_r = self.data.reshape((*self.shape, self.numspin, -1))
-
-        data_g = gkspc.r2g(data_r).reshape((*self.shape, -1))
-        return DistWavefunSpinR(gkspc, data_g)
+    def __init__(self, dist_gkspc: DistGkSpace, data: NDArray):
+        DistWavefun.__init__(self, dist_gkspc, data)
