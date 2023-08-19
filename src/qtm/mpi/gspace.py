@@ -1,18 +1,20 @@
-# from __future__ import annotations
-from qtm.typing import Optional
-from qtm.config import NDArray
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Sequence
 __all__ = ['DistGSpaceBase', 'DistGSpace', 'DistGkSpace']
 
 import numpy as np
 
 from qtm.gspace import GSpaceBase, GSpace, GkSpace
-from qtm.gspace.fft.utils import DummyFFT3D
+from qtm.fft.base import DummyFFT3D
 from qtm.mpi import QTMComm
-
-from qtm.mpi.utils import (
+from .utils import (
     scatter_slice, scatter_len,
-    gen_subarray_dtypes, gen_vector_dtype
 )
+
+from qtm.config import NDArray
+from qtm.msg_format import type_mismatch_msg
 
 
 class DistGSpaceBase(GSpaceBase):
@@ -81,7 +83,8 @@ class DistGSpaceBase(GSpaceBase):
         # The sticks undergo a global transformation so that the data across
         # the X-Axis is now distributed across processes.
         # A work array is created to store this globally transposed data
-        self._work_trans = self.FFTBackend.create_buffer((self.nx_loc * numsticks, ))
+        self._work_trans = self.FFTBackend.allocate_array((self.nx_loc * numsticks,),
+                                                          'c16')
         # Generating 'bufspec's for 'Alltollv' communication where the data along
         # sticks are distributed
         self._sticks_bufspecv = scatter_len(nx, self.pwgrp_size) * self.numsticks_loc
@@ -101,10 +104,9 @@ class DistGSpaceBase(GSpaceBase):
                             self.gspc_glob.grid_shape,
                             self.gspc_glob.g_cryst[:, self.ig_loc])
 
-        # Some attributes already set by super().__init__ are overwritten as it is
-        # incorrect/invalid
-        self.grid_shape = (self.nx_loc, ny, nz)
-        self.size_r = int(np.prod(self.grid_shape))
+        self.grid_shape_loc = (self.nx_loc, ny, nz)
+        # 'size_r' needs to be updated
+        self.size_r = int(np.prod(self.grid_shape_loc))
         # 'GSpaceBase' attributes that are disabled as they are not defined
         # when distributed
         self.idxgrid, self.idxsort = None, None
@@ -165,150 +167,157 @@ class DistGSpaceBase(GSpaceBase):
         work_full.reshape((self.nx_loc, -1))[:, self._trans2full] = work_trans.T
         arr_out[:] = self._fftyz.ifft(self._normalise_idft)
 
-    def create_buffer(self, shape: tuple[int, ...]) -> NDArray:
+    def allocate_array(self, shape: int | Sequence[int],
+                       dtype: str = 'c16') -> NDArray:
         """Modified to prevent accessing the now-DummyFFT instance"""
-        return self.FFTBackend.create_buffer(shape)
+        return self.FFTBackend.allocate_array(shape, dtype)
 
-    def check_buffer(self, arr: NDArray) -> None:
+    def check_array_type(self, arr: NDArray) -> None:
         """Modified to prevent accessing the now-DummyFFT instance"""
-        self.FFTBackend.check_buffer(arr)
+        self.FFTBackend.check_array_type(arr)
 
-    def r2g(self, arr_r: NDArray, arr_g: Optional[NDArray] = None) -> NDArray:
-        self.check_buffer_r(arr_r)
+    def r2g(self, arr_r: NDArray, arr_g: NDArray | None = None) -> NDArray:
+        self.check_array_r(arr_r)
         if arr_g is not None:
-            self.check_buffer_g(arr_g)
+            self.check_array_g(arr_g)
         else:
-            arr_g = self.create_buffer_g(arr_r.shape[:-1])
+            arr_g = self.allocate_array((*arr_r.shape[:-1], self.size_g))
 
-        for inp, out in zip(arr_r.reshape(-1, *self.grid_shape),
+        for inp, out in zip(arr_r.reshape(-1, *self.grid_shape_loc),
                             arr_g.reshape(-1, self.size_g)):
             self._r2g(inp, out)
 
         return arr_g
 
-    def g2r(self, arr_g: NDArray, arr_r: Optional[NDArray] = None) -> NDArray:
-        self.check_buffer_g(arr_g)
+    def g2r(self, arr_g: NDArray, arr_r: NDArray | None = None) -> NDArray:
+        self.check_array_g(arr_g)
         if arr_r is not None:
-            self.check_buffer_r(arr_r)
+            self.check_array_r(arr_r)
         else:
-            arr_r = self.create_buffer_r(arr_g.shape[:-1])
+            arr_r = self.allocate_array((*arr_g.shape[:-1], self.size_r))
 
         for inp, out in zip(arr_g.reshape(-1, self.size_g),
-                            arr_r.reshape(-1, *self.grid_shape)):
+                            arr_r.reshape(-1, *self.grid_shape_loc)):
             self._g2r(inp, out)
 
         return arr_r
 
-    def check_gspc_glob(self, gspc_glob: GSpaceBase):
-        if gspc_glob != self.gspc_glob:
-            raise ValueError("input 'gspc_glob' at root process of pwgrp "
-                             "does not match local instance. ")
+    def scatter_r(self, arr_root: NDArray | None) -> NDArray:
+        with self.pwgrp_comm as comm:
+            is_root = comm.rank == 0
+            if is_root:
+                self.gspc_glob.check_array_r(arr_root)
 
-    def scatter_r(self, arr_root: Optional[NDArray]) -> NDArray:
-        shape, sendbuf = None, None
-        if self.pwgrp_rank == 0:
-            self.gspc_glob.check_buffer_r(arr_root)
-            shape = arr_root.shape[:-1]
-            sendbuf = arr_root.reshape((-1, self.gspc_glob.size_r))
-        shape = self.pwgrp_comm.bcast(shape)
+            shape = comm.bcast(arr_root.shape[:-1] if is_root else None)
+            dtype = comm.bcast(arr_root.dtype.str if is_root else None)
+            out = self.allocate_array((*shape, self.size_r), dtype)
 
-        out = self.create_buffer_r(shape)
-        recvbuf = out.reshape((-1, self.size_r))
-
-        for iarr in range(np.prod(shape)):
-            self.pwgrp_comm.comm.Scatterv(
-                (sendbuf[iarr], self._scatter_r_bufspec)
-                if self.pwgrp_rank == 0 else None,
-                recvbuf[iarr]
-            )
+            if is_root:
+                sendbuf = arr_root.reshape((-1, self.gspc_glob.size_r))
+            recvbuf = out.reshape((-1, self.size_r))
+            for iarr in range(np.prod(shape)):
+                comm.Scatterv(
+                    (sendbuf[iarr], self._scatter_r_bufspec)
+                    if self.pwgrp_rank == 0 else None,
+                    recvbuf[iarr]
+                )
         return out
 
-    def gather_r(self, arr_loc: NDArray, allgather: bool = False) -> Optional[NDArray]:
-        self.check_buffer_r(arr_loc)
-        if not isinstance(allgather, bool):
-            raise TypeError("'allgather' must be a boolean. "
-                            f"got '{type(allgather)}'.")
+    def gather_r(self, arr_loc: NDArray, allgather: bool = False) -> NDArray | None:
+        with self.pwgrp_comm as comm:
+            self.check_array_r(arr_loc)
+            if not isinstance(allgather, bool):
+                raise TypeError(type_mismatch_msg('allgather', allgather, bool))
 
-        is_root = self.pwgrp_rank == 0
-        shape = self.pwgrp_comm.bcast(arr_loc.shape[:-1])
-        if arr_loc.shape[:-1] != shape:
-            raise ValueError("shape of 'arr_loc' inconsistent across MPI processes. "
-                             f"got shape[:-1]={arr_loc.shape[:-1]} locally, but "
-                             f"at root, it is {shape}.")
-        sendbuf = arr_loc.reshape((-1, self.size_r))
-        arr_glob, recvbuf = None, None
-        if is_root or allgather:
-            arr_glob = self.gspc_glob.create_buffer_r(shape)
-            recvbuf = arr_glob.reshape((-1, self.gspc_glob.size_r))
-        if allgather:
-            recvbuf[..., self.ir_loc] = sendbuf
+            is_root = comm.rank == 0
+            shape = comm.bcast(arr_loc.shape[:-1])
+            if arr_loc.shape[:-1] != shape:
+                raise ValueError(
+                    "'arr_loc.shape[:-1]' is not identical across MPI processes. "
+                    f"got arr_loc.shape[:-1] = {arr_loc.shape[:-1]} at "
+                    f"pwgrp_rank = {self.pwgrp_rank}.")
+            sendbuf = arr_loc.reshape((-1, self.size_r))
 
-        for iarr in range(np.prod(shape)):
+            gspc_glob = self.gspc_glob
+            if is_root or allgather:
+                arr_glob = gspc_glob.allocate_array((*shape, self.gspc_glob.size_r))
+                recvbuf = arr_glob.reshape((-1, self.gspc_glob.size_r))
             if allgather:
-                self.pwgrp_comm.comm.Allgatherv(
-                    self.pwgrp_comm.IN_PLACE,
-                    (recvbuf[iarr], self._scatter_r_bufspec)
-                )
-            else:
-                self.pwgrp_comm.comm.Gatherv(sendbuf[iarr],
-                                             (recvbuf[iarr], self._scatter_r_bufspec)
-                                             if is_root or allgather else None)
+                recvbuf[..., self.ir_loc] = sendbuf
+
+            for iarr in range(np.prod(shape)):
+                if allgather:
+                    comm.Allgatherv(
+                        comm.IN_PLACE,
+                        (recvbuf[iarr], self._scatter_r_bufspec)
+                    )
+                else:
+                    comm.Gatherv(
+                        sendbuf[iarr],
+                        (recvbuf[iarr], self._scatter_r_bufspec)
+                        if is_root or allgather else None
+                    )
         if is_root or allgather:
             return arr_glob
 
     def allgather_r(self, arr_loc: NDArray) -> NDArray:
         return self.gather_r(arr_loc, True)
 
-    def scatter_g(self, arr_root: Optional[NDArray]):
-        shape, sendbuf = None, None
-        if self.pwgrp_rank == 0:
-            shape = arr_root.shape[:-1]
-            sendbuf = arr_root.reshape((-1, self.gspc_glob.size_g))
-        shape = self.pwgrp_comm.bcast(shape)
+    def scatter_g(self, arr_root: NDArray | None):
+        with self.pwgrp_comm as comm:
+            is_root = comm.rank == 0
+            if is_root:
+                self.gspc_glob.check_array_g(arr_root)
 
-        out = self.create_buffer_g(shape)
-        recvbuf = out.reshape((-1, self.size_g))
+            shape = comm.bcast(arr_root.shape[:-1] if is_root else None)
+            dtype = comm.bcast(arr_root.dtype.str if is_root else None)
+            out = self.allocate_array((*shape, self.size_g), dtype)
 
-        for iarr in range(np.prod(shape)):
-            self.pwgrp_comm.comm.Scatterv(
-                (sendbuf[iarr], self._scatter_g_bufspec)
-                if self.pwgrp_rank == 0 else None,
-                recvbuf[iarr]
-            )
+            if is_root:
+                sendbuf = arr_root.reshape((-1, self.gspc_glob.size_g))
+            recvbuf = out.reshape((-1, self.size_g))
+            for iarr in range(np.prod(shape)):
+                comm.Scatterv(
+                    (sendbuf[iarr], self._scatter_g_bufspec)
+                    if self.pwgrp_rank == 0 else None,
+                    recvbuf[iarr]
+                )
         return out
 
-    def gather_g(self, arr_loc: NDArray, allgather: bool = False) -> Optional[NDArray]:
-        self.check_buffer_g(arr_loc)
-        if not isinstance(allgather, bool):
-            raise TypeError("'allgather' must be a boolean. "
-                            f"got '{type(allgather)}'.")
+    def gather_g(self, arr_loc: NDArray, allgather: bool = False) -> NDArray | None:
+        with self.pwgrp_comm as comm:
+            self.check_array_g(arr_loc)
+            if not isinstance(allgather, bool):
+                raise TypeError(type_mismatch_msg('allgather', allgather, bool))
 
-        is_root = self.pwgrp_rank == 0
-        shape = self.pwgrp_comm.bcast(arr_loc.shape[:-1])
-        if arr_loc.shape[:-1] != shape:
-            raise ValueError("shape of 'arr_loc' inconsistent across MPI processes. "
-                             f"got shape[:-1]={arr_loc.shape[:-1]} locally, but "
-                             f"at root, it is {shape}.")
-        sendbuf = arr_loc.reshape((-1, self.size_g))
-        arr_glob, recvbuf = None, None
-        if is_root or allgather:
-            arr_glob = self.gspc_glob.create_buffer_g(shape)
-            recvbuf = arr_glob.reshape((-1, self.gspc_glob.size_g))
-        if allgather:
-            recvbuf[..., self.ig_loc] = sendbuf
+            is_root = comm.rank == 0
+            shape = comm.bcast(arr_loc.shape[:-1])
+            if arr_loc.shape[:-1] != shape:
+                raise ValueError(
+                    "'arr_loc.shape[:-1]' is not identical across MPI processes. "
+                    f"got arr_loc.shape[:-1] = {arr_loc.shape[:-1]} at "
+                    f"pwgrp_rank = {self.pwgrp_rank}.")
+            sendbuf = arr_loc.reshape((-1, self.size_g))
 
-        for iarr in range(np.prod(shape)):
+            gspc_glob = self.gspc_glob
+            if is_root or allgather:
+                arr_glob = gspc_glob.allocate_array((*shape, self.gspc_glob.size_g))
+                recvbuf = arr_glob.reshape((-1, self.gspc_glob.size_g))
             if allgather:
-                self.pwgrp_comm.comm.Allgatherv(
-                    self.pwgrp_comm.IN_PLACE,
-                    (recvbuf[iarr], self._scatter_g_bufspec)
-                )
-            else:
-                self.pwgrp_comm.comm.Gatherv(
-                    sendbuf[iarr],
-                    (recvbuf[iarr], self._scatter_g_bufspec)
-                    if is_root or allgather else None
-                )
+                recvbuf[..., self.ig_loc] = sendbuf
+
+            for iarr in range(np.prod(shape)):
+                if allgather:
+                    comm.Allgatherv(
+                        comm.IN_PLACE,
+                        (recvbuf[iarr], self._scatter_g_bufspec)
+                    )
+                else:
+                    comm.Gatherv(
+                        sendbuf[iarr],
+                        (recvbuf[iarr], self._scatter_g_bufspec)
+                        if is_root or allgather else None
+                    )
         if is_root or allgather:
             return arr_glob
 
@@ -327,16 +336,22 @@ class DistGSpace(DistGSpaceBase, GSpace):
 
 class DistGkSpace(DistGSpaceBase, GkSpace):
 
-    gkspc_glob: GkSpace
+    gspc_glob: GkSpace
 
-    def __init__(self, comm: QTMComm, gkspc: GkSpace):
+    def __init__(self, comm: QTMComm, gkspc: GkSpace, gwfn: DistGSpace):
         if not isinstance(gkspc, GkSpace):
             raise TypeError(f"'gkspc' must be a '{GkSpace}' instance. "
                             f"got '{type(gkspc)}'.")
-        self.gkspc_glob = gkspc
 
-        DistGSpaceBase.__init__(self, comm, self.gkspc_glob)
-        self.gspc_glob = None
+        DistGSpaceBase.__init__(self, comm, gkspc)
+        self.gkspc_glob = self.gspc_glob
+
+        if not isinstance(gwfn, DistGSpace):
+            raise TypeError()
+        if gwfn.gspc_glob is not gkspc.gwfn:
+            raise ValueError
+        self.gwfn = gwfn
+
         self.ecutwfn = self.gkspc_glob.ecutwfn
         self.k_cryst = self.gkspc_glob.k_cryst
         self.idxgk = None
