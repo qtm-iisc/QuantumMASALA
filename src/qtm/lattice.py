@@ -1,10 +1,12 @@
-# from __future__ import annotations
-from qtm.typing import Self
-from qtm.config import NDArray
-__all__ = ['Lattice', 'RealLattice', 'ReciLattice', 'NDArray']
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Literal
+__all__ = ['Lattice', 'RealLattice', 'ReciLattice']
 
 import numpy as np
 
+from qtm.config import NDArray
 from qtm.constants import TPI, ANGSTROM
 
 
@@ -13,7 +15,6 @@ class Lattice:
 
     Describes a lattice by its primitive translation vectors and provides
     methods for coordinate transformations.
-    Base class of `RealLattice` and `ReciprocalLatvec`.
 
     Parameters
     ----------
@@ -35,7 +36,7 @@ class Lattice:
                 f"dtype={primvec.dtype if hasattr(primvec, 'dtype') else 'NA'}"
             )
 
-        self.primvec: NDArray = primvec.copy('C')
+        self.primvec: NDArray = primvec.copy('C').astype('f8')
         r"""(``(3, 3)``, ``'f8'``, ``'C'``) Matrix containing
         lattice translation vectors. 
         :math:`\vec{a}_i` is given by `primvec[:, i]`.
@@ -59,10 +60,10 @@ class Lattice:
         """
 
     @property
-    def axes_cart(self) -> tuple[list[float], ...]:
+    def axes_cart(self) -> list[tuple[float, float, float]]:
         """tuple of the three primitive vectors in atomic units
         """
-        return tuple(vec.tolist() for vec in self.primvec.T)
+        return list(tuple(vec) for vec in self.primvec.T)
 
     def cart2cryst(self, arr: NDArray, axis: int = 0) -> NDArray:
         """Transforms array of vector components in cartesian coords
@@ -72,7 +73,7 @@ class Lattice:
         ----------
         arr : NDArray
             Input array of vector components in cartesian coords.
-        axis : int, optional
+        axis : int, default=0
             Axis indexing the vector coordinates/components.
             `arr.shape[axis]` must be equal to 3.
 
@@ -86,7 +87,7 @@ class Lattice:
         mat_ = self.primvec_inv.reshape((3, 3) + (1,) * (vec_.ndim - axis - 2))
         return np.sum(mat_ * vec_, axis=axis + 1)
 
-    def cryst2cart(self, arr: NDArray, axis: int = 0):
+    def cryst2cart(self, arr: NDArray, axis: int = 0) -> NDArray:
         """Transforms array of vector components in crystal coords
         to cartesian coords.
 
@@ -94,7 +95,7 @@ class Lattice:
         ----------
         arr : NDArray
             Input array of vector components in crystal coords.
-        axis : int, optional
+        axis : int, default=0
             Axis indexing the vector coordinates/components.
             ``arr.shape[axis]`` must be equal to 3.
 
@@ -108,7 +109,8 @@ class Lattice:
         mat_ = self.primvec.reshape((3, 3) + (1,) * (vec_.ndim - axis - 2))
         return np.sum(mat_ * vec_, axis=axis + 1)
 
-    def dot(self, l_vec1: NDArray, l_vec2: NDArray, coords: str = 'cryst') -> NDArray:
+    def dot(self, l_vec1: NDArray, l_vec2: NDArray,
+            coords: Literal['cryst', 'cart'] = 'cryst') -> NDArray:
         """Computes the dot product between two sets of vectors
 
         Parameters
@@ -116,7 +118,7 @@ class Lattice:
         l_vec1, l_vec2 : NDArray
             Input Array of vector components.
             Their first axes must have length 3.
-        coords : {'cryst', 'cart'}, optional
+        coords : {'cryst', 'cart'}, default='cryst'
             Coordinate type of input vector components.
 
         Returns
@@ -146,7 +148,8 @@ class Lattice:
         else:
             raise ValueError(f"'coords' must be either 'cryst' or 'cart'. Got {coords}")
 
-    def norm2(self, l_vec: NDArray, coords: str = 'cryst') -> NDArray:
+    def norm2(self, l_vec: NDArray,
+              coords: Literal['cryst', 'cart'] = 'cryst') -> NDArray:
         """Computes the norm squared of input vectors.
 
         Parameters
@@ -154,7 +157,7 @@ class Lattice:
         l_vec : NDArray
             Input Array of vector components.
             First axis must be of length 3.
-        coords : {'cryst', 'cart'}, optional
+        coords : {'cryst', 'cart'}, default='cryst'
             Coordinate type of input vector components.
 
         Returns
@@ -181,7 +184,8 @@ class Lattice:
         else:
             raise ValueError(f"'coords' must be either 'cryst' or 'cart'. Got {coords}")
 
-    def norm(self, l_vec: NDArray, coords: str = 'cryst') -> NDArray:
+    def norm(self, l_vec: NDArray,
+             coords: Literal['cryst', 'cart'] = 'cryst') -> NDArray:
         """Computes the norm of given vectors.
 
         Parameters
@@ -189,7 +193,7 @@ class Lattice:
         l_vec : NDArray
             Input Array of vector components.
             First axis must be of length 3.
-        coords : {'cryst', 'cart'}, optional
+        coords : {'cryst', 'cart'}, default='cryst'
             Coordinate type of input vector components.
 
         Returns
@@ -238,7 +242,7 @@ class RealLattice(Lattice):
         """
 
     @classmethod
-    def from_bohr(cls, alat: float, a1, a2, a3) -> Self:
+    def from_bohr(cls, alat: float, a1, a2, a3) -> RealLattice:
         """Generates ``RealLatvec`` instance from a list of
         primitive translation vectors in atomic units
 
@@ -259,7 +263,7 @@ class RealLattice(Lattice):
         return cls(alat, latvec)
 
     @classmethod
-    def from_angstrom(cls, alat: float, a1, a2, a3) -> Self:
+    def from_angstrom(cls, alat: float, a1, a2, a3) -> RealLattice:
         """Generates ``RealLatvec`` instance from a list of
         primitive translation vectors in angstrom
 
@@ -281,7 +285,7 @@ class RealLattice(Lattice):
         return cls(alat, latvec)
 
     @classmethod
-    def from_alat(cls, alat: float, a1, a2, a3) -> Self:
+    def from_alat(cls, alat: float, a1, a2, a3) -> RealLattice:
         """Generates ``RealLatvec`` instance from a list of
         primitive translation vectors in 'alat' units
 
@@ -302,7 +306,7 @@ class RealLattice(Lattice):
         return cls(alat, latvec)
 
     @classmethod
-    def from_recilat(cls, recilat: 'ReciLattice') -> Self:
+    def from_recilat(cls, recilat: 'ReciLattice') -> RealLattice:
         """Constructs the real lattice dual to the reciprocal lattice
 
         Parameters
@@ -320,10 +324,10 @@ class RealLattice(Lattice):
         return cls(alat, latvec)
 
     @property
-    def axes_alat(self) -> tuple[list[float], ...]:
+    def axes_alat(self) -> list[tuple[float, float, float]]:
         """List of the three primitive vectors in 'alat' units
         """
-        return tuple(vec.tolist() for vec in self.latvec.T / self.alat)
+        return list(tuple(vec) for vec in self.latvec.T / self.alat)
 
     def cart2alat(self, arr: NDArray, axis: int = 0) -> NDArray:
         """Transforms array of vector components in atomic units
@@ -333,7 +337,7 @@ class RealLattice(Lattice):
         ----------
         arr : NDArray
             Input array of vector components in atomic units.
-        axis : int, optional
+        axis : int, default=0
             Axis indexing the `i`th coordinate in ``arr``.
             ``arr.shape[axis]`` must be equal to 3.
 
@@ -353,7 +357,7 @@ class RealLattice(Lattice):
         ----------
         arr : NDArray
             Input array of vector components in 'alat' units
-        axis : int, optional
+        axis : int, default=0
             Axis indexing the `i`th coordinate in ``arr``.
             ``arr.shape[axis]`` must be equal to 3.
 
@@ -373,7 +377,7 @@ class RealLattice(Lattice):
         ----------
         arr : NDArray
             Input array of vector components in crystal coords.
-        axis : int, optional
+        axis : int, default=0
             Axis indexing the ``i``th coordinate in ``arr``.
             ``arr.shape[axis]`` must be equal to 3.
 
@@ -393,7 +397,7 @@ class RealLattice(Lattice):
         ----------
         arr : NDArray
             Input array of vector components in 'alat' units.
-        axis : int, optional
+        axis : int, default=0
             Axis indexing the ``i``th coordinate in ``arr``.
             ``arr.shape[axis]`` must be equal to 3.
 
@@ -405,7 +409,8 @@ class RealLattice(Lattice):
         """
         return self.cart2cryst(arr, axis) * self.alat
 
-    def dot(self, l_vec1: NDArray, l_vec2: NDArray, coords: str = 'cryst') -> NDArray:
+    def dot(self, l_vec1: NDArray, l_vec2: NDArray,
+            coords: Literal['cryst', 'cart', 'alat'] = 'cryst') -> NDArray:
         """Same as ``Lattice.dot()`` method, but exdending it for
         ``coords='alat'``.
 
@@ -414,7 +419,7 @@ class RealLattice(Lattice):
         l_vec1, l_vec2 : NDArray
             Input Array of vector components.
             Their first axes must have length 3.
-        coords : {'cryst', 'cart', 'alat'}, optional
+        coords : {'cryst', 'cart', 'alat'}, defualt='cryst'
             Coordinate type of input vector components.
 
         Returns
@@ -437,7 +442,8 @@ class RealLattice(Lattice):
         else:
             raise ValueError(f"'coords' must be one of 'cryst', 'cart' or 'alat'. Got {coords}")
 
-    def norm2(self, l_vec: NDArray, coords: str = 'cryst') -> NDArray:
+    def norm2(self, l_vec: NDArray,
+              coords: Literal['cryst', 'cart', 'alat'] = 'cryst') -> NDArray:
         """Same as ``Lattice.norm2()`` method, but exdending it for
         ``coords='alat'``.
 
@@ -446,7 +452,7 @@ class RealLattice(Lattice):
         l_vec : NDArray
             (``(3, ...)``) Input Array of vector components.
             First axis must be of length 3.
-        coords : {'cryst', 'cart', 'alat'}, optional
+        coords : {'cryst', 'cart', 'alat'}, default='cryst'
             Coordinate type of input vector components.
 
         Returns
@@ -470,7 +476,8 @@ class RealLattice(Lattice):
             raise ValueError("'coords' must be one of 'cryst', 'cart' or 'alat'. "
                              f"Got {coords}")
 
-    def norm(self, l_vec: NDArray, coords: str = 'cryst') -> NDArray:
+    def norm(self, l_vec: NDArray,
+             coords: Literal['cryst', 'cart', 'alat'] = 'cryst') -> NDArray:
         """Computes the norm of given vectors.
 
         Parameters
@@ -478,7 +485,7 @@ class RealLattice(Lattice):
         l_vec : NDArray
             Input Array of vector components.
             First axis must be of length 3.
-        coords : {'cryst', 'cart', 'alat'}, optional
+        coords : {'cryst', 'cart', 'alat'}, default='cryst'
             Coordinate type of input vector components.
 
         Returns
@@ -533,7 +540,7 @@ class ReciLattice(Lattice):
         """
 
     @classmethod
-    def from_cart(cls, tpiba: float, b1, b2, b3) -> Self:
+    def from_cart(cls, tpiba: float, b1, b2, b3) -> ReciLattice:
         """Generates ``ReciprocalLattice`` instance from a list of
         primitive translation vectors in atomic units
 
@@ -554,7 +561,7 @@ class ReciLattice(Lattice):
         return cls(tpiba, recvec)
 
     @classmethod
-    def from_tpiba(cls, tpiba: float, b1, b2, b3) -> Self:
+    def from_tpiba(cls, tpiba: float, b1, b2, b3) -> ReciLattice:
         """Generates ``ReciprocalLattice`` instance from a list of
         primitive translation vectors in 'tpiba' units
 
@@ -575,7 +582,7 @@ class ReciLattice(Lattice):
         return cls(tpiba, recvec)
 
     @classmethod
-    def from_reallat(cls, reallat: RealLattice) -> Self:
+    def from_reallat(cls, reallat: RealLattice) -> ReciLattice:
         """Constructs the reciprocal lattice dual to the real lattice
 
         Parameters
@@ -593,11 +600,11 @@ class ReciLattice(Lattice):
         return cls(tpiba, recvec)
 
     @property
-    def axes_tpiba(self) -> tuple[list[float], ...]:
+    def axes_tpiba(self) -> list[tuple[float, float, float]]:
         """List of vectors representing axes of lattice
         in units of 'tpiba'
         """
-        return tuple(vec.tolist() for vec in self.recvec.T / self.tpiba)
+        return list(tuple(vec) for vec in self.recvec.T / self.tpiba)
 
     def cart2tpiba(self, arr: NDArray, axis: int = 0) -> NDArray:
         """Converts array of vector coords in atomic units to 'tpiba' units"""
@@ -608,21 +615,24 @@ class ReciLattice(Lattice):
         return arr * self.tpiba
 
     def cryst2tpiba(self, arr: NDArray, axis: int = 0) -> NDArray:
-        """Converts array of vector components in crystal coords to cartesian coords ('tpiba' units)"""
+        """Converts array of vector components in crystal coords to
+        cartesian coords ('tpiba' units)"""
         return self.cryst2cart(arr, axis) / self.tpiba
 
     def tpiba2cryst(self, arr: NDArray, axis: int = 0) -> NDArray:
-        """Converts array of vector components in cartesian coords ('tpiba' units) to crystal coords"""
+        """Converts array of vector components in cartesian coords
+        ('tpiba' units) to crystal coords"""
         return self.cart2cryst(arr, axis) * self.tpiba
 
-    def dot(self, l_vec1: NDArray, l_vec2: NDArray, coords: str = 'cryst') -> NDArray:
+    def dot(self, l_vec1: NDArray, l_vec2: NDArray,
+            coords: Literal['cryst', 'cart', 'alat'] = 'cryst') -> NDArray:
         """Same as ``Lattice.dot()`` method, but exdending it for ``'tpiba'``.
 
         Parameters
         ----------
         l_vec1, l_vec2 : NDArray
             Input Array of vector components. Their first axes must be of length 3.
-        coords : {'cryst', 'cart', 'tpiba'}; optional
+        coords : {'cryst', 'cart', 'tpiba'}; default='cryst'
             Coordinate type of input vector components.
 
         Returns
@@ -638,14 +648,15 @@ class ReciLattice(Lattice):
         else:
             raise ValueError(f"'coords' must be one of 'cryst', 'cart' or 'tpiba'. Got {coords}")
 
-    def norm2(self, l_vec: NDArray, coords: str = 'cryst') -> NDArray:
+    def norm2(self, l_vec: NDArray,
+              coords: Literal['cryst', 'cart', 'alat'] = 'cryst') -> NDArray:
         """Same as `Lattice.dot()` method, but exdending it for ``'tpiba'``.
 
         Parameters
         ----------
         l_vec : NDArray
             Input Array of vector components. First axis must be of length 3.
-        coords : {'cryst', 'cart', 'tpiba'}; optional
+        coords : {'cryst', 'cart', 'tpiba'}, default='cryst'
             Coordinate type of input vector components.
 
         Returns
