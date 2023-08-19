@@ -1,9 +1,10 @@
 """QuantumMASALA's Configuration Module
 
 """
-# from __future__ import annotations
-from typing import Union, Any, Type
+from __future__ import annotations
 __all__ = ['QTMConfig', 'qtmconfig', 'NDArray']
+
+from typing import Union  # Required import for Runtime checking
 
 import numpy as np
 from importlib.util import find_spec
@@ -123,19 +124,6 @@ class QTMConfig:
             self._use_gpu = True
 
     @property
-    def NDArray(self) -> Type[np.ndarray]:  # noqa : N802
-        """`typing.Union[numpy.ndarray, cupy.ndarray]` if `use_gpu` is True,
-        else `numpy.ndarray`. Primarily for typing routines that are
-        CPU(NumPy)/GPU(CuPy) Agnostic.
-        """
-        if self.cupy_installed:
-            import cupy as cp
-            ndarray = Union[np.ndarray, cp.ndarray]
-        else:
-            ndarray = np.ndarray
-        return ndarray
-
-    @property
     def fft_available_backends(self) -> list[str]:
         """list of supported fft libraries installed"""
         backends = ['scipy', 'numpy']
@@ -143,6 +131,8 @@ class QTMConfig:
             backends.insert(0, 'pyfftw')
         if self.mkl_fft_installed:
             backends.insert(0, 'mkl_fft')
+        if self.use_gpu and self.cupy_installed:
+            backends.append('cupy')
         return backends
 
     _fft_backend = None
@@ -196,13 +186,13 @@ class QTMConfig:
                              f"{str(available_planners)[1:-1]}. got {val}")
         self._pyfftw_planner = val
 
-    pyfftw_flags: tuple[str, ...] = ( )
+    pyfftw_flags: tuple[str, ...] = ()
     """Additional flags to be passed to FFTW Planner routines
     """
 
-    _rng_seed: Any = _RNG_DEFAULT_SEED
+    _rng_seed = _RNG_DEFAULT_SEED
     @property  # noqa : E301
-    def rng_seed(self) -> Any:
+    def rng_seed(self):
         """Seed object to be passed to NumPy's RNG routines.
         Automatically broadcasted to all MPI processes."""
         return self._rng_seed
@@ -215,5 +205,9 @@ class QTMConfig:
             self._rng_seed = COMM_WORLD.bcast(self._rng_seed)
 
 
-qtmconfig = QTMConfig()
-NDArray = qtmconfig.NDArray
+qtmconfig: QTMConfig = QTMConfig()
+if qtmconfig.cupy_installed:
+    import cupy as cp
+    NDArray = Union[np.ndarray, cp.ndarray]
+else:
+    NDArray = np.ndarray

@@ -6,6 +6,8 @@ __all__ = ['type_mismatch_msg', 'type_mismatch_seq_msg',
            'value_mismatch_msg', 'value_not_in_list_msg',
            'obj_mismatch_msg']
 
+from qtm.config import NDArray
+
 
 def type_mismatch_msg(obj_name: str, obj: Any,
                       l_typ: type | str | list[type | str]):
@@ -18,9 +20,10 @@ def type_mismatch_msg(obj_name: str, obj: Any,
         list: "a list",
         tuple: "a tuple",
         dict: "a dict",
+        NDArray: "a supported ndarray",
     }
 
-    if isinstance(l_typ, (type, str)):
+    if isinstance(l_typ, (type, str)) or l_typ is NDArray:
         l_typ = [l_typ, ]
     l_typ = list(l_typ)
 

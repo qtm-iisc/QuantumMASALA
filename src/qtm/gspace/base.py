@@ -1,5 +1,7 @@
-# from __future__ import annotations
-from qtm.typing import Optional, Union, Sequence, NDArray
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Sequence
 __all__ = ['GSpaceBase', ]
 
 import numpy as np
@@ -9,6 +11,7 @@ from qtm.fft import FFT3DFull
 from qtm.msg_format import value_mismatch_msg
 
 from qtm.constants import TPI
+from qtm.config import NDArray
 
 
 ROUND_PREC: int = 6
@@ -163,7 +166,7 @@ class GSpaceBase:
         """(``(size, )``, ``'f8'``) Norm of G vectors."""
         return np.sqrt(self.g_norm2)
 
-    def allocate_array(self, shape: Union[int, Sequence[int]],
+    def allocate_array(self, shape: int | Sequence[int],
                        dtype: str = 'c16') -> NDArray:
         """Returns an empty C-contiguous array of given shape and dtype.
 
@@ -244,7 +247,7 @@ class GSpaceBase:
                 'arr.shape', arr.shape, (..., self.size_g)
             ))
 
-    def r2g(self, arr_r: NDArray, arr_g: Optional[NDArray] = None) -> NDArray:
+    def r2g(self, arr_r: NDArray, arr_g: NDArray | None = None) -> NDArray:
         self.check_array_r(arr_r)
         if arr_g is not None:
             self.check_array_g(arr_g)
@@ -257,7 +260,7 @@ class GSpaceBase:
 
         return arr_g
 
-    def g2r(self, arr_g: NDArray, arr_r: Optional[NDArray] = None) -> NDArray:
+    def g2r(self, arr_g: NDArray, arr_r: NDArray | None = None) -> NDArray:
         self.check_array_g(arr_g)
         if arr_r is not None:
             self.check_array_r(arr_r)

@@ -10,8 +10,7 @@ The timers are automatically disabled when running in interactive mode to
 prevent exceptions due to improper timer usage like, for example,
 stopping an already stopped timer, accessing a non-existing timer, etc.
 """
-# from __future__ import annotations
-from qtm.typing import Optional
+from __future__ import annotations
 __all__ = ['LOGGER_NAME', 'LOG_FORMAT', 'qtmlogger',
            'qtmlogger_set_filehandle',
            'QTMTimer', 'QTMCounter', 'QTMLogger', 'warn',
@@ -90,7 +89,7 @@ class QTMTimer:
         self.enable_timer: bool = not hasattr(sys, 'ps1')
         """If False, the module is disabled; all methods have no effect"""
 
-    def _find_timer(self, label: str) -> Optional[int]:
+    def _find_timer(self, label: str) -> int | None:
         """Returns index of timer with input label if present, else None.
 
         Parameters
@@ -303,7 +302,7 @@ class QTMCounter:
         self.numcounter: int = 0
         """number of uniquely labeled counters"""
 
-    def _find_counter(self, label: str) -> Optional[bool]:
+    def _find_counter(self, label: str) -> bool | None:
         idx = np.nonzero(self.l_counter['label'][:self.numcounter] == label)[0]
         if len(idx) == 0:
             return None

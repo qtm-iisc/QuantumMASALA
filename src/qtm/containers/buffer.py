@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import Literal, Sequence
+    from typing import Literal, Sequence, Self
 __all__ = ['Buffer']
 
 from abc import ABC, abstractmethod
@@ -151,7 +151,7 @@ class Buffer(NDArrayOperatorsMixin, ABC):
 
     @classmethod
     def empty(cls, gspc: GSpaceBase,
-              shape: int | Sequence[int] | None) -> Buffer:
+              shape: int | Sequence[int] | None) -> Self:
         """Creates an empty `Buffer` instance of given shape.
 
         Parameters
@@ -173,7 +173,7 @@ class Buffer(NDArrayOperatorsMixin, ABC):
 
     @classmethod
     def zeros(cls, gspc: GSpaceBase,
-              shape: int | Sequence[int] | None):
+              shape: int | Sequence[int] | None) -> Self:
         """Creates an `Buffer` instance of given shape containing zeros.
 
         Parameters
@@ -188,7 +188,7 @@ class Buffer(NDArrayOperatorsMixin, ABC):
         return out
 
     @classmethod
-    def from_array(cls, gspc: GSpaceBase, data: NDArray):
+    def from_array(cls, gspc: GSpaceBase, data: NDArray) -> Self:
         """Creates an empty `Buffer` instance from input array
 
         Parameters
@@ -200,31 +200,31 @@ class Buffer(NDArrayOperatorsMixin, ABC):
         """
         return cls(gspc, data.astype('c16').copy(order='C'))
 
-    def copy(self) -> Buffer:
+    def copy(self) -> Self:
         """Makes a copy of itself"""
         data = self._data.copy(order='C')
         return self.__class__(self.gspc, data)
 
-    def conj(self) -> Buffer:
+    def conj(self) -> Self:
         """Returns the complex conjugate of its data, cast to the same type
         as the instance."""
         return self.__class__(self.gspc, self._data.conj())
 
     @abstractmethod
-    def to_r(self) -> Buffer:
+    def to_r(self) -> Self:
         """If `basis_type` is ``'g'``, returns the Backwards Fourier Transform
         of the instances' data cast to its dual `Buffer` subtype.
         Else returns itself."""
         pass
 
     @abstractmethod
-    def to_g(self) -> Buffer:
+    def to_g(self) -> Self:
         """If `basis_type` is ``'r'``, returns the Forward Fourier Transform
         of the instances' data cast to its dual `Buffer` subtype.
         Else returns itself."""
         pass
 
-    def reshape(self, shape: int | Sequence[int]) -> Buffer:
+    def reshape(self, shape: int | Sequence[int]) -> Self:
         """Returns a new instance whose data is reshaped according to input
         `shape`
 
@@ -268,7 +268,7 @@ class Buffer(NDArrayOperatorsMixin, ABC):
                 'self.gspc', self.gspc, 'other.gspc', other.gspc
             ))
 
-    def __getitem__(self, item) -> Buffer:
+    def __getitem__(self, item) -> Self:
         self._check_slice(item)
         try:
             data = self._data[item]
@@ -277,7 +277,7 @@ class Buffer(NDArrayOperatorsMixin, ABC):
             raise Exception("failed to slice field. refer to the rest of the "
                             "exception message for further info.") from e
 
-    def __setitem__(self, key, value: Buffer):
+    def __setitem__(self, key, value: Self):
         self._check_slice(key)
         self._check_other(value)
         self._data[key] = value.data

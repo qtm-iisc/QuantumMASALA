@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import Sequence
+    from typing import Sequence, Literal
 __all__ = ['Field', 'FieldG', 'FieldR']
 
 from abc import ABC, abstractmethod
@@ -54,7 +54,7 @@ class FieldG(Field):
         return gspc.size_g
 
     @property
-    def basis_type(self):
+    def basis_type(self) -> Literal['g']:
         return 'g'
 
     def to_r(self) -> FieldR:
@@ -85,7 +85,7 @@ class FieldR(Field):
         return gspc.size_r
 
     @property
-    def basis_type(self):
+    def basis_type(self) -> Literal['r']:
         return 'r'
 
     def to_r(self) -> FieldR:
