@@ -71,17 +71,16 @@ class BasisAtoms:
         Pseudopotential data of the species. For routines where pseudopotentials
         are not involed the number of valence electrons of input species can
         be given instead.
+    mass : float | None, default=None
+        Atomic Mass of the species. If not required, can be given None.
     reallat : RealLattice
         Real Lattice of the crystal.
     r_cryst : NDArray
         (``(3, numatoms)``) Crystal Coordinates of atoms in unit cell.
-    mass : float | None, default=None
-        Atomic Mass of the species.
     """
 
-    def __init__(self, label: str, ppdata: PseudoPotFile | int,
+    def __init__(self, label: str, ppdata: PseudoPotFile | int, mass: float | None,
                  reallat: RealLattice, r_cryst: NDArray,
-                 mass: float | None = None,
                  ):
         self.label: str = label
         """Label assigned to the atomic species."""
@@ -103,8 +102,15 @@ class BasisAtoms:
         self.ppdata: PseudoPotFile | None = ppdata
         """ Pseudopotential data of the species."""
 
+        if mass is not None:
+            if not isinstance(mass, float) or mass < 0:
+                raise TypeError(type_mismatch_msg('mass', mass, "a positive float"))
+        self.mass: float | None = mass
+        """Mass of the atomic species in a.m.u."""
+
         try:
-            r_cryst = np.copy(r_cryst, like=self.reallat.latvec)
+            r_cryst = np.asarray(r_cryst, dtype='f8', order='C',
+                                 like=self.reallat.latvec)
         except Exception as e:
             raise TypeError(type_mismatch_msg('r_cryst', r_cryst, NDArray)) from e
         if r_cryst.ndim != 2:
@@ -113,16 +119,10 @@ class BasisAtoms:
             raise ValueError(
                 value_mismatch_msg('r_cryst.shape[0]', r_cryst.shape[0], 3)
             )
-        self.r_cryst: NDArray = np.copy(r_cryst, dtype='f8', like=self.reallat.latvec)
+        self.r_cryst: NDArray = r_cryst
         """(``(3, self.numatoms)``) Crystal Coordinates of atoms in unit cell"""
         self.numatoms: int = self.r_cryst.shape[1]
         """Number of atoms per unit cell belonging to the species"""
-
-        if mass is not None:
-            if not isinstance(mass, float) or mass < 0:
-                raise TypeError(type_mismatch_msg('mass', mass, "a positive float"))
-        self.mass: float | None = mass
-        """Mass of the atomic species in a.m.u."""
 
     @property
     def cart(self) -> NDArray:
@@ -137,9 +137,8 @@ class BasisAtoms:
         return self.reallat.cryst2alat(self.r_cryst)
 
     @classmethod
-    def from_cart(cls, label: str, ppdata: PseudoPotFile | int,
-                  reallat: RealLattice, *r_cart,
-                  mass: float | None = None) -> BasisAtoms:
+    def from_cart(cls, label: str, ppdata: PseudoPotFile | int, mass: float | None,
+                  reallat: RealLattice, *r_cart) -> BasisAtoms:
         """Generates `BasisAtoms` instance from cartesian coordinates
 
         Parameters
@@ -162,24 +161,22 @@ class BasisAtoms:
             raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
         r_cart = np.array(r_cart, dtype='f8', like=reallat.latvec).T
         r_cryst = reallat.cart2cryst(r_cart)
-        return cls(label, ppdata, reallat, r_cryst, mass)
+        return cls(label, ppdata, mass, reallat, r_cryst)
 
     @classmethod
-    def from_cryst(cls, label: str, ppdata: PseudoPotFile | int,
-                   reallat: RealLattice, *r_cryst,
-                   mass: float | None = None) -> BasisAtoms:
+    def from_cryst(cls, label: str, ppdata: PseudoPotFile | int, mass: float | None,
+                   reallat: RealLattice, *r_cryst) -> BasisAtoms:
         """Generates `BasisAtoms` instance from crystal coordinates.
         Refer to `from_cart` for a descripton of the input
         arguments"""
         if not isinstance(reallat, RealLattice):
             raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
         r_cryst = np.array(r_cryst, dtype='f8', like=reallat.latvec).T
-        return cls(label, ppdata, reallat, r_cryst, mass)
+        return cls(label, ppdata, mass, reallat, r_cryst)
 
     @classmethod
-    def from_alat(cls, label: str, ppdata: PseudoPotFile | int,
-                  reallat: RealLattice, r_alat,
-                  mass: float | None = None) -> BasisAtoms:
+    def from_alat(cls, label: str, ppdata: PseudoPotFile | int, mass: float | None,
+                  reallat: RealLattice, r_alat) -> BasisAtoms:
         """Generates `BasisAtoms` instance from cartesian coordinates in
         alat units. Refer to `from_cart` for a descripton of the input
         arguments"""
@@ -187,12 +184,11 @@ class BasisAtoms:
             raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
         r_alat = np.array(r_alat, dtype='f8', like=reallat.latvec).T
         r_cryst = reallat.alat2cryst(r_alat)
-        return cls(label, ppdata, reallat, r_cryst, mass)
+        return cls(label, ppdata, mass, reallat, r_cryst)
 
     @classmethod
-    def from_angstrom(cls, label: str, ppdata: PseudoPotFile | int,
-                      reallat: RealLattice, *r_ang,
-                      mass: float | None = None) -> BasisAtoms:
+    def from_angstrom(cls, label: str, ppdata: PseudoPotFile | int, mass: float | None,
+                      reallat: RealLattice, *r_ang) -> BasisAtoms:
         """Generates `BasisAtoms` instance from cartesian coordinates in
         angstrom units. Refer to `from_cart` for a descripton of the input
         arguments"""
@@ -200,11 +196,10 @@ class BasisAtoms:
             raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
         r_cart = np.array(r_ang, dtype='f8', like=reallat.latvec).T * ANGSTROM
         r_cryst = reallat.cart2cryst(r_cart)
-        return cls(label, ppdata, reallat, r_cryst, mass)
+        return cls(label, ppdata, mass, reallat, r_cryst)
 
     @classmethod
-    def from_bohr(cls, label: str, ppdata: PseudoPotFile | int,
-                  reallat: RealLattice, *r_cart,
-                  mass: float | None = None) -> BasisAtoms:
+    def from_bohr(cls, label: str, ppdata: PseudoPotFile | int, mass: float | None,
+                  reallat: RealLattice, *r_cart) -> BasisAtoms:
         """Alias of `from_cart` classmethod"""
-        return cls.from_cart(label, ppdata, reallat, *r_cart, mass=mass)
+        return cls.from_cart(label, ppdata, mass, reallat, *r_cart)
