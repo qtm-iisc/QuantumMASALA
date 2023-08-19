@@ -1,33 +1,42 @@
 # from __future__ import annotations
-from qtm.typing import Optional, Self, Sequence, Any, Union
-from qtm.config import NDArray
+from qtm.typing import Optional, Self, Sequence, Union, Any, NDArray
 __all__ = ['QTMComm', 'QTMComm',
-           'BufSpec', 'BufSpecV']
+           'BufSpec', 'BufSpecV',
+           'split_comm_pwgrp']
 
 from types import MethodType
-import numpy as np
-
-from qtm.logger import warn
 
 from qtm import qtmconfig
 if qtmconfig.mpi4py_installed:
-    from mpi4py.MPI import COMM_WORLD, COMM_NULL, Intracomm, Group, Op
-    from mpi4py.MPI import IN_PLACE, SUM, PROD, MIN, MAX, IDENT, SIMILAR
+    from mpi4py.MPI import COMM_WORLD, COMM_NULL, COMM_SELF
+    from mpi4py.MPI import Op, IN_PLACE
+    InPlace = type(IN_PLACE)
+    from mpi4py.MPI import SUM, PROD, MIN, MAX, LAND, LOR, IDENT, SIMILAR
 
     WORLD_SIZE, WORLD_RANK = COMM_WORLD.Get_size(), COMM_WORLD.Get_rank()
-    InPlace = type(IN_PLACE)
+    # WARNING: Following import is only done when mpi4py is installed.
+    from mpi4py.MPI import Group, Intracomm
+
 else:
-    COMM_WORLD = None
+    COMM_WORLD, COMM_NULL, COMM_SELF = 'COMM_WORLD', 'COMM_NULL', 'COMM_SELF'
     Intracomm, Op, InPlace = 'Intracomm', 'Op', 'InPlace'
+    IN_PLACE, SUM, PROD, MIN, MAX, LAND, LOR = (
+        'IN_PLACE', 'SUM', 'PROD', 'MIN', 'MAX', 'LAND', 'LOR'
+    )
 
     WORLD_SIZE, WORLD_RANK = 1, 0
-    IN_PLACE, SUM, PROD, MIN, MAX = 'IN_PLACE', 'SUM', 'PROD', 'MIN', 'MAX'
+    Group = None
 
 BufSpec = NDArray
 BufSpecV = tuple[NDArray, Sequence[int]]
 
 
 class QTMComm:
+
+    mpi4py_installed = qtmconfig.mpi4py_installed
+    comm_world = COMM_WORLD
+    comm_null = COMM_NULL
+    comm_self = COMM_SELF
 
     world_size: int = WORLD_SIZE
     """Size of the `mpi4py.MPI.COMM_WORLD` group"""
@@ -43,6 +52,10 @@ class QTMComm:
     """Alias of `mpi4py.MPI.MIN`"""
     MAX = MAX
     """Alias of `mpi4py.MPI.MAX`"""
+    LAND = LAND
+    """Alias of `mpi4py.MPI.LAND`"""
+    LOR = LOR
+    """Alias of `mpi4py.MPI.LOR`"""
     BUFFER_ATTR_NAME: str = '_data'
     """Attribute name in QTM's data containers that points to the underlying
     array/buffer"""
@@ -51,22 +64,14 @@ class QTMComm:
                  parent_comm: Optional[Self] = None,
                  sync_with_parent: bool = True,
                  subgrp_idx: Optional[int] = None):
-        # Getting installation status of mpi4py
-        mpi4py_installed = qtmconfig.mpi4py_installed
-
         # Validating 'comm'
-        is_null = False
-        if mpi4py_installed:
-            if comm == COMM_NULL:
-                is_null = True
-            elif not isinstance(comm, Intracomm):
+        is_null = (comm == self.comm_null)
+        if not is_null:
+            if self.mpi4py_installed and not isinstance(comm, Intracomm):
                 raise TypeError("'comm' must be a MPI Intracommunicator. "
                                 f"got {type(comm)}.")
-        elif comm is not None:
-            raise ValueError(
-                "'comm' takes only 'None' when mpi4py is not installed/enabled. "
-                f"got {comm} (type {type(comm)}).")
-
+        else:
+            comm = None
         self.is_null: bool = is_null
         """True if `comm` is `mpi4py.MPI.COMM_NULL`."""
 
@@ -78,7 +83,7 @@ class QTMComm:
         size, rank = 1, 0
         if self.is_null:
             size = 0
-        elif self.comm is not None:
+        elif self.mpi4py_installed:
             size, rank = self.comm.Get_size(), self.comm.Get_rank()
         self.size: int = size
         """Size of the group associated to `comm`.
@@ -88,26 +93,26 @@ class QTMComm:
         """
 
         if parent_comm is not None:
-            if isinstance(parent_comm, Intracomm):
-                parent_comm = QTMComm(parent_comm, None)
             if not isinstance(parent_comm, QTMComm):
                 raise TypeError(
-                    "If not 'None, 'parent_comm' must be an instance of either "
-                    "'QTMComm' or 'mpi4py.MPI.Intracomm'. "
-                    f"got type {type(parent_comm)}"
+                    "If not 'None, 'parent_comm' must be an instance of "
+                    f"'{QTMComm}' instance. got {type(parent_comm)}."
                 )
             if parent_comm.is_null:
-                warn("'parent_comm' is a null communicator. Setting it"
-                     "to 'None'.")
+                raise ValueError("'parent_comm' is a null communicator i.e "
+                                 "parent_comm.is_null = True. ")
+            elif self.world_size == 1:
                 parent_comm = None
 
-        if mpi4py_installed and not self.is_null and parent_comm is not None:
-            comm_group = self.comm.Get_group()
-            grp_intersection = Group.Intersection(
-                comm_group, parent_comm.Get_group())
-            if Group.Compare(comm_group, grp_intersection) not in [IDENT, SIMILAR]:
-                raise ValueError("'comm' is not a subgroup of group associated to"
-                                 "'parent_comm'.")
+        if not self.is_null and parent_comm is not None:
+            if self.mpi4py_installed:
+                comm_group = self.comm.Get_group()
+                grp_intersection = Group.Intersection(
+                    comm_group, parent_comm.comm.Get_group())
+                if Group.Compare(comm_group, grp_intersection) not in [IDENT, SIMILAR]:
+                    raise ValueError("'comm' is not a subgroup of group associated to"
+                                     "'parent_comm'.")
+
         self.parent_comm: Optional[QTMComm] = parent_comm
         """Parent Communicator; used to synchronize subgroups (of which this
         instance is a part of) when exiting context."""
@@ -131,7 +136,7 @@ class QTMComm:
         out = super().__getattribute__(item)
         if isinstance(out, MethodType) and self.is_null:
             raise AttributeError("'CommMod' instance is a null communicator. "
-                                 "All methods except 'barrier' are disabled.")
+                                 "All methods are disabled.")
         return out
 
     def __enter__(self) -> Self:
@@ -141,30 +146,41 @@ class QTMComm:
             self.Barrier()
         return self
 
+    class SkipWithBlock(Exception):
+        pass
+
+    def skip_with_block(self):
+        raise self.SkipWithBlock
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """When exiting the context, all processes in group will be
         synchronized with ``MPI_Barrier`` call. This is disabled if
         `sync_with_parent` is set to `False`."""
         if isinstance(exc_val, Exception):
-            raise Exception(
-                f"Process # {self.world_rank} / {self.world_size} has encountered "
-                f"an exception. Please refer above for further info."
-            ) from exc_val
+            if exc_type is not self.SkipWithBlock:
+                raise Exception(
+                    f"Process # {self.world_rank} / {self.world_size} has encountered "
+                    f"an exception. Please refer above for further info."
+                ) from exc_val
 
+        # Synchronize with all processes in group
         if not self.is_null:
             self.Barrier()
+        # Synchronize all processes in the parent group if required
         if self.sync_with_parent:
             self.parent_comm.Barrier()
+        # If block is skipped, the exception raised for the mechanism needs to be
+        # suppressed
+        if exc_type is self.SkipWithBlock:
+            return True
 
     def Barrier(self) -> None:  # noqa: N802
-        if self.comm is not None:
+        if self.mpi4py_installed:
             self.comm.Barrier()
 
-    def Get_group(self) -> Optional[Group]:  # noqa: N802
-        """Alias of ``self.comm.Get_group()``"""
-        if self.comm is None:
-            return None
-        return self.comm.Get_group()
+    def barrier(self) -> None:  # noqa: N802
+        if self.mpi4py_installed:
+            self.comm.barrier()
 
     def Incl(self, ranks: Sequence[int], sync_with_parent: bool = True) -> Self:  # noqa: N802
         """Creates a subgroup of communicator containing only the processes
@@ -184,17 +200,21 @@ class QTMComm:
             so that all processes in the parent group will exit the `with`
             code block at the same time
         """
-        if self.comm is None:
+        if self.size == 1:
             if list(ranks) != [0, ]:
                 raise ValueError("communicator has only one process")
             return self
-        comm_out = Intracomm(self.comm.Create_group(
+        comm_out = self.comm.Create_group(
             self.comm.Get_group().Incl(ranks)
-        ))
+        )
         return QTMComm(comm_out, self, sync_with_parent)
 
-    def Split(self, color: int, key: int, sync_with_parent: bool = False,
-              id_: Optional[Any] = None) -> Self:  # noqa: N802
+    def Root(self):
+        return QTMComm(self.comm_self if self.rank == 0 else self.comm_null,
+                       self, sync_with_parent=True)
+
+    def Split(self, color: int, key: int,
+              sync_with_parent: bool = False) -> Self:  # noqa: N802
         """Divides the group into multiple subgroups defined by `color` and
         `key` values.
 
@@ -207,78 +227,108 @@ class QTMComm:
             Index of the subgroup to assign this process to.
         key : int
             Order/Rank of this process within the subgroup given by `color`.
-        sync_with_parent : bool, default=True
+        sync_with_parent : bool, default=False
             If True, when used in a `with` block, calls `parent_comm.Barrier()`
             so that all processes in the parent group will exit the `with`
             code block at the same time
-        id_ : Optional[Any],default=color
-            If specified, will be passed to `QTMComm` instance creation,
-            else, `color` value will be used in place.
         """
-        comm_split = Intracomm(
-            self.comm.Split(color, key)
-        )
-        if id_ is None:
-            id_ = color
-        return QTMComm(comm_split, self, sync_with_parent, id_)
+        comm_split = self.comm.Split(color, key)
+        return QTMComm(comm_split, self, sync_with_parent, color)
 
-    def _check_op(self, op: Op) -> None:
-        """Checks if input MPI operator is supported by this module"""
-        l_op = [self.SUM, self.PROD, self.MIN, self.MAX]
-        if op not in l_op:
-            raise NotImplementedError("'op' is not supported/recognized. "
-                                      f"Supported values: {l_op}")
-
-    def bcast(self, obj):
+    def bcast(self, obj, root: int = 0):
         """Alias of ``mpi4py.MPI.Comm.bcast``"""
-        if self.comm is None:
-            return obj
-        return self.comm.bcast(obj)
+        if self.mpi4py_installed:
+            return self.comm.bcast(obj, root)
+        return obj
+
+    def scatter(self, sendobj: Sequence[Any], root: int = 0):
+        if self.mpi4py_installed:
+            return self.comm.scatter(sendobj, root)
+        return sendobj
 
     def allgather(self, obj):
         """Alias of ``mpi4py.MPI.Comm.allgather``"""
-        if self.comm is None:
-            return [obj, ]
-        return self.comm.allgather(obj)
+        if self.mpi4py_installed:
+            return self.comm.allgather(obj)
+        return [obj, ]
 
     def allreduce(self, val, op: Op = SUM):
         """Alias of ``mpi4py.MPI.Comm.allreduce``"""
-        self._check_op(op)
-        if self.comm is None:
-            return val
-        return self.comm.allreduce(val, op)
+        if self.mpi4py_installed:
+            return self.comm.allreduce(val, op)
+        return val
 
-    def Bcast(self, buf: BufSpec):  # noqa: N802
+    def Bcast(self, buf: BufSpec, root: int = 0):  # noqa: N802
         """Alias of ``mpi4py.MPI.Comm.Bcast``"""
-        if self.comm is not None:
-            self.comm.Bcast(buf)
-        return buf
+        if self.mpi4py_installed:
+            self.comm.Bcast(buf, root)
+
+    def Scatter(self, sendbuf: Optional[BufSpec], recvbuf: Union[InPlace, BufSpec],
+                root: int = 0):
+        if self.mpi4py_installed:
+            self.comm.Scatter(sendbuf, recvbuf, root)
+        elif recvbuf != IN_PLACE:
+            recvbuf_ = recvbuf[0] if isinstance(recvbuf, tuple) else recvbuf
+            sendbuf_ = sendbuf[0] if isinstance(sendbuf, tuple) else sendbuf
+            recvbuf_[:] = sendbuf_
+
+    def Scatterv(self, sendbuf: Optional[BufSpecV], recvbuf: Union[InPlace, BufSpec],
+                 root: int = 0):
+        if self.mpi4py_installed:
+            self.comm.Scatterv(sendbuf, recvbuf, root)
+        elif recvbuf != IN_PLACE:
+            recvbuf_ = recvbuf[0] if isinstance(recvbuf, tuple) else recvbuf
+            sendbuf_ = sendbuf[0] if isinstance(sendbuf, tuple) else sendbuf
+            recvbuf_[:] = sendbuf_
+
+    def Gather(self, sendbuf: Union[InPlace, BufSpec], recvbuf: Optional[BufSpec],
+               root: int = 0):
+        if self.mpi4py_installed:
+            self.comm.Gather(sendbuf, recvbuf, root)
+        elif sendbuf != IN_PLACE:
+            recvbuf_ = recvbuf[0] if isinstance(recvbuf, tuple) else recvbuf
+            sendbuf_ = sendbuf[0] if isinstance(sendbuf, tuple) else sendbuf
+            recvbuf_[:] = sendbuf_
+
+    def Gatherv(self, sendbuf: Union[InPlace, BufSpec], recvbuf: Optional[BufSpecV],
+                root: int = 0):
+        if self.mpi4py_installed:
+            self.comm.Gatherv(sendbuf, recvbuf, root)
+        elif sendbuf != IN_PLACE:
+            recvbuf_ = recvbuf[0] if isinstance(recvbuf, tuple) else recvbuf
+            sendbuf_ = sendbuf[0] if isinstance(sendbuf, tuple) else sendbuf
+            recvbuf_[:] = sendbuf_
 
     def Allgather(self, sendbuf: Union[InPlace, BufSpec],
                   recvbuf: BufSpec):  # noqa: N802
         """Alias of `mpi4py.MPI.Comm.Allgather`"""
-        self.comm.Allgather(sendbuf, recvbuf)
+        if self.mpi4py_installed:
+            self.comm.Allgather(sendbuf, recvbuf)
+        elif sendbuf != IN_PLACE:
+            recvbuf[:] = sendbuf
 
-    def Allgatherv(self, sendbuf: Union[InPlace, BufSpecV],
+    def Allgatherv(self, sendbuf: Union[InPlace, BufSpec],
                   recvbuf: BufSpecV):  # noqa: N802
         """Alias of `mpi4py.MPI.Comm.Allgatherv`"""
-        if self.comm is not None:
+        if self.mpi4py_installed:
             self.comm.Allgather(sendbuf, recvbuf)
+        elif sendbuf != IN_PLACE:
+            recvbuf[0][:] = sendbuf
 
     def Allreduce(self, sendbuf: Union[InPlace, BufSpec],
                   recvbuf: BufSpec, op: Op = SUM):  # noqa: N802
         """Alias of `mpi4py.MPI.Comm.Allreduce`"""
-        self._check_op(op)
-        if self.comm is not None:
+        if self.mpi4py_installed:
             self.comm.Allreduce(sendbuf, recvbuf, op=op)
 
 
 def split_comm_pwgrp(comm: QTMComm, pwgrp_size: int = 1):
-    comm_size, comm_rank = comm.size, comm.rank
-
     if not isinstance(comm, QTMComm):
         raise TypeError(f"'comm' must be a '{QTMComm}' instance. "
                         f"got type {type(comm)}")
+    if comm.is_null:
+        raise ValueError(f"'comm' must not be a null communicator.")
+    comm_size, comm_rank = comm.size, comm.rank
 
     if not isinstance(pwgrp_size, int) or pwgrp_size <= 0:
         raise ValueError("'pwgrp_size' must be a positive integer. "
@@ -289,40 +339,12 @@ def split_comm_pwgrp(comm: QTMComm, pwgrp_size: int = 1):
                          f"{comm_size} processes, but pwgrp_size = {pwgrp_size} "
                          f"is not a factor of comm.size = {comm_size}")
 
-    n_pwgrp = comm_size // pwgrp_size
     color = comm_rank // pwgrp_size
     key = comm_rank % pwgrp_size
-    intracomm = comm.Split(color, key)
 
-
+    pwgrp_comm = None
+    if pwgrp_size != 1:
+        pwgrp_comm = comm.Split(color, key)
     intercomm = comm.Split(key, color)
 
-    return intracomm, intercomm
-
-
-class CommMod:
-
-    def __init__(self, comm, pwgrp_size: int = 1):
-        comm_size, comm_rank = comm.size, comm.rank
-
-        if not isinstance(comm, QTMComm):
-            raise TypeError(f"'comm' must be a '{QTMComm}' instance. "
-                            f"got type {type(comm)}")
-
-        if not isinstance(pwgrp_size, int) or pwgrp_size <= 0:
-            raise ValueError("'pwgrp_size' must be a positive integer. "
-                             f"got {pwgrp_size} (type {type(pwgrp_size)}).")
-
-        if comm_size % pwgrp_size != 0:
-            raise ValueError("'pwgrp_size' must evenly divide 'comm's "
-                             f"{comm_size} processes, but pwgrp_size = {pwgrp_size} "
-                             f"is not a factor of comm.size = {comm_size}")
-
-        self.parent_comm = comm
-        self.numpwgrp = comm_size // pwgrp_size
-        self.idxpwgrp = comm_rank // pwgrp_size
-        self.pwgrp_rank = comm_rank % pwgrp_size
-
-        self.pwgrp_comm = self.parent_comm.Split(self.idxpwgrp, self.pwgrp_rank)
-        self.intercomm = self.parent_comm.Split(self.pwgrp_rank, self.idxpwgrp)
-
+    return pwgrp_comm, intercomm
