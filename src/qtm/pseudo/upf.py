@@ -1,10 +1,13 @@
-from __future__ import annotations
+# from __future__ import annotations
+# NOTE: Type hints are used by the reader during runtime so the above line
+# must be commented for now
 __all__ = ["UPFv2Data"]
 
 import xml.etree.ElementTree as ET
 import copy
 import numpy as np
 from dataclasses import dataclass
+from typing import Optional
 
 from qtm.crystal.basis_atoms import PseudoPotFile
 from qtm.constants import RYDBERG
@@ -24,8 +27,12 @@ class UPFv2Data(PseudoPotFile):
 
     Notes
     -----
-    As `QuantumMASALA does not support PAW or Ultrasoft Pseudopotentials,
+    As QuantumMASALA does not support PAW or Ultrasoft Pseudopotentials,
     they are omitted in this implementation.
+
+    This implementation does not have a great coverage over the UPF
+    specification and needs improvement. Suggestions for better implementations
+    are welcome.
     """
 
     # Fields in 'PP_HEADER'.
@@ -59,7 +66,7 @@ class UPFv2Data(PseudoPotFile):
     r_ab: np.ndarray
 
     # Fields in 'PP_NLCC'.
-    rho_atc: np.ndarray | None
+    rho_atc: Optional[np.ndarray]
 
     # Fields in 'PP_LOCAL'.
     vloc: np.ndarray
@@ -94,6 +101,8 @@ class UPFv2Data(PseudoPotFile):
                         typ = data[key]
                         if typ == bool:
                             data[key] = val.lower() == "t"
+                        elif typ is str:
+                            data[key] = val
                         else:
                             data[key] = typ(val)
 
