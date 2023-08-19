@@ -16,15 +16,18 @@ EPS6 = 1E-6
 
 
 def _simpson(f_r: NDArray, r_ab: NDArray):
-    # NOTE: Number of radial points specified in UPF File is expected
-    # to be odd. Will fail otherwise
-    assert r_ab.shape[0] % 2 == 1
     f_times_dr = f_r * r_ab
-    f_times_dr[:] *= 1./3
+    if len(r_ab) % 2 == 0:  # If even # of points <-> odd # of interval
+        f_times_dr = f_times_dr[:-1]  # Discard last point for now
+    f_times_dr[:] *= 1. / 3
     f_times_dr[..., 1:-1:2] *= 4
     f_times_dr[..., 2:-1:2] *= 2
-    return np.sum(f_times_dr, axis=-1)
-
+    integral = np.sum(f_times_dr, axis=-1)
+    # Dealing with last interval when odd # of intervals
+    if len(r_ab) % 2 == 0:
+        integral += (-0.5 * f_times_dr[-2] + 4 * f_times_dr[-1])
+        integral += 2.5 * (f_r[-1] * r_ab[-1] / 3.)
+    return integral
 
 def _sph2pw(r: NDArray, r_ab: NDArray, f_times_r2: NDArray, g: NDArray):
     numg = g.shape[0]
