@@ -4,7 +4,7 @@ import numpy as np
 from scipy.special import erf, erfc, xlogy
 
 from qtm.dft.kswfn import KSWfn
-from qtm.dft.comm_mod import DFTCommMod
+from qtm.dft.config import DFTCommMod
 from .utils import check_args
 
 from qtm.constants import TPI, SQRT_PI
@@ -65,9 +65,9 @@ def _compute_en(wfn: KSWfn, e_fermi: float,
     return degauss * np.sum(smear_func(f[mask]))
 
 
-def compute_occ(dftcomm: DFTCommMod, l_wfn: list[KSWfn], numel: int,
+def compute_occ(dftcomm: DFTCommMod, l_wfn: list[list[KSWfn]], numel: int,
                 is_spin: bool, smear_typ: str, degauss: float):
-    check_args(dftcomm, l_wfn, numel)
+    # check_args(dftcomm, l_wfn, numel)
     with dftcomm.image_comm as comm:
         assert isinstance(is_spin, bool)
         assert is_spin == comm.bcast(is_spin)
@@ -81,8 +81,9 @@ def compute_occ(dftcomm: DFTCommMod, l_wfn: list[KSWfn], numel: int,
             comm.skip_with_block()
 
         # Aggregating all values to prevent repeated iteration across objects
-        l_evl = np.stack([wfn.evl for wfn in l_wfn])
-        l_weights = np.array([wfn.k_weight for wfn in l_wfn], like=l_evl)
+        l_evl = np.stack(wfn.evl for wfn_k in l_wfn for wfn in wfn_k)
+        l_weights = np.array([wfn.k_weight for wfn_k in l_wfn for wfn in wfn_k],
+                             like=l_evl)
 
         # Setting bounds for bisection method
         mu_min = comm.allreduce(np.amin(l_evl), comm.MIN)
@@ -96,7 +97,7 @@ def compute_occ(dftcomm: DFTCommMod, l_wfn: list[KSWfn], numel: int,
         # Computes average occupation for given fermi level
         def compute_numel(e_mu):
             l_occ = _compute_occ(l_evl, e_mu, smear_typ, degauss)
-            numel_ = np.sum(l_occ * l_weights.reshape((-1, 1, 1)))
+            numel_ = np.sum(l_occ * l_weights.reshape((-1, 1)))
             numel_ = comm.allreduce(numel_, comm.SUM)
             return comm.bcast(numel_)
 
@@ -111,19 +112,19 @@ def compute_occ(dftcomm: DFTCommMod, l_wfn: list[KSWfn], numel: int,
             mu_min, mu_max = comm.bcast(mu_min), comm.bcast(mu_max)
             mu_guess = (mu_min + mu_max) / 2
             del_numel = numel - compute_numel(mu_guess)
-
         # Computing occ and e_smear
         e_fermi, e_smear = mu_guess, 0.
-        for wfn in l_wfn:
-            wfn.occ[:] = _compute_occ(wfn.evl, e_fermi, smear_typ, degauss)
-            e_smear += wfn.k_weight * _compute_en(wfn, e_fermi, smear_typ, degauss)
+        for wfn_k in l_wfn:
+            for wfn in wfn_k:
+                wfn.occ[:] = _compute_occ(wfn.evl, e_fermi, smear_typ, degauss)
+                e_smear += wfn.k_weight * _compute_en(wfn, e_fermi, smear_typ, degauss)
+                dftcomm.kgrp_intra.Bcast(wfn.occ)
         e_smear = comm.allreduce(e_smear, comm.SUM)
         e_smear *= 2 if not is_spin else 1
 
     with dftcomm.kgrp_intra as comm:
         e_fermi = comm.bcast(e_fermi)
         e_smear = comm.bcast(e_smear)
-        for wfn in l_wfn:
-            comm.Bcast(wfn.occ)
+
 
     return e_fermi, e_smear

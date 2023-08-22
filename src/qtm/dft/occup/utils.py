@@ -2,7 +2,7 @@ from __future__ import annotations
 __all__ = ['check_args']
 
 from qtm.dft.kswfn import KSWfn
-from qtm.dft.comm_mod import DFTCommMod
+from qtm.dft.config import DFTCommMod
 
 EPS = 1E-7
 
