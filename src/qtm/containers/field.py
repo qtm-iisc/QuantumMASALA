@@ -96,8 +96,8 @@ class FieldR(Field):
         data = gspc.r2g(self.data)
         return FieldG(gspc, data)
 
-    def integrate_unitcell(self, axis: int | Sequence[int] | None = None) \
-            -> NDArray | complex:
+    def integrate_unitcell(self) -> NDArray | complex:
+        #TODO: Update docstrings
         """Evaluates the integral of the field across the unit cell.
 
         Effectively a `numpy.sum` operation involving the last axis + input
@@ -114,7 +114,4 @@ class FieldR(Field):
         NDArray | complex
 
         """
-        return np.sum(
-            np.sum(self, axis=-1),
-            axis=axis
-        ) * self.gspc.reallat_dv
+        return np.sum(self, axis=-1) * self.gspc.reallat_dv
