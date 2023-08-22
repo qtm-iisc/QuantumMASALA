@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Sequence
-__all__ = ['GSpaceBase', ]
+__all__ = ['GSpaceBase', 'cryst2idxgrid']
 
 import numpy as np
 
