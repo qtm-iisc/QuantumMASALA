@@ -5,15 +5,17 @@ import numpy as np
 from qtm.containers import FieldG
 
 
-def check_rho(rho: FieldG):
+def check_rho(rho: FieldG, shape = None):
     if not isinstance(rho, FieldG):
         raise TypeError("'rho' must be a 'FieldG' instance. "
                         f"got type {type(rho)}")
 
-    if rho.shape not in [(1, ), (2, )]:
-        raise ValueError("'shape' of 'rho' must be either (1, ) or (2, ). "
-                         f"got rho.shape = {rho.shape}")
-
+    if shape is None:
+        if rho.shape not in [(1, ), (2, )]:
+            raise ValueError("'shape' of 'rho' must be either (1, ) or (2, ). "
+                             f"got rho.shape = {rho.shape}")
+    elif rho.shape != shape:
+        raise ValueError()
 
 def fieldg_grad(field_g: FieldG) -> FieldG:
     if not isinstance(field_g, FieldG):

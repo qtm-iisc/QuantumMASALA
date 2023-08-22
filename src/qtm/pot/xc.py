@@ -101,7 +101,7 @@ def compute(rho: FieldG, rhocore: FieldG,
         Contribution of XC Potential to total energy (per unit cell)
     """
     check_rho(rho)
-    check_rho(rhocore)
+    check_rho(rhocore, ())
     if rho.gspc != rhocore.gspc:
         raise ValueError("'gspc' of 'rho' and 'rho_core' must match.")
 
@@ -135,7 +135,7 @@ def compute(rho: FieldG, rhocore: FieldG,
         zk_r = FieldR.from_array(grho, xcfunc_out['zk'].T)
         v_r = FieldR.from_array(grho, xcfunc_out['vrho'].T.reshape((numspin, -1)))
         v_xc += v_r
-        en_xc += (rho * zk_r).integrate_unitcell()
+        en_xc += sum((rho * zk_r)).integrate_unitcell()
 
         if need_grad:
             vsig_r = FieldR.from_array(

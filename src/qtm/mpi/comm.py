@@ -60,9 +60,6 @@ class QTMComm:
     """Alias of `mpi4py.MPI.LAND`"""
     LOR = LOR
     """Alias of `mpi4py.MPI.LOR`"""
-    BUFFER_ATTR_NAME: str = '_data'
-    """Attribute name in QTM's data containers that points to the underlying
-    array/buffer"""
 
     def __init__(self, comm: Intracomm | None,
                  parent_comm: QTMComm | None = None,
