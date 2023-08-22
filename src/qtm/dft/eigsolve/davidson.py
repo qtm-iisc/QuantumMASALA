@@ -9,30 +9,39 @@ import numpy as np
 from scipy.linalg import eigh
 
 from qtm.containers import WavefunG
-from qtm.dft import KSWfn, KSHam, DFTCommMod
+from qtm.dft import KSWfn, KSHam, DFTCommMod, dftconfig
 
 from qtm.config import NDArray
 
 
-def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn,
-          diago_thr: float, vloc_g0: float, *args,
-          numwork: int = 2, maxiter: int = 20, **kwargs) -> tuple[KSWfn, int]:
+def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
+          vloc_g0: list[complex]) -> tuple[KSWfn, int]:
     assert isinstance(dftcomm, DFTCommMod)
 
     kgrp_intra = dftcomm.kgrp_intra
     bgrp_inter = dftcomm.pwgrp_inter_kgrp
 
+    numwork = dftconfig.davidson_numwork
+    maxiter = dftconfig.davidson_maxiter
+
     with kgrp_intra as comm:
         assert isinstance(ksham, KSHam)
         assert isinstance(kswfn, KSWfn)
         assert ksham.gkspc is kswfn.gkspc
+
+        diago_thr = comm.bcast(diago_thr)
         assert isinstance(diago_thr, float)
         assert diago_thr > 0
-        assert isinstance(vloc_g0, Number)
-        assert isinstance(numwork, int) and numwork > 1
-        assert isinstance(maxiter, int) and maxiter > 1
-        diago_thr = comm.bcast(diago_thr)
+
         vloc_g0 = comm.bcast(vloc_g0)
+        assert len(vloc_g0) == (1 + ksham.is_noncolin) \
+               and all(isinstance(num, Number) for num in vloc_g0)
+
+        numwork = comm.bcast(numwork)
+        assert isinstance(numwork, int) and numwork > 1
+
+        maxiter = comm.bcast(maxiter)
+        assert isinstance(maxiter, int) and maxiter > 1
 
     gkspc = ksham.gkspc
     basis_size = kswfn.evc_gk.basis_size
@@ -46,7 +55,10 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn,
     # Only the diagonal part of the Ham is considered and 'approximately'
     # inverted so that the small terms will not be transformed to large
     # quantities
-    ham_diag = ksham.ke_gk + ksham.vnl_diag + vloc_g0
+    ham_diag = ksham.ke_gk + ksham.vnl_diag
+    ham_diag.data[:gkspc.size_g] += vloc_g0[0]
+    if ksham.is_noncolin:
+        ham_diag.data[gkspc.size_g:] += vloc_g0[1]
 
     def apply_g_psi(l_wfn: WavefunG, l_evl: NDArray):
         scala = 2
@@ -248,5 +260,6 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn,
             np.fill_diagonal(evc_red[:ndim, :ndim], 1)
 
     kswfn.evc_gk[:] = evc
+
     kswfn.evl[:] = np.array(evl.real, like=kswfn.evl)
     return kswfn, idxiter
