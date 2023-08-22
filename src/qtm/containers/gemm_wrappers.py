@@ -1,15 +1,19 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from typing import Literal, Protocol
-__all__ = ['get_zgemm']
+    from typing import Literal
+__all__ = ['get_zgemm', 'ZGEMMWrapper']
 
+from sys import version_info
 import numpy as np
-from qtm import qtmconfig
+from qtm.config import qtmconfig
+
 from qtm.config import NDArray
 
 
-if TYPE_CHECKING:
+if version_info[1] >= 8:
+    from typing import Protocol
+
     class ZGEMMWrapper(Protocol):
         """Wraps ZGEMM function calls defined in Linear Algebra libraries
 
@@ -23,7 +27,7 @@ if TYPE_CHECKING:
 
         NOTE: The wrapper does very little checks on the input arguments and
         might not behave as expected in some situations. Test thorougly before
-        using it in production
+        using the wrapper.
         """
 
         def __call__(self, a: NDArray, b: NDArray, trans_a: Literal[0, 1, 2] = 0,
@@ -34,9 +38,10 @@ if TYPE_CHECKING:
 
             Array arguments are expected to be in Fortran contiguous order.
             `trans_a` and `trans_b` take 0, 1 or 2 where:
-              * 0 -> op( X ) = X
-              * 1 -> op( X ) = X**T (transpose)
-              * 2 -> op( X ) = X**H (transpose conjugate)
+
+            * 0 -> op( X ) = X
+            * 1 -> op( X ) = X**T (transpose)
+            * 2 -> op( X ) = X**H (transpose conjugate)
 
             Parameters
             ----------
@@ -53,7 +58,9 @@ if TYPE_CHECKING:
             -------
             c : NDarray
             """
-        pass
+        ...
+else:
+    ZGEMMWrapper = 'ZGEMMWrapper'
 
 
 def get_zgemm(arr_type: type) -> ZGEMMWrapper:
