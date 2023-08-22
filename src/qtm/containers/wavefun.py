@@ -12,7 +12,7 @@ from qtm.gspace import GkSpace
 from .buffer import Buffer
 from .field import FieldR
 from .gemm_wrappers import get_zgemm
-from qtm import qtmconfig
+from qtm.config import qtmconfig
 
 from qtm.config import NDArray
 from qtm.msg_format import *
@@ -185,12 +185,12 @@ class WavefunR(Wavefun):
         gwfn = self.gkspc.gwfn
         den_data = self.data.conj()
         den_data *= self.data
+        den_data /= self.basis_size
         den_data = den_data.reshape((*self.shape, self.numspin, -1))
         den = FieldR(gwfn, den_data)
         if not normalize:
             return den
-        fac = np.sum(den, axis=-1) * gwfn.reallat_dv
-        den /= fac[:, np.newaxis]
+        den /= den.integrate_unitcell()[:, np.newaxis]
         return den
 
 
