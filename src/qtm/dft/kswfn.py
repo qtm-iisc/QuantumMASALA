@@ -95,7 +95,7 @@ class KSWfn:
         """Initializes `evc_gk` with an unnormalized randomized
         wavefunction"""
         rng_mod = get_rng_module(self.evc_gk.data)
-        seed_k = np.array(self.k_cryst).view('i8')
+        seed_k = np.array(self.k_cryst).view('uint')
         rng = rng_mod.default_rng([seed_k, qtmconfig.rng_seed])
         data = self.evc_gk.data
         rng.random(out=data.view('f8'))

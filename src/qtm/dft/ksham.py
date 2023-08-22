@@ -7,34 +7,41 @@ from qtm.containers import FieldR, WavefunG
 from qtm.gspace import GkSpace
 from qtm.pseudo import NonlocGenerator
 
+from qtm.msg_format import *
+
 
 class KSHam:
 
-    def __init__(self, gkspc: GkSpace, vloc: FieldR,
+    def __init__(self, gkspc: GkSpace, is_noncolin: bool, vloc: FieldR,
                  l_nloc: Sequence[NonlocGenerator]):
         if not isinstance(gkspc, GkSpace):
-            raise TypeError(f"'gkspc' must be a {GkSpace} instance. "
-                            f"got '{type(gkspc)}'.")
+            raise TypeError(type_mismatch_msg('gkspc', gkspc, GkSpace))
         self.gkspc: GkSpace = gkspc
         self.ke_gk = WavefunG(gkspc, (0.5 * self.gkspc.gk_norm2).astype('c16'))
+
+        if not isinstance(is_noncolin, bool):
+            raise TypeError(type_mismatch_msg('is_noncolin', is_noncolin, bool))
+        self.is_noncolin: bool = is_noncolin
 
         if not isinstance(vloc, FieldR):
             raise TypeError(f"'vloc' must be a {FieldR} instance. "
                             f"got '{type(vloc)}'.")
         if vloc.gspc is not self.gkspc.gwfn:
             raise ValueError("mismatch between 'vloc.gspc' and 'gkspc.gwfn'")
-        if vloc.shape != ():
-            raise ValueError("'vloc' must be a scalar Field i.e. shape =  (). "
-                             f"got vloc.shape = {vloc.shape}")
+        if vloc.shape != (1 + is_noncolin, ):
+            if not is_noncolin and vloc.shape == ():
+                pass
+            else:
+                raise ValueError(value_mismatch_msg(
+                    'vloc.shape', vloc.shape,
+                    f"{(1 + is_noncolin, )} when is_noncolin = {is_noncolin}"
+                ))
         self.vloc = vloc
 
         if not isinstance(l_nloc, Sequence) or any(
                 not isinstance(nloc, NonlocGenerator) for nloc in l_nloc
         ):
-            raise TypeError(
-                f"'l_nloc' must be a sequence of '{NonlocGenerator}' instances. "
-            )
-
+            raise TypeError(type_mismatch_msg('l_nloc', l_nloc, NonlocGenerator))
         self.l_vkb_dij = []
         self.vnl_diag = 0
         for nloc in l_nloc:
@@ -51,7 +58,7 @@ class KSHam:
         np.multiply(self.ke_gk, l_psi, out=l_hpsi)
         for psi, hpsi in zip(l_psi, l_hpsi):
             psi_r = psi.to_r()
-            psi_r *= self.vloc.data
+            psi_r *= self.vloc.data.ravel()
             hpsi += psi_r.to_g()
 
         for vkb, dij in self.l_vkb_dij:
