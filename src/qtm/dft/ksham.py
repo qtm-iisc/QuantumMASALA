@@ -1,33 +1,37 @@
+# TODO: Refactor for spin-orbit calculatioons
 from __future__ import annotations
 __all__ = ['KSHam']
 from collections.abc import Sequence
 import numpy as np
 
-from qtm.containers import FieldR, WavefunG
+from qtm.containers import FieldRType, get_WavefunG
 from qtm.gspace import GkSpace
 from qtm.pseudo import NonlocGenerator
 
+from qtm.logger import qtmlogger
 from qtm.msg_format import *
 
 
 class KSHam:
 
-    def __init__(self, gkspc: GkSpace, is_noncolin: bool, vloc: FieldR,
+    def __init__(self, gkspc: GkSpace, is_noncolin: bool, vloc: FieldRType,
                  l_nloc: Sequence[NonlocGenerator]):
         if not isinstance(gkspc, GkSpace):
             raise TypeError(type_mismatch_msg('gkspc', gkspc, GkSpace))
         self.gkspc: GkSpace = gkspc
-        self.ke_gk = WavefunG(gkspc, (0.5 * self.gkspc.gk_norm2).astype('c16'))
+        self.ke_gk = get_WavefunG(gkspc, 1)((0.5 * self.gkspc.gk_norm2).astype('c16'))
 
         if not isinstance(is_noncolin, bool):
             raise TypeError(type_mismatch_msg('is_noncolin', is_noncolin, bool))
         self.is_noncolin: bool = is_noncolin
 
-        if not isinstance(vloc, FieldR):
-            raise TypeError(f"'vloc' must be a {FieldR} instance. "
-                            f"got '{type(vloc)}'.")
-        if vloc.gspc is not self.gkspc.gwfn:
-            raise ValueError("mismatch between 'vloc.gspc' and 'gkspc.gwfn'")
+        if not isinstance(vloc, FieldRType):
+            raise TypeError(type_mismatch_msg('vloc', vloc, FieldRType))
+        if vloc.gspc is not gkspc.gwfn:
+            raise ValueError(obj_mismatch_msg(
+                'vloc.gspc', vloc.gspc, 'gkspc.gwfn', gkspc.gwfn
+            ))
+
         if vloc.shape != (1 + is_noncolin, ):
             if not is_noncolin and vloc.shape == ():
                 pass
@@ -49,7 +53,8 @@ class KSHam:
             self.l_vkb_dij.append((vkb, dij))
             self.vnl_diag += vkb_diag
 
-    def h_psi(self, l_psi: WavefunG, l_hpsi: WavefunG):
+    @qtmlogger.time('KSHam:h_psi')
+    def h_psi(self, l_psi: get_WavefunG, l_hpsi: get_WavefunG):
         # l_hpsi[:] = self.ke_gk * l_psi
         assert l_psi.shape == l_hpsi.shape
         l_psi = l_psi.reshape(-1)
@@ -68,5 +73,5 @@ class KSHam:
             proj = vkb.vdot(l_psi)
             proj = dij @ proj
 
-            l_hpsi._zgemm(vkb.data.T, proj.T,
-                          0, 1, 1.0, l_hpsi.data.T, 1.0)
+            l_hpsi.zgemm(vkb.data.T, proj.T,
+                         0, 1, 1.0, l_hpsi.data.T, 1.0)

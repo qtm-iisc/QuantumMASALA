@@ -2,7 +2,7 @@ __all__ = ['KSWfn']
 import numpy as np
 
 from qtm.gspace import GkSpace
-from qtm.containers import WavefunG, WavefunSpinG, FieldR
+from qtm.containers import WavefunGType, get_WavefunG, FieldRType
 from qtm.constants import TPIJ
 
 from qtm.config import qtmconfig, NDArray
@@ -75,11 +75,8 @@ class KSWfn:
         For non-colinear calculations
         """
 
-        if self.is_noncolin:
-            evc_gk = WavefunSpinG.empty(self.gkspc, self.numbnd)
-        else:
-            evc_gk = WavefunG.empty(self.gkspc, self.numbnd)
-        self.evc_gk: WavefunG = evc_gk
+        WavefunG = get_WavefunG(self.gkspc, 1 + self.is_noncolin)
+        self.evc_gk: WavefunGType = WavefunG.empty(self.numbnd)
         """Contains the KS eigen-wavefunctions
         """
         self.evl: NDArray = np.empty(self.numbnd, dtype='f8',
@@ -102,11 +99,13 @@ class KSWfn:
         np.multiply(data.real, np.exp(TPIJ * data.imag), out=data)
         self.evc_gk /= 1 + self.gkspc.gk_norm2
 
-    def compute_rho(self) -> FieldR:
+    def compute_rho(self) -> FieldRType:
         """Constructs a density from the eigenkets `evc_gk` and occupation
         `occ`"""
         self.evc_gk.normalize()
-        rho = sum(occ * wfn.to_r().get_density(normalize=False)
-                  for wfn, occ in zip(self.evc_gk, self.occ))
+        rho: FieldRType = sum(
+            occ * wfn.to_r().get_density(normalize=False)
+            for wfn, occ in zip(self.evc_gk, self.occ)
+        )
         rho /= np.prod(rho.gspc.grid_shape) * rho.gspc.reallat_dv
         return rho

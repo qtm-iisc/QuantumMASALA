@@ -3,7 +3,8 @@ __all__ = ['MixModBase']
 from abc import ABC, abstractmethod
 import numpy as np
 
-from qtm.containers import FieldG
+from qtm.gspace import GSpace
+from qtm.containers import FieldGType
 from qtm.pot.utils import check_rho
 from qtm.dft import DFTCommMod
 
@@ -13,29 +14,28 @@ from qtm.constants import FPI
 class MixModBase(ABC):
 
     @abstractmethod
-    def __init__(self, dftcomm: DFTCommMod, rho: FieldG, beta: float, mixdim: int):
+    def __init__(self, dftcomm: DFTCommMod, rho: FieldGType, beta: float, mixdim: int):
         assert isinstance(dftcomm, DFTCommMod)
         self.dftcomm = dftcomm
         self.is_root_pwgrp = self.dftcomm.pwgrp_inter_image.rank == 0
 
         check_rho(rho)
-        self.grho = rho.gspc
-        self.numspin = rho.shape[0]
+        self.FieldG: type[FieldGType] = type(rho)
+        self.grho: GSpace = self.FieldG.gspc
+        self.numspin: int = rho.shape[0]
 
         assert isinstance(beta, float) and 0 < beta <= 1
-        self.beta = beta
+        self.beta: float = beta
         assert isinstance(mixdim, int) and mixdim > 1
-        self.mixdim = mixdim
+        self.mixdim: int = mixdim
 
-    def _check_rho(self, rho_in: FieldG, rho_out: FieldG):
-        assert isinstance(rho_in, FieldG)
-        assert isinstance(rho_out, FieldG)
-        assert rho_in.gspc is self.grho
-        assert rho_out.gspc is self.grho
+    def _check_rho(self, rho_in: FieldGType, rho_out: FieldGType):
+        assert type(rho_in) is self.FieldG
+        assert type(rho_out) is self.FieldG
         assert rho_in.shape == (self.numspin, )
         assert rho_out.shape == (self.numspin,)
 
-    def _dot(self, rho1_g: FieldG, rho2_g: FieldG) -> float:
+    def _dot(self, rho1_g: FieldGType, rho2_g: FieldGType) -> float:
         chden1 = sum(rho1_g)
         chden2 = sum(rho2_g)
         fac = (
@@ -55,20 +55,20 @@ class MixModBase(ABC):
             dot += fac * np.sum(spden1.conj() * spden2).real / tpiba**2
         return dot
 
-    def compute_error(self, rho_in: FieldG, rho_out: FieldG) -> float:
+    def compute_error(self, rho_in: FieldGType, rho_out: FieldGType) -> float:
         self._check_rho(rho_in, rho_out)
         res = rho_in - rho_out
         return self._dot(res, res)
 
-    def mix(self, rho_in: FieldG, rho_out: FieldG) -> FieldG:
+    def mix(self, rho_in: FieldGType, rho_out: FieldGType) -> FieldGType:
         self._check_rho(rho_in, rho_out)
         if self.is_root_pwgrp:
             rho_next = self._mix(rho_in, rho_out)
         else:
-            rho_next = FieldG.empty(self.grho, self.numspin)
+            rho_next = self.FieldG.empty(self.numspin)
         self.dftcomm.pwgrp_inter_image.Bcast(rho_next.data)
         return rho_next
 
     @abstractmethod
-    def _mix(self, rho_in: FieldG, rho_out: FieldG) -> FieldG:
+    def _mix(self, rho_in: FieldGType, rho_out: FieldGType) -> FieldGType:
         pass

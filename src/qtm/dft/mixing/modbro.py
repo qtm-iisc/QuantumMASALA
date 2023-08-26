@@ -2,7 +2,7 @@ __all__ = ['ModBroyden']
 
 import numpy as np
 
-from qtm.containers import FieldG
+from qtm.containers import FieldGType
 from qtm.dft import DFTCommMod
 
 from .base import MixModBase
@@ -10,23 +10,23 @@ from .base import MixModBase
 
 class ModBroyden(MixModBase):
 
-    def __init__(self, dftcomm: DFTCommMod, rho: FieldG,
+    def __init__(self, dftcomm: DFTCommMod, rho: FieldGType,
                  beta: float, mixdim: int):
         super().__init__(dftcomm, rho, beta, mixdim)
         self.idxiter = 0
 
         if self.is_root_pwgrp:
-            self.rho_old = FieldG.empty(self.grho, self.numspin)
-            self.res_old = FieldG.empty(self.grho, self.numspin)
+            self.rho_old = self.FieldG.empty(self.numspin)
+            self.res_old = self.FieldG.empty(self.numspin)
 
-            self.l_del_rho = FieldG.empty(self.grho, (self.mixdim, self.numspin))
-            self.l_del_res = FieldG.empty(self.grho, (self.mixdim, self.numspin))
+            self.l_del_rho = self.FieldG.empty((self.mixdim, self.numspin))
+            self.l_del_res = self.FieldG.empty((self.mixdim, self.numspin))
             self.overlap = self.grho.allocate_array((self.mixdim, self.mixdim))
         else:
             self.rho_old, self.res_old = None, None
             self.l_del_rho, self.l_del_res, self.overlap = None, None, None
 
-    def _mix(self, rho_in: FieldG, rho_out: FieldG) -> FieldG:
+    def _mix(self, rho_in: FieldGType, rho_out: FieldGType) -> FieldGType:
         self._check_rho(rho_in, rho_out)
         res = rho_out - rho_in
 

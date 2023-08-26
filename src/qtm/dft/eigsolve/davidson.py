@@ -8,12 +8,14 @@ from numbers import Number
 import numpy as np
 from scipy.linalg import eigh
 
-from qtm.containers import WavefunG
+from qtm.containers import WavefunGType
 from qtm.dft import KSWfn, KSHam, DFTCommMod, dftconfig
 
+from qtm.logger import qtmlogger
 from qtm.config import NDArray
 
 
+@qtmlogger.time('davidson:solve')
 def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
           vloc_g0: list[complex]) -> tuple[KSWfn, int]:
     assert isinstance(dftcomm, DFTCommMod)
@@ -60,7 +62,7 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     if ksham.is_noncolin:
         ham_diag.data[gkspc.size_g:] += vloc_g0[1]
 
-    def apply_g_psi(l_wfn: WavefunG, l_evl: NDArray):
+    def apply_g_psi(l_wfn: WavefunGType, l_evl: NDArray):
         scala = 2
         for wfn_, evl_ in zip(l_wfn, l_evl):
             x = scala * (ham_diag - evl_)
@@ -73,8 +75,9 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     n_unconv = numeig
 
     ndim_max = numwork * numeig
-    psi = WavefunG.empty(gkspc, ndim_max)
-    hpsi = WavefunG.empty(gkspc, ndim_max)
+    WavefunG: type[WavefunGType] = type(evc)
+    psi = WavefunG.empty(ndim_max)
+    hpsi = WavefunG.empty(ndim_max)
     ham_red = np.zeros((ndim_max, ndim_max), dtype='c16', like=evl)
     ovl_red = np.zeros((ndim_max, ndim_max), dtype='c16', like=evl)
     evc_red = np.zeros((numeig, ndim_max), dtype='c16', like=evl)

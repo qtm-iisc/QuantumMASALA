@@ -6,7 +6,7 @@ from __future__ import annotations
 __all__ = ['solve']
 from scipy.sparse.linalg import LinearOperator, eigsh
 
-from qtm.containers import WavefunG
+from qtm.containers import WavefunGType
 from qtm.dft import KSWfn, KSHam, DFTCommMod
 
 
@@ -26,6 +26,7 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn,
         assert diago_thr > 0
 
         gkspc = ksham.gkspc
+        WavefunG = type(kswfn.evc_gk)
         numbnd = kswfn.numbnd
         evl = kswfn.evl
         evc_gk = kswfn.evc_gk.data.T
@@ -34,8 +35,8 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn,
         def ksham_matvec(psi):
             nonlocal n_hpsi
             n_hpsi += 1
-            psi = WavefunG(gkspc, psi)
-            hpsi = WavefunG.empty(gkspc, psi.shape)
+            psi = WavefunG(psi)
+            hpsi = WavefunG.empty(psi.shape)
             ksham.h_psi(psi, hpsi)
             return hpsi.data
 
