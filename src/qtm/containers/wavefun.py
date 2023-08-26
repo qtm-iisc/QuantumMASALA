@@ -1,16 +1,15 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from typing import Literal
-__all__ = ['Wavefun', 'WavefunG', 'WavefunR',
-           'WavefunSpinG', 'WavefunSpinR']
+__all__ = ['WavefunGType', 'get_WavefunG',
+           'WavefunRType', 'get_WavefunR',
+           'WavefunType']
 
-from abc import ABC, abstractmethod
+from functools import cache, cached_property
+from typing import Union
 import numpy as np
 
 from qtm.gspace import GkSpace
-from .buffer import Buffer
-from .field import FieldR
+from .buffer import BufferType
+from .field import get_FieldR
 from .gemm_wrappers import get_zgemm
 from qtm.config import qtmconfig
 
@@ -18,65 +17,36 @@ from qtm.config import NDArray
 from qtm.msg_format import *
 
 
-class Wavefun(Buffer, ABC):
-    """Represents the (periodic part of) Bloch Wavefunctions of crystal.
-
-    The G-Space of the bloch wavefunctions are centred at a given k-point
-    instead of the origin. This G-Space is described by `qtm.gspace.GkSpace`
-    instances. For naming consistency, this class will have the `gkspc`
-    attribute aliasing `gspc`, which is a `qtm.gspace.GkSpace` instance.
-    """
+class WavefunGType(BufferType):
+    gspc: GkSpace = None
+    gkspc: GkSpace = None
     numspin: int = None
-    gspc: GkSpace
+    basis_type = 'g'
+    basis_size: int = None
+    ndarray: type = None
 
-    @abstractmethod
-    def __new__(cls, gkspc: GkSpace, data: NDArray):
-        assert cls.numspin is not None
-        return Buffer.__new__(cls, gkspc, data)
-
-    def __init__(self, gkspc: GkSpace, data: NDArray):
+    def __init_subclass__(cls, gkspc: GkSpace, numspin: int):
         if not isinstance(gkspc, GkSpace):
-            raise TypeError(type_mismatch_msg('gspc', gkspc, GkSpace))
-        Buffer.__init__(self, gkspc, data)
-        self.gkspc: GkSpace = self.gspc
-        """Alias of `gspc`"""
-        self._zgemm = get_zgemm(type(data))
-        """Wrapper to ZGEMM BLAS routine. Refer to 
-        `qtm.containers.gemm_wrappers.ZGEMMWrapper` for further info"""
+            raise TypeError(type_mismatch_msg('gkspc', gkspc, GkSpace))
+        if not isinstance(numspin, int) or numspin <= 0:
+            raise TypeError(type_mismatch_msg(
+                'numspin', numspin, 'a positive integer'
+            ))
+        cls.gspc, cls.gkspc = gkspc, gkspc
+        cls.numspin, cls.basis_size = numspin, numspin * gkspc.size_g
+        cls.ndarray = type(cls.gspc.g_cryst)
 
+    @cached_property
+    def zgemm(self):
+        return get_zgemm(self.ndarray)
 
-class WavefunG(Wavefun):
-    numspin: int = 1
+    def to_r(self) -> WavefunRType:
+        wfn_r = get_WavefunR(self.gkspc, self.numspin).empty(self.shape)
+        self.gkspc._g2r(self._data, wfn_r._data)
+        return wfn_r
 
-    def __new__(cls, gkspc: GkSpace, data: NDArray):
-        if not qtmconfig.mpi4py_installed:
-            return Wavefun.__new__(cls, gkspc, data)
-
-        from qtm.mpi import DistGkSpace, DistWavefun, DistWavefunG
-        if isinstance(gkspc, DistGkSpace):
-            return DistWavefun.__new__(DistWavefunG, gkspc, data)
-        return Wavefun.__new__(cls, gkspc, data)
-
-    @classmethod
-    def _get_basis_size(cls, gkspc: GkSpace) -> int:
-        return cls.numspin * gkspc.size_g
-
-    def __init__(self, gkspc: GkSpace, data: NDArray):
-        Wavefun.__init__(self, gkspc, data)
-
-    @property
-    def basis_type(self) -> Literal['g']:
-        return 'g'
-
-    def to_g(self) -> WavefunG:
+    def to_g(self) -> WavefunGType:
         return self
-
-    def to_r(self) -> WavefunR:
-        gkspc = self.gkspc
-        data_g = self.data.reshape((*self.shape, self.numspin, -1))
-
-        data_r = gkspc.g2r(data_g).reshape((*self.shape, -1))
-        return WavefunR(gkspc, data_r)
 
     def norm2(self) -> NDArray:
         """Returns the norm-squared value of the wavefunction vectors."""
@@ -97,7 +67,7 @@ class WavefunG(Wavefun):
         """Normalizes the wavefunction so that its norm is 1."""
         self.data[:] /= self.norm()[:, np.newaxis]
 
-    def vdot(self, ket: WavefunG) -> NDArray:
+    def vdot(self, ket: get_WavefunG) -> NDArray:
         """Evaluates the vector dot product between the wavefunctions in two
         `WavefunG` instances. The values of the instance are conjugated, not
         the ones in the method input.
@@ -125,7 +95,7 @@ class WavefunG(Wavefun):
 
         bra_ = self.data.reshape((-1, self.basis_size))
         ket_ = ket.data.reshape((-1, self.basis_size))
-        braket = self._zgemm(
+        braket = self.zgemm(
             alpha=1.0, a=bra_.T, trans_a=2,
             b=ket_.T, trans_b=0,
         )
@@ -139,37 +109,38 @@ class WavefunG(Wavefun):
             return braket.reshape((*self.shape, *ket.shape))
 
 
-class WavefunR(Wavefun):
-    numspin: int = 1
+class WavefunRType(BufferType):
+    gspc: GkSpace = None
+    gkspc: GkSpace = None
+    numspin: int = None
+    basis_type = 'r'
+    basis_size: int = None
+    ndarray: type = None
+    zgemm = None
 
-    def __new__(cls, gkspc: GkSpace, data: NDArray):
-        if not qtmconfig.mpi4py_installed:
-            return Wavefun.__new__(cls, gkspc, data)
+    def __init_subclass__(cls, gkspc: GkSpace, numspin: int):
+        if not isinstance(gkspc, GkSpace):
+            raise TypeError(type_mismatch_msg(
+                'gkspc', gkspc, GkSpace
+            ))
+        if not isinstance(numspin, int) or numspin <= 0:
+            raise TypeError(type_mismatch_msg(
+                'numspin', numspin, 'a positive integer'
+            ))
+        cls.gspc, cls.gkspc = gkspc, gkspc
+        cls.numspin, cls.basis_size = numspin, numspin * gkspc.size_r
+        cls.ndarray = type(cls.gspc.g_cryst)
+        cls.zgemm = get_zgemm(cls.ndarray)
 
-        from qtm.mpi import DistGkSpace, DistWavefun, DistWavefunR
-        if isinstance(gkspc, DistGkSpace):
-            return DistWavefun.__new__(DistWavefunR, gkspc, data)
-        return Wavefun.__new__(cls, gkspc, data)
+    def to_g(self) -> WavefunGType:
+        wfn_g = get_WavefunG(self.gkspc, self.numspin).empty(self.shape)
+        self.gkspc._r2g(self._data, wfn_g._data)
+        return wfn_g
 
-    @classmethod
-    def _get_basis_size(cls, gkspc: GkSpace) -> int:
-        return cls.numspin * gkspc.size_r
-
-    @property
-    def basis_type(self) -> Literal['r']:
-        return 'r'
-
-    def to_r(self) -> WavefunR:
+    def to_r(self) -> WavefunRType:
         return self
 
-    def to_g(self) -> WavefunG:
-        gkspc = self.gkspc
-        data_r = self.data.reshape((*self.shape, self.numspin, -1))
-
-        data_g = gkspc.r2g(data_r).reshape((*self.shape, -1))
-        return WavefunG(gkspc, data_g)
-
-    def get_density(self, normalize: bool = True) -> FieldR:
+    def get_density(self, normalize: bool = True) -> get_FieldR:
         """"Constructs the probability density from the stored wavefunctions
 
         Parameters
@@ -187,48 +158,37 @@ class WavefunR(Wavefun):
         den_data *= self.data
         den_data /= self.basis_size
         den_data = den_data.reshape((*self.shape, self.numspin, -1))
-        den = FieldR(gwfn, den_data)
+        den = get_FieldR(gwfn)(den_data)
         if not normalize:
             return den
         den /= den.integrate_unitcell()[:, np.newaxis]
         return den
 
 
-class WavefunSpinG(WavefunG):
-    numspin = 2
+WavefunType = Union[WavefunGType, WavefunRType]
 
-    def __new__(cls, gkspc: GkSpace, data: NDArray):
-        if not qtmconfig.mpi4py_installed:
-            return Wavefun.__new__(cls, gkspc, data)
 
-        from qtm.mpi import DistGkSpace, DistWavefun, DistWavefunSpinG
+@cache
+def get_WavefunG(gkspc: GkSpace, numspin: int) -> type[WavefunGType]:
+    if qtmconfig.mpi4py_installed:
+        from qtm.mpi.gspace import DistGkSpace
+        from qtm.mpi.containers import get_DistWavefunG
         if isinstance(gkspc, DistGkSpace):
-            return DistWavefun.__new__(DistWavefunSpinG, gkspc, data)
-        return Wavefun.__new__(cls, gkspc, data)
+            return get_DistWavefunG(gkspc, numspin)
 
-    def to_r(self) -> WavefunSpinR:
-        gkspc = self.gkspc
-        data_g = self.data.reshape((*self.shape, self.numspin, -1))
-
-        data_r = gkspc.g2r(data_g).reshape((*self.shape, -1))
-        return WavefunSpinR(gkspc, data_r)
+    class WavefunG(WavefunGType, gkspc=gkspc, numspin=numspin):
+        pass
+    return WavefunG
 
 
-class WavefunSpinR(WavefunR):
-    numspin = 2
-
-    def __new__(cls, gkspc: GkSpace, data: NDArray):
-        if not qtmconfig.mpi4py_installed:
-            return Wavefun.__new__(cls, gkspc, data)
-
-        from qtm.mpi import DistGkSpace, DistWavefun, DistWavefunR
+@cache
+def get_WavefunR(gkspc: GkSpace, numspin: int) -> type[WavefunRType]:
+    if qtmconfig.mpi4py_installed:
+        from qtm.mpi.gspace import DistGkSpace
+        from qtm.mpi.containers import get_DistWavefunR
         if isinstance(gkspc, DistGkSpace):
-            return DistWavefun.__new__(DistWavefunR, gkspc, data)
-        return Wavefun.__new__(cls, gkspc, data)
+            return get_DistWavefunR(gkspc, numspin)
 
-    def to_g(self) -> WavefunSpinG:
-        gkspc = self.gkspc
-        data_r = self.data.reshape((*self.shape, self.numspin, -1))
-
-        data_g = gkspc.r2g(data_r).reshape((*self.shape, -1))
-        return WavefunSpinR(gkspc, data_g)
+    class WavefunR(WavefunRType, gkspc=gkspc, numspin=numspin):
+        pass
+    return WavefunR
