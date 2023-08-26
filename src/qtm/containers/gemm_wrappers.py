@@ -5,6 +5,7 @@ if TYPE_CHECKING:
 __all__ = ['get_zgemm', 'ZGEMMWrapper']
 
 from sys import version_info
+from functools import cache
 import numpy as np
 from qtm.config import qtmconfig
 
@@ -32,7 +33,7 @@ if version_info[1] >= 8:
 
         def __call__(self, a: NDArray, b: NDArray, trans_a: Literal[0, 1, 2] = 0,
                      trans_b: Literal[0, 1, 2] = 0, alpha: complex = 1.0,
-                     c: NDArray | None = None, beta: complex = 0.0) -> NDArray:
+                     out: NDArray | None = None, beta: complex = 0.0) -> NDArray:
             """Implements C := alpha*op( A )*op( B ) + beta*C, where op( X ) is
             one of: op( X ) = X or op( X ) = X**T or op( X ) = X**H
 
@@ -50,19 +51,20 @@ if version_info[1] >= 8:
             trans_a: Literal[0, 1, 2], default=0
             trans_b: Literal[0, 1, 2], default=0
             alpha: complex, default=1.0
-            c: Optional[NDArray], default=None
+            out: Optional[NDArray], default=None
                 If None, a new array is allocated and C above is taken to be zero
             beta: complex, default=0.0
 
             Returns
             -------
-            c : NDarray
+            out : NDarray
             """
         ...
 else:
     ZGEMMWrapper = 'ZGEMMWrapper'
 
 
+@cache
 def get_zgemm(arr_type: type) -> ZGEMMWrapper:
     if arr_type is np.ndarray:
         from scipy.linalg.blas import zgemm
