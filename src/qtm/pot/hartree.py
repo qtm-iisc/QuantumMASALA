@@ -2,12 +2,12 @@ from __future__ import annotations
 __all__ = ['compute']
 
 import numpy as np
-from qtm.containers import FieldG, FieldR
+from qtm.containers import FieldGType, FieldRType
 from qtm.constants import FPI
 from .utils import check_rho
 
 
-def compute(rho: FieldG) -> tuple[FieldR, float]:
+def compute(rho: FieldGType) -> tuple[FieldRType, float]:
     """Computes the Hartree Potential and the corresponding interaction energy
     per unit cell for input charge.
 
@@ -24,7 +24,7 @@ def compute(rho: FieldG) -> tuple[FieldR, float]:
     """
     check_rho(rho)
     gspc = rho.gspc
-    rho = sum(rho)
+    rho: FieldGType = sum(rho)
     v_g = FPI * rho
     with np.errstate(divide='ignore'):
         v_g /= gspc.g_norm2

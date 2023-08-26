@@ -7,7 +7,7 @@ from scipy.linalg import block_diag
 
 from qtm.crystal.basis_atoms import BasisAtoms
 from qtm.gspace import GSpace, GkSpace
-from qtm.containers import WavefunG
+from qtm.containers import get_WavefunG, WavefunGType
 from .upf import UPFv2Data
 
 from qtm.config import NDArray
@@ -97,7 +97,7 @@ class NonlocGenerator:
         self.dij_beta = ppdata.dij
 
     @qtmlogger.time('nloc:gen_vkb_dij')
-    def gen_vkb_dij(self, gkspc: GkSpace) -> tuple[WavefunG, NDArray, WavefunG]:
+    def gen_vkb_dij(self, gkspc: GkSpace) -> tuple[WavefunGType, NDArray, WavefunGType]:
         r"""Computes the Nonlocal Operator as a set of Beta Projectors and a
         transformation matrix
 
@@ -116,7 +116,9 @@ class NonlocGenerator:
             list of diagonal elements of the non-local operator
         """
         # Setting Up: Computing spherical coordinates for all :math:`\mathbf{G}+\mathbf{k}`
+        WavefunG = get_WavefunG(gkspc, 1)
         numgk = gkspc.size_g
+
         gk_cryst = gkspc.gk_cryst
         gk_x, gk_y, gk_z = gkspc.gk_cart
         gk_norm = gkspc.gk_norm
@@ -193,8 +195,8 @@ class NonlocGenerator:
         numatoms = self.species.numatoms
 
         # Generating KB Projectors corresponding to all atoms
-        l_vkb_full = WavefunG.empty(gkspc, numatoms * self.numvkb)
-        vkb_diag = WavefunG.zeros(gkspc, None)
+        l_vkb_full = WavefunG.empty(numatoms * self.numvkb)
+        vkb_diag = WavefunG.zeros(None)
         for iat, pos_cryst in enumerate(self.species.r_cryst.T):
             phase = np.exp(-TPIJ * (pos_cryst @ gk_cryst))
             l_vkb_iat = l_vkb_full[iat*self.numvkb: (iat+1)*self.numvkb]
