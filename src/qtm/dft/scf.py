@@ -12,7 +12,7 @@ import numpy as np
 from qtm.crystal import Crystal
 from qtm.kpts import KList
 from qtm.gspace import GSpace, GkSpace
-from qtm.containers import FieldG, FieldR
+from qtm.containers import FieldGType, FieldRType, get_FieldG, get_FieldR
 
 from qtm.pot import hartree, xc, ewald
 from qtm.pseudo import (
@@ -64,7 +64,7 @@ else:
 def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         grho: GSpace, gwfn: GSpace, numbnd: int,
         is_spin: bool, is_noncolin: bool,
-        symm_rho: bool = True, rho_start: FieldG | tuple[float, ...] | None = None,
+        symm_rho: bool = True, rho_start: FieldGType | tuple[float, ...] | None = None,
         wfn_init: WfnInit | None = None,
         libxc_func: tuple[str, str] | None = None,
 
@@ -132,7 +132,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                 'symm_rho', symm_rho, bool
             ))
 
-        if isinstance(rho_start, FieldG):
+        if isinstance(rho_start, FieldGType):
             if rho_start.gspc is not grho:
                 raise ValueError(
                     obj_mismatch_msg('rho_start.gspc', rho_start.gspc, 'grho', grho)
@@ -146,12 +146,12 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             if rho_start is None:
                 raise ValueError(type_mismatch_msg(
                     'rho_start', rho_start,
-                    f"a {FieldG} instance or a sequeuce of numbers between -1 and +1 "
+                    f"a {get_FieldG} instance or a sequeuce of numbers between -1 and +1 "
                     f"representing starting spin polarisation on each atomic type of"
                     f"crystal (for is_spin = {is_spin})"
                 ))
             starting_mag = rho_start
-            rho_start = FieldG.zeros(grho, (1 + is_spin, ))
+            rho_start = get_FieldG(grho).zeros(1 + is_spin)
             for sp, mag in zip(crystal.l_atoms, starting_mag):
                 rho_atomic_sp = loc_generate_rhoatomic(sp, grho)
                 mag = max(min(mag, 1), -1)
@@ -252,7 +252,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                 wfn_init(ik, kswfn)
             l_kswfn_kgrp.append(kswfn)
 
-        v_ion, rho_core = FieldG.zeros(grho, ()), FieldG.zeros(grho, ())
+        FieldG_rho: FieldGType = get_FieldG(grho)
+        v_ion, rho_core = FieldG_rho.zeros(None), FieldG_rho.zeros(1)
         l_nloc = []
         for sp in crystal.l_atoms:
             v_ion_sp, rho_core_sp = loc_generate_pot_rhocore(sp, grho)
@@ -273,12 +274,12 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             xc.check_libxc_func(libxc_func)
 
         # SCF iteration input and output charge densities
-        rho_in, rho_out = rho_start, FieldG.empty(grho, (1 + is_spin,))
+        rho_in, rho_out = rho_start, FieldG_rho.empty(1 + is_spin)
 
         # Defining local potential calculation subroutine
-        v_hart: FieldR
-        v_xc: FieldR
-        vloc: FieldR
+        v_hart: FieldG_rho
+        v_xc: FieldG_rho
+        vloc: FieldG_rho
         vloc_g0: list[complex]
 
         def compute_vloc():
@@ -313,7 +314,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         # Generating rho from l_kswfn_kgrp
         def update_rho_out():
             nonlocal rho_out
-            rho_wfn = FieldG.zeros(gwfn, (1 + is_spin, ))
+            rho_wfn = FieldG_rho.zeros(1 + is_spin)
             sl_bnd = scatter_slice(numbnd, n_bgrp, i_bgrp)
             if sl_bnd.start < sl_bnd.stop:
                 for kswfn_k in l_kswfn_kgrp:
