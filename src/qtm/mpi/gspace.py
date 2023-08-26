@@ -126,46 +126,50 @@ class DistGSpaceBase(GSpaceBase):
         # which yield contiguous chunks, so the size of each chunk is computed
         self._scatter_r_bufspec = scatter_len(nx, self.pwgrp_size) * ny * nz
 
-    def _r2g(self, arr_inp: NDArray, arr_out: NDArray) -> None:
+    def _r2g(self, arr_r: NDArray, arr_g: NDArray) -> None:
         # Similar to FFT3DSticks but with communication between the two FFT
-        self._fftyz.inp_fwd[:] = arr_inp
-        work_full = self._fftyz.fft().reshape((self.nx_loc, -1))
-        work_trans = self._work_trans.reshape((-1, self.nx_loc))
-        work_full.take(self._trans2full, axis=1, out=work_trans.T)
+        for inp, out in zip(arr_r.reshape(-1, *self.grid_shape),
+                            arr_g.reshape(-1, self.size_g)):
+            self._fftyz.inp_fwd[:] = inp
+            work_full = self._fftyz.fft().reshape((self.nx_loc, -1))
+            work_trans = self._work_trans.reshape((-1, self.nx_loc))
+            work_full.take(self._trans2full, axis=1, out=work_trans.T)
 
-        work_sticks = self._fftx.inp_fwd.ravel()
-        self.pwgrp_comm.comm.Alltoallv(
-            (work_trans, self._trans_bufspecv),
-            (work_sticks, self._sticks_bufspecv)
-        )
-        np.concatenate(tuple(
-            arr.reshape(self.numsticks_loc, -1).T for arr in
-            np.split(work_sticks, np.cumsum(self._sticks_bufspecv)[:-1])
-        ), axis=0, out=work_sticks.reshape((-1, self.numsticks_loc)))
+            work_sticks = self._fftx.inp_fwd.ravel()
+            self.pwgrp_comm.comm.Alltoallv(
+                (work_trans, self._trans_bufspecv),
+                (work_sticks, self._sticks_bufspecv)
+            )
+            np.concatenate(tuple(
+                arr.reshape(self.numsticks_loc, -1).T for arr in
+                np.split(work_sticks, np.cumsum(self._sticks_bufspecv)[:-1])
+            ), axis=0, out=work_sticks.reshape((-1, self.numsticks_loc)))
 
-        work_sticks = self._fftx.fft()
-        work_sticks.take(self._g2sticks_loc, out=arr_out)
+            work_sticks = self._fftx.fft()
+            work_sticks.take(self._g2sticks_loc, out=out)
 
-    def _g2r(self, arr_inp: NDArray, arr_out: NDArray) -> None:
+    def _g2r(self, arr_r: NDArray, arr_g: NDArray) -> None:
         # Similar to FFT3DSticks but with communication between the two FFT
-        work_sticks = self._fftx.inp_bwd
-        work_sticks.reshape(-1)[self._g2sticks_loc] = arr_inp
-        work_sticks = self._fftx.ifft(self._normalise_idft)
+        for inp, out in zip(arr_g.reshape(-1, self.size_g),
+                            arr_r.reshape(-1, *self.grid_shape)):
+            work_sticks = self._fftx.inp_bwd
+            work_sticks.reshape(-1)[self._g2sticks_loc] = inp
+            work_sticks = self._fftx.ifft(self._normalise_idft)
 
-        work_trans = self._work_trans
-        self.pwgrp_comm.comm.Alltoallv(
-            (work_sticks, self._sticks_bufspecv),
-            (work_trans, self._trans_bufspecv)
-        )
-        np.concatenate(tuple(
-            arr.reshape((self.nx_loc, -1)).T for arr in
-            np.split(work_trans, np.cumsum(self._trans_bufspecv)[:-1])
-        ), axis=0, out=work_trans.reshape((-1, self.nx_loc)))
-        work_trans = work_trans.reshape((-1, self.nx_loc))
+            work_trans = self._work_trans
+            self.pwgrp_comm.comm.Alltoallv(
+                (work_sticks, self._sticks_bufspecv),
+                (work_trans, self._trans_bufspecv)
+            )
+            np.concatenate(tuple(
+                arr.reshape((self.nx_loc, -1)).T for arr in
+                np.split(work_trans, np.cumsum(self._trans_bufspecv)[:-1])
+            ), axis=0, out=work_trans.reshape((-1, self.nx_loc)))
+            work_trans = work_trans.reshape((-1, self.nx_loc))
 
-        work_full = self._fftyz.inp_bwd
-        work_full.reshape((self.nx_loc, -1))[:, self._trans2full] = work_trans.T
-        arr_out[:] = self._fftyz.ifft(self._normalise_idft)
+            work_full = self._fftyz.inp_bwd
+            work_full.reshape((self.nx_loc, -1))[:, self._trans2full] = work_trans.T
+            out[:] = self._fftyz.ifft(self._normalise_idft)
 
     def allocate_array(self, shape: int | Sequence[int],
                        dtype: str = 'c16') -> NDArray:
@@ -175,32 +179,6 @@ class DistGSpaceBase(GSpaceBase):
     def check_array_type(self, arr: NDArray) -> None:
         """Modified to prevent accessing the now-DummyFFT instance"""
         self.FFTBackend.check_array_type(arr)
-
-    def r2g(self, arr_r: NDArray, arr_g: NDArray | None = None) -> NDArray:
-        self.check_array_r(arr_r)
-        if arr_g is not None:
-            self.check_array_g(arr_g)
-        else:
-            arr_g = self.allocate_array((*arr_r.shape[:-1], self.size_g))
-
-        for inp, out in zip(arr_r.reshape(-1, *self.grid_shape_loc),
-                            arr_g.reshape(-1, self.size_g)):
-            self._r2g(inp, out)
-
-        return arr_g
-
-    def g2r(self, arr_g: NDArray, arr_r: NDArray | None = None) -> NDArray:
-        self.check_array_g(arr_g)
-        if arr_r is not None:
-            self.check_array_r(arr_r)
-        else:
-            arr_r = self.allocate_array((*arr_g.shape[:-1], self.size_r))
-
-        for inp, out in zip(arr_g.reshape(-1, self.size_g),
-                            arr_r.reshape(-1, *self.grid_shape_loc)):
-            self._g2r(inp, out)
-
-        return arr_r
 
     def scatter_r(self, arr_root: NDArray | None) -> NDArray:
         with self.pwgrp_comm as comm:

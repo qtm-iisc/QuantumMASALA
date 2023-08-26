@@ -247,18 +247,24 @@ class GSpaceBase:
                 'arr.shape', arr.shape, (..., self.size_g)
             ))
 
+    def _r2g(self, arr_r: NDArray, arr_g: NDArray):
+        for inp, out in zip(arr_r.reshape(-1, *self.grid_shape),
+                            arr_g.reshape(-1, self.size_g)):
+            self._fft.r2g(inp, out)
+
     def r2g(self, arr_r: NDArray, arr_g: NDArray | None = None) -> NDArray:
         self.check_array_r(arr_r)
         if arr_g is not None:
             self.check_array_g(arr_g)
         else:
             arr_g = self.allocate_array((*arr_r.shape[:-1], self.size_g))
-
-        for inp, out in zip(arr_r.reshape(-1, *self.grid_shape),
-                            arr_g.reshape(-1, self.size_g)):
-            self._fft.r2g(inp, out)
-
+        self._r2g(arr_r, arr_g)
         return arr_g
+
+    def _g2r(self, arr_g: NDArray, arr_r: NDArray):
+        for inp, out in zip(arr_g.reshape(-1, self.size_g),
+                            arr_r.reshape(-1, *self.grid_shape)):
+            self._fft.g2r(inp, out)
 
     def g2r(self, arr_g: NDArray, arr_r: NDArray | None = None) -> NDArray:
         self.check_array_g(arr_g)
@@ -266,9 +272,5 @@ class GSpaceBase:
             self.check_array_r(arr_r)
         else:
             arr_r = self.allocate_array((*arr_g.shape[:-1], self.size_r))
-
-        for inp, out in zip(arr_g.reshape(-1, self.size_g),
-                            arr_r.reshape(-1, *self.grid_shape)):
-            self._fft.g2r(inp, out)
-
+        self._g2r(arr_g, arr_r)
         return arr_r
