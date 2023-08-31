@@ -9,15 +9,15 @@ using a `GSpace` instance. This is done in the followoing way:
 ...
 ... rho_g = FieldG_grho.empty(2)
 
-Convenience Functions `FieldG` and `FieldR` are defined to generate the
-`FieldGType` and `FieldRType` instances respectively. So, the same can be
+Convenience Functions `get_FieldG` and `get_FieldR` are defined to generate
+the `FieldGType` and `FieldRType` instances respectively. So, the same can be
 achieved in a single line:
 >>> rho_g = get_FieldG(grho).empty(2)
 ... rho_r = get_FieldR(grho).empty(2)
 
-Note that `FieldG` and `FieldR` are cached, so the same `BufferType` class is
-returned for a given `GSpace` instance, allowing simpler checking in array
-operations .
+Note that `get_FieldG` and `get_FieldR` are cached functions, so the same
+`BufferType` class is returned for a given `GSpace` instance, allowing simpler
+checking in array operations.
 """
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -59,7 +59,7 @@ class FieldGType(BufferType):
         cls.ndarray = type(cls.gspc.g_cryst)
 
     def to_r(self) -> FieldRType:
-        field_r = get_FieldR(self.gspc).empty(self.shape)
+        field_r = get_FieldR(self.gspc).empty(self.shape, 'c16')
         self.gspc._g2r(self._data, field_r._data)
         return field_r
 
@@ -85,7 +85,7 @@ class FieldRType(BufferType):
         cls.ndarray = type(cls.gspc.g_cryst)
 
     def to_g(self) -> FieldGType:
-        field_g = get_FieldG(self.gspc).empty(self.shape)
+        field_g = get_FieldG(self.gspc).empty(self.shape, 'c16')
         self.gspc._r2g(self._data, field_g._data)
         return field_g
 

@@ -41,8 +41,8 @@ class BufferType(NDArrayOperatorsMixin, ABC):
     Notes
     -----
     No checks are done to `data` in the `__init__` method. If you want to
-    initialize from the existing data, please use `from_array` method to
-    ensure the array is of the right type.
+    initialize from the existing data, please use the `from_array`
+    class method for the purpose.
 
     Support for NumPy ufuncs are implemented using
     `numpy.lib.mixins.NDArrayOperatorsMixin`. Refer to:
@@ -58,8 +58,8 @@ class BufferType(NDArrayOperatorsMixin, ABC):
     resulting output will be an array instead of a `Buffer` instance.
     """
 
-    # Class attributes that will be intialised by subclass'
-    # `__init_subclass__` method which takes a `gspc` argument
+    # Below are the class attributes that will be initialized by the subclass'
+    # `__init_subclass__` method, which takes a `GSpaceBase` argument.
     gspc: GSpaceBase = None
     """`GSpaceBase` instance representing the basis of the space"""
     basis_type: Literal['r', 'g'] = None
@@ -71,6 +71,7 @@ class BufferType(NDArrayOperatorsMixin, ABC):
     ndarray: type = None
     """Array Type of `data`. Matches the type of the arrays in `gspc` 
     (`gspc.g_cryst`)"""
+
     @abstractmethod
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__()
@@ -97,7 +98,8 @@ class BufferType(NDArrayOperatorsMixin, ABC):
 
     @property
     def data(self) -> NDArray:
-        """Array containing the data of the periodic function"""
+        """(``(..., basis_size)``) Array containing the data of the
+        periodic function"""
         return self._data
 
     @property
@@ -111,45 +113,69 @@ class BufferType(NDArrayOperatorsMixin, ABC):
         return self._data.ndim - 1
 
     @classmethod
-    def empty(cls, shape: int | Sequence[int] | None) -> Self:
-        """Creates an empty `BufferType` instance of given shape.
+    def empty(cls, shape: int | Sequence[int] = (),
+              dtype: str = 'c16') -> Self:
+        """Creates a empty `BufferType` instance of given shape.
 
         Parameters
         ----------
-        shape : int | Sequence[int] | None
+        shape : int | Sequence[int], default=()
             Shape of the empty `BufferType` instance to create.
-            If None, results in a scalar/1D `BufferType`.
+            For scalar/1D `BufferType`, `shape` must be `()`.
+        dtype: str, default='c16'
+            String representing the array dtype to be allocated.
+
+        Returns
+        -------
+        A `BufferType` instance containing an empty data array of
+        shape ``(*shape, basis_size)`` and dtype `dtype`.
         """
         if shape is None:
             shape = ()
         elif isinstance(shape, int):
             shape = (shape, )
-        data = cls.gspc.allocate_array((*shape, cls.basis_size))
+        data = cls.gspc.allocate_array((*shape, cls.basis_size), dtype=dtype)
         return cls(data)
 
     @classmethod
-    def zeros(cls, shape: int | Sequence[int] | None) -> Self:
-        """Creates an `BufferType` instance of given shape containing zeros.
+    def zeros(cls, shape: int | Sequence[int] = (),
+              dtype: str = 'c16') -> Self:
+        """Creates a `BufferType` instance of given shape containing zeros.
 
         Parameters
         ----------
-        shape : int | Sequence[int] | None
-            Shape of the empty `Buffer`. If None, results in a scalar `Buffer`.
+        shape : int | Sequence[int], default=()
+            Shape of the empty `BufferType` instance to create.
+            For scalar/1D `BufferType`, `shape` must be `()`.
+        dtype: str, default='c16'
+            String representing the array dtype to be allocated.
+
+        Returns
+        -------
+        A `BufferType` instance containing a zero data array of
+        shape ``(*shape, basis_size)`` and dtype `dtype`.
         """
-        out = cls.empty(shape)
+        out = cls.empty(shape, dtype)
         out.data[:] = 0
         return out
 
     @classmethod
     def from_array(cls, data: NDArray) -> Self:
-        """Creates an empty `Buffer` instance from input array
+        """Creates a `BufferType` instance from values in `data` array.
 
         Parameters
         ----------
         data : NDArray
-            Data array to be cast into a `Buffer`. The array is copied.
+            Input data array. Must be an `ndarray` instance with shape
+            ``(..., basis_size)``.
+
+        Returns
+        -------
+        A `BufferType` instance containing a copy of the `data` array.
         """
-        return cls(data.astype('c16').copy(order='C'))
+        assert type(data) is cls.ndarray
+        assert data.shape[-1] == cls.basis_size
+        return cls(data.copy(order='C'))
 
     def copy(self) -> Self:
         """Makes a copy of itself"""

@@ -38,6 +38,16 @@ class WavefunGType(BufferType):
 
     @cached_property
     def zgemm(self):
+        """
+
+        Notes
+        -----
+        Ideally this should be a class attribute that is set within
+        `__init_subclass__` and not an instance property. But, doing so
+        results in unexpected behaviour, which has to do with caching
+        functions that has default values for its kwargs.
+
+        """
         return get_zgemm(self.ndarray)
 
     def to_r(self) -> WavefunRType:
