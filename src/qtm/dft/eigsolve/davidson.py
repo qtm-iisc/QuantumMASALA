@@ -17,7 +17,7 @@ from qtm.config import NDArray
 
 @qtmlogger.time('davidson:solve')
 def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
-          vloc_g0: list[complex]) -> tuple[KSWfn, int]:
+          vloc_g0: complex) -> tuple[KSWfn, int]:
     assert isinstance(dftcomm, DFTCommMod)
 
     kgrp_intra = dftcomm.kgrp_intra
@@ -36,8 +36,7 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
         assert diago_thr > 0
 
         vloc_g0 = comm.bcast(vloc_g0)
-        assert len(vloc_g0) == (1 + ksham.is_noncolin) \
-               and all(isinstance(num, Number) for num in vloc_g0)
+        # assert isinstance(vloc_g0, Number), print(type(vloc_g0), vloc_g0)
 
         numwork = comm.bcast(numwork)
         assert isinstance(numwork, int) and numwork > 1
@@ -57,10 +56,7 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     # Only the diagonal part of the Ham is considered and 'approximately'
     # inverted so that the small terms will not be transformed to large
     # quantities
-    ham_diag = ksham.ke_gk + ksham.vnl_diag
-    ham_diag.data[:gkspc.size_g] += vloc_g0[0]
-    if ksham.is_noncolin:
-        ham_diag.data[gkspc.size_g:] += vloc_g0[1]
+    ham_diag = ksham.ke_gk + ksham.vnl_diag + vloc_g0
 
     def apply_g_psi(l_wfn: WavefunGType, l_evl: NDArray):
         scala = 2

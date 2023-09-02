@@ -107,5 +107,5 @@ class KSWfn:
             occ * wfn.to_r().get_density(normalize=False)
             for wfn, occ in zip(self.evc_gk, self.occ)
         )
-        rho /= np.prod(rho.gspc.grid_shape) * rho.gspc.reallat_dv
+        rho /= rho.gspc.reallat_cellvol
         return rho

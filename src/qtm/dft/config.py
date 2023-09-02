@@ -6,6 +6,7 @@ __all__ = ['DFTCommMod', 'dftconfig']
 
 from qtm.mpi.comm import QTMComm, split_comm_pwgrp
 
+from qtm.config import qtmconfig
 from qtm.msg_format import *
 
 
@@ -53,6 +54,21 @@ class DFTConfig:
     spglib_symprec: float = 1E-5
 
     _eigsolve_method: Literal['davidson', 'scipy'] = 'davidson'
+
+    _use_gpu: bool = False
+    @property  # noqa : E301
+    def use_gpu(self) -> bool:
+        """enable GPU acceleration"""
+        return self._use_gpu
+
+    @use_gpu.setter
+    def use_gpu(self, flag: bool):
+        if not isinstance(flag, bool):
+            raise TypeError(f"'use_gpu' must be a boolean. got type {type(flag)}")
+        self._use_gpu = False
+        if flag:
+            qtmconfig.check_cupy()
+            self._use_gpu = True
 
     @property
     def eigsolve_method(self):

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Literal
+    from numbers import Number
 __all__ = ['scf', 'EnergyData', 'IterPrinter']
 
 from dataclasses import dataclass
@@ -19,8 +20,11 @@ from qtm.pseudo import (
     loc_generate_rhoatomic, loc_generate_pot_rhocore,
     NonlocGenerator
 )
+from qtm.symm.symmetrize_field import SymmFieldMod
+
 from qtm.dft import DFTCommMod, dftconfig, KSWfn, KSHam, eigsolve, occup, mixing
 
+from qtm.mpi.check_args import check_system
 from qtm.mpi.utils import scatter_slice
 
 from qtm.msg_format import *
@@ -81,24 +85,10 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         raise TypeError(
             type_mismatch_msg('dftcomm', dftcomm, DFTCommMod)
         )
+
+    # Checking input arguments
     with dftcomm.image_comm as comm:
-        crystal = comm.bcast(crystal)
-        if not isinstance(crystal, Crystal):
-            raise TypeError
-
-        kpts = comm.bcast(kpts)
-        if not isinstance(kpts, KList):
-            raise TypeError
-
-        if not isinstance(grho, GSpace):
-            raise TypeError()
-        if grho.recilat != comm.bcast(grho.recilat):
-            raise ValueError()
-        if grho.ecut != comm.bcast(grho.ecut):
-            raise ValueError()
-        if grho.grid_shape != comm.bcast(grho.grid_shape):
-            raise ValueError()
-
+        check_system(comm, crystal, grho, gwfn, kpts)
         if grho is not gwfn:
             raise NotImplementedError()
 
@@ -109,16 +99,9 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             ))
 
         is_spin = comm.bcast(is_spin)
-        if not isinstance(is_spin, bool):
-            raise TypeError(type_mismatch_msg(
-                'is_spin', is_spin, bool
-            ))
-
+        assert isinstance(is_spin, bool)
         is_noncolin = comm.bcast(is_noncolin)
-        if not isinstance(is_noncolin, bool):
-            raise TypeError(type_mismatch_msg(
-                'is_noncolin', is_noncolin, bool
-            ))
+        assert isinstance(is_noncolin, bool)
         if is_noncolin:
             raise NotImplementedError(
                 "noncollinear calculations yet to be implemented"
@@ -127,12 +110,13 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             is_spin = True
 
         symm_rho = comm.bcast(symm_rho)
-        if not isinstance(symm_rho, bool):
-            raise TypeError(type_mismatch_msg(
-                'symm_rho', symm_rho, bool
-            ))
+        assert isinstance(symm_rho, bool)
+        symm_mod = None
+        if symm_rho:
+            symm_mod = SymmFieldMod(crystal, grho)
 
         if isinstance(rho_start, FieldGType):
+            assert rho_start.gspc is grho
             if rho_start.gspc is not grho:
                 raise ValueError(
                     obj_mismatch_msg('rho_start.gspc', rho_start.gspc, 'grho', grho)
@@ -164,52 +148,34 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         libxc_func = comm.bcast(libxc_func)
 
         occ_typ = comm.bcast(occ_typ)
-        if occ_typ not in ['fixed', 'smear']:
-            raise ValueError(value_not_in_list_msg(
-                'occ_typ', occ_typ, ['fixed', 'smear']
-            ))
+        assert occ_typ in ['fixed', 'smear']
 
         smear_typ = comm.bcast(smear_typ)
-        if smear_typ not in ['gauss', 'fd', 'mv']:
-            raise ValueError(value_not_in_list_msg(
-                'smear_typ', smear_typ, ['gauss', 'fd', 'mv']
-            ))
+        assert smear_typ in ['gauss', 'fd', 'mv']
 
         e_temp = comm.bcast(e_temp)
-        if not isinstance(e_temp, float) or e_temp < 0:
-            raise TypeError(type_mismatch_msg(
-                'e_temp', e_temp, 'a positive float'
-            ))
+        assert isinstance(e_temp, float)
+        assert e_temp >= 0
 
         conv_thr = comm.bcast(conv_thr)
-        if not isinstance(conv_thr, float) or conv_thr < 0:
-            raise TypeError(type_mismatch_msg(
-                'conv_thr', conv_thr, 'a positive float'
-            ))
+        assert isinstance(conv_thr, float)
+        assert conv_thr > 0
 
         maxiter = comm.bcast(maxiter)
-        if not isinstance(maxiter, int) or maxiter <= 0:
-            raise TypeError(type_mismatch_msg(
-                'maxiter', maxiter, 'a positive integer'
-            ))
+        assert isinstance(maxiter, int)
+        assert maxiter >= 0
 
         diago_thr_init = comm.bcast(diago_thr_init)
-        if not isinstance(diago_thr_init, float) or diago_thr_init <= 0:
-            raise TypeError(
-                'diago_thr_init', diago_thr_init, 'a positive float'
-            )
+        assert isinstance(diago_thr_init, float)
+        assert diago_thr_init > 0
 
         mix_beta = comm.bcast(mix_beta)
-        if not isinstance(mix_beta, float) or mix_beta <= 0 or mix_beta > 1:
-            raise TypeError(
-                'mix_beta', mix_beta, 'a positive float less than 1'
-            )
+        assert isinstance(mix_beta, float)
+        assert 0 < mix_beta <= 1
 
         mix_dim = comm.bcast(mix_dim)
-        if not isinstance(mix_dim, int) or mix_dim <= 0:
-            raise TypeError(
-                'mix_dim', mix_dim, 'a positive integer'
-            )
+        assert isinstance(mix_dim, int)
+        assert mix_dim > 0
 
     start_time = perf_counter()
     image_comm = dftcomm.image_comm
@@ -253,7 +219,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             l_kswfn_kgrp.append(kswfn)
 
         FieldG_rho: FieldGType = get_FieldG(grho)
-        v_ion, rho_core = FieldG_rho.zeros(None), FieldG_rho.zeros(1)
+        v_ion, rho_core = FieldG_rho.zeros(()), FieldG_rho.zeros(1)
         l_nloc = []
         for sp in crystal.l_atoms:
             v_ion_sp, rho_core_sp = loc_generate_pot_rhocore(sp, grho)
@@ -280,10 +246,10 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         v_hart: FieldG_rho
         v_xc: FieldG_rho
         vloc: FieldG_rho
-        vloc_g0: list[complex]
+        v_ion_g0: Number
 
         def compute_vloc():
-            nonlocal rho_in, v_hart, v_xc, vloc, vloc_g0
+            nonlocal rho_in, v_hart, v_xc, vloc, v_ion_g0
             v_hart, en.hartree = hartree.compute(rho_in)
             v_xc, en.xc = xc.compute(rho_in, rho_core, *libxc_func)
             vloc = v_ion + v_hart + v_xc
@@ -292,7 +258,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             vloc /= np.prod(gwfn.grid_shape)
             pwgrp_inter_kgrp.bcast(vloc.data)
             image_comm.bcast(vloc.data)
-            vloc_g0 = np.sum(vloc, axis=-1)
+            v_ion_g0 = np.sum(v_ion) / np.prod(grho.grid_shape)
 
         # Defining KS Hamiltonian solver routines
         # if dftconfig.eigsolve_method == 'davidson':
@@ -305,8 +271,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                 ksham = KSHam(kswfn_.gkspc, is_noncolin,
                               vloc if is_noncolin else vloc[ispin], l_nloc)
                 _, niter = solver.solve(dftcomm, ksham, kswfn_, diago_thr,
-                                        vloc_g0 if is_noncolin or not is_spin
-                                        else [vloc_g0[ispin], ])
+                                        v_ion_g0)
                 numiter += niter
             numiter /= 2 if is_spin and not is_noncolin else 1
             return numiter
@@ -320,11 +285,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                 for kswfn_k in l_kswfn_kgrp:
                     for ispin, kswfn in enumerate(kswfn_k):
                         k_weight = kswfn.k_weight
-                        evc_gk, evc_occ = kswfn.evc_gk[sl_bnd], kswfn.occ[sl_bnd]
-                        rho_k_spin = sum(
-                            occ * wfn.to_r().get_density(normalize=True)
-                            for wfn, occ in zip(evc_gk, evc_occ)
-                        )
+                        rho_k_spin = kswfn.compute_rho()
                         if is_noncolin:
                             rho_wfn[:] += k_weight * rho_k_spin.to_g()
                         else:
@@ -333,7 +294,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
 
             # Grid interpolation from gwfn -> grho goes here
             rho_out[:] = rho_wfn[:]
-
+            if symm_rho:
+                rho_out = symm_mod.symmetrize(rho_out)
 
         # Defining energy calculation routine
         en.ewald = image_comm.bcast(ewald.compute(crystal, grho))
@@ -360,6 +322,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
 
         # Defining charge mixing routine
         # if dftconfig.mixing_method == 'modbroyden':
+        if symm_rho:
+            rho_start = symm_mod.symmetrize(rho_start)
         mixmod = mixing.ModBroyden(dftcomm, rho_start, mix_beta, mix_dim)
 
         diago_thr = diago_thr_init
@@ -402,6 +366,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                 diago_thr = min(diago_thr, 0.1 * e_error / crystal.numel)
                 diago_thr = max(diago_thr, 1E-13)
                 rho_in = mixmod.mix(rho_in, rho_out)
+                if symm_rho:
+                    rho_in = symm_mod.symmetrize(rho_in)
 
             scf_converged = image_comm.bcast(scf_converged)
             diago_thr = image_comm.bcast(diago_thr)
