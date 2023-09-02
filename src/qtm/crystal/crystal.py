@@ -29,8 +29,16 @@ class Crystal:
         self.recilat: ReciLattice = ReciLattice.from_reallat(self.reallat)
         """Represents the crystal's lattice in reciprocal space"""
 
-        if not all(isinstance(sp, BasisAtoms) for sp in l_atoms):
-            raise TypeError(type_mismatch_seq_msg('l_atoms', l_atoms, BasisAtoms))
+        for ityp, typ in enumerate(l_atoms):
+            if not isinstance(typ, BasisAtoms):
+                raise TypeError(type_mismatch_msg(
+                    f'l_atoms[{ityp}]', l_atoms[ityp], BasisAtoms
+                ))
+            if typ.reallat is not self.reallat:
+                raise ValueError(obj_mismatch_msg(
+                    f'l_atoms[{ityp}].reallat', typ.reallat,
+                    'reallat', reallat
+                ))
         self.l_atoms: list[BasisAtoms] = l_atoms
         """Represents the crystal's atom basis where each element represents
         a subset of basis atoms belonging to the same species"""
@@ -71,7 +79,7 @@ class Crystal:
             r_cart_sup = reallat.cryst2cart(r_cryst)
             r_cryst_sup = reallat_sup.cart2cryst(r_cart_sup)
             l_atoms_sup.append(
-                BasisAtoms(sp.label, sp.ppdata, reallat_sup, r_cryst_sup, sp.mass)
+                BasisAtoms(sp.label, sp.ppdata, sp.mass, reallat_sup, r_cryst_sup)
             )
 
         return Crystal(reallat_sup, l_atoms_sup)
@@ -82,7 +90,6 @@ class CrystalSymm:
 
     symprec: float = 1E-5
     check_supercell: bool = True
-    symm_check_supercell: bool = True
     use_all_frac: bool = False
 
     def __init__(self, crystal: Crystal):
@@ -127,8 +134,11 @@ class CrystalSymm:
                    ('recilat_rot', 'i4', (3, 3))]
         )
         """List of Symmetry operations of input crystal"""
-        self.numsymm: int = len(self.symm)
+
+    @property
+    def numsymm(self) -> int:
         """Total number of crystal symmetries"""
+        return len(self.symm)
 
     @property
     def reallat_rot(self):
@@ -151,4 +161,3 @@ class CrystalSymm:
             np.linalg.norm(fac - np.rint(fac), axis=1) <= self.symprec
         )[0]
         self.symm = self.symm[idx_comm].copy()
-        self.numsymm = len(self.symm)

@@ -166,7 +166,6 @@ class WavefunRType(BufferType):
         gwfn = self.gkspc.gwfn
         den_data = self.data.conj()
         den_data *= self.data
-        den_data /= self.basis_size
         den_data = den_data.reshape((*self.shape, self.numspin, -1))
         den = get_FieldR(gwfn)(den_data)
         if not normalize:

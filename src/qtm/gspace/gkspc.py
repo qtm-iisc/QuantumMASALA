@@ -36,15 +36,21 @@ class GkSpace(GSpaceBase):
         self.gk_cryst = self.g_cryst.copy().astype('f8')
         for ipol in range(3):
             self.gk_cryst[ipol] += self.k_cryst[ipol]
-        self.gk_cart = self.recilat.cryst2cart(self.gk_cryst)
-        self.gk_norm2 = self.recilat.norm2(self.gk_cart, 'cart')
 
+    @property
+    def gk_cart(self) -> NDArray:
+        return self.recilat.cryst2cart(self.gk_cryst)
 
     @property
     def gk_tpiba(self) -> NDArray:
         r"""(``(3, size)``, ``'f8'``) Cartesian coordinates of G+k vectors in
         units of `tpiba` (:math:`\frac{2\pi}{a}`)."""
         return self.recilat.cryst2tpiba(self.gk_cryst)
+
+    @property
+    def gk_norm2(self) -> NDArray:
+        # TODO: Bug when using 'cryst'. Fix it
+        return self.recilat.norm2(self.gk_cart, 'cart')
 
     @property
     def gk_norm(self) -> NDArray:

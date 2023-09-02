@@ -121,17 +121,20 @@ class BasisAtoms:
             )
         self.r_cryst: NDArray = r_cryst
         """(``(3, self.numatoms)``) Crystal Coordinates of atoms in unit cell"""
-        self.numatoms: int = self.r_cryst.shape[1]
-        """Number of atoms per unit cell belonging to the species"""
 
     @property
-    def cart(self) -> NDArray:
+    def numatoms(self) -> int:
+        """Number of atoms per unit cell belonging to the species"""
+        return self.r_cryst.shape[1]
+
+    @property
+    def r_cart(self) -> NDArray:
         """(``(3, self.numatoms)``) Cartesian Coords of the
         atoms in atomic units"""
         return self.reallat.cryst2cart(self.r_cryst)
 
     @property
-    def alat(self) -> NDArray:
+    def r_alat(self) -> NDArray:
         """(``(3, self.numatoms)``) Cartesian Coords of the
         atoms in 'alat' units"""
         return self.reallat.cryst2alat(self.r_cryst)

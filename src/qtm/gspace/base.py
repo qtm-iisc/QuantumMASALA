@@ -103,7 +103,7 @@ def _sort_g(grid_shape: tuple[int, int, int], idxgrid: NDArray) -> NDArray:
 class GSpaceBase:
 
     FFT3D = FFT3DFull
-    _normalise_idft = True
+    _normalise_idft: bool = True
 
     def __init__(self, recilat: ReciLattice, grid_shape: tuple[int, int, int],
                  g_cryst: NDArray):
