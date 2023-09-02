@@ -27,8 +27,10 @@ class SymmFieldMod:
                 type_mismatch_msg('gspc', gspc, GSpace)
             )
 
-        if gspc.is_dist:
-            gspc = gspc.gspc_glob
+        if qtmconfig.mpi4py_installed:
+            from qtm.mpi.gspace import DistGSpace
+            if isinstance(gspc, DistGSpace):
+                gspc = gspc.gspc_glob
 
         self.gspc = gspc
         size_g = self.gspc.size_g
