@@ -21,6 +21,7 @@ from qtm.containers import (
 from .gspace import DistGSpaceBase, DistGSpace, DistGkSpace
 
 from qtm.msg_format import type_mismatch_msg
+from qtm.config import NDArray
 
 
 class DistBufferType(BufferType, ABC):
@@ -87,13 +88,13 @@ class DistBufferType(BufferType, ABC):
         return self.gather(allgather=True)
 
     @classmethod
-    def scatter(cls, dist_gspc: DistGSpaceBase, buf_glob: BufferType) -> DistBufferType:
-        with dist_gspc.pwgrp_comm as comm:
+    def scatter(cls, buf_glob: BufferType) -> DistBufferType:
+        with cls.gspc.pwgrp_comm as comm:
             is_root = comm.rank == 0
             if is_root:
                 if type(buf_glob) is not cls.BufferType:
                     raise TypeError()
-                if dist_gspc.gspc_glob is not buf_glob.gspc:
+                if cls.gspc.gspc_glob is not buf_glob.gspc:
                     raise ValueError()
 
             shape = comm.bcast(buf_glob.shape if is_root else None)
@@ -105,9 +106,9 @@ class DistBufferType(BufferType, ABC):
                 )
 
             if basis_type == 'g':
-                data_loc = dist_gspc.scatter_g(data_glob)
+                data_loc = cls.gspc.scatter_g(data_glob)
             else:  # if basis_type == 'r':
-                data_loc = dist_gspc.scatter_r(data_glob)
+                data_loc = cls.gspc.scatter_r(data_glob)
             return cls(data_loc.reshape((*shape, -1)))
 
 
@@ -116,8 +117,9 @@ def get_DistFieldG(dist_gspc: DistGSpace) -> type[FieldGType]:
     if not isinstance(dist_gspc, DistGSpace):
         raise TypeError(type_mismatch_msg('dist_gspc', dist_gspc, DistGSpace))
 
-    class DistFieldG(FieldGType, gspc=dist_gspc):
+    class DistFieldG(DistBufferType, FieldGType, gspc=dist_gspc):
         gspc: DistGSpace
+        BufferType = get_FieldG(dist_gspc.gspc_glob)
     return DistFieldG
 
 
@@ -126,28 +128,40 @@ def get_DistFieldR(dist_gspc: DistGSpace) -> type[FieldRType]:
     if not isinstance(dist_gspc, DistGSpace):
         raise TypeError(type_mismatch_msg('dist_gspc', dist_gspc, DistGSpace))
 
-    class DistFieldR(FieldRType, gspc=dist_gspc):
+    class DistFieldR(DistBufferType, FieldRType, gspc=dist_gspc):
         gspc: DistGSpace
+        BufferType = get_FieldR(dist_gspc.gspc_glob)
     return DistFieldR
 
 
 @cache
 def get_DistWavefunG(dist_gkspc: DistGkSpace, numspin: int) -> type[WavefunGType]:
-    if not isinstance(dist_gkspc, DistGSpace):
-        raise TypeError(type_mismatch_msg('dist_gspc', dist_gkspc, DistGSpace))
+    if not isinstance(dist_gkspc, DistGkSpace):
+        raise TypeError(type_mismatch_msg('dist_gspc', dist_gkspc, DistGkSpace))
 
-    class DistWavefunG(WavefunGType, gkspc=dist_gkspc, numspin=numspin):
+    class DistWavefunG(DistBufferType, WavefunGType, gkspc=dist_gkspc,
+                       numspin=numspin):
         gspc: DistGkSpace
         gkspc: DistGkSpace
+        BufferType = get_WavefunG(dist_gkspc.gkspc_glob, numspin)
+
+        def vdot(self, ket: WavefunGType) -> NDArray:
+            out = super().vdot(ket)
+            comm = self.gkspc.pwgrp_comm
+            comm.Allreduce(comm.IN_PLACE, out, comm.SUM)
+            return out
+        
     return DistWavefunG
 
 
 @cache
 def get_DistWavefunR(dist_gkspc: DistGkSpace, numspin: int) -> type[WavefunRType]:
-    if not isinstance(dist_gkspc, DistGSpace):
-        raise TypeError(type_mismatch_msg('dist_gspc', dist_gkspc, DistGSpace))
+    if not isinstance(dist_gkspc, DistGkSpace):
+        raise TypeError(type_mismatch_msg('dist_gspc', dist_gkspc, DistGkSpace))
 
-    class DistWavefunR(WavefunRType, gkspc=dist_gkspc, numspin=numspin):
+    class DistWavefunR(DistBufferType, WavefunRType, gkspc=dist_gkspc,
+                       numspin=numspin):
         gspc: DistGkSpace
         gkspc: DistGkSpace
+        BufferType = get_WavefunR(dist_gkspc.gkspc_glob, numspin)
     return DistWavefunR

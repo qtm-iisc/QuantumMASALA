@@ -19,7 +19,9 @@ from qtm.msg_format import type_mismatch_msg
 
 class DistGSpaceBase(GSpaceBase):
 
+    is_dist = True
     FFT3D = DummyFFT3D
+
 
     def __init__(self, comm: QTMComm, gspc: GSpaceBase):
         if not isinstance(comm, QTMComm):
@@ -128,7 +130,7 @@ class DistGSpaceBase(GSpaceBase):
 
     def _r2g(self, arr_r: NDArray, arr_g: NDArray) -> None:
         # Similar to FFT3DSticks but with communication between the two FFT
-        for inp, out in zip(arr_r.reshape(-1, *self.grid_shape),
+        for inp, out in zip(arr_r.reshape(-1, *self.grid_shape_loc),
                             arr_g.reshape(-1, self.size_g)):
             self._fftyz.inp_fwd[:] = inp
             work_full = self._fftyz.fft().reshape((self.nx_loc, -1))
@@ -148,10 +150,10 @@ class DistGSpaceBase(GSpaceBase):
             work_sticks = self._fftx.fft()
             work_sticks.take(self._g2sticks_loc, out=out)
 
-    def _g2r(self, arr_r: NDArray, arr_g: NDArray) -> None:
+    def _g2r(self, arr_g: NDArray, arr_r: NDArray) -> None:
         # Similar to FFT3DSticks but with communication between the two FFT
         for inp, out in zip(arr_g.reshape(-1, self.size_g),
-                            arr_r.reshape(-1, *self.grid_shape)):
+                            arr_r.reshape(-1, *self.grid_shape_loc)):
             work_sticks = self._fftx.inp_bwd
             work_sticks.reshape(-1)[self._g2sticks_loc] = inp
             work_sticks = self._fftx.ifft(self._normalise_idft)
@@ -333,3 +335,7 @@ class DistGkSpace(DistGSpaceBase, GkSpace):
         self.ecutwfn = self.gkspc_glob.ecutwfn
         self.k_cryst = self.gkspc_glob.k_cryst
         self.idxgk = None
+
+        self.gk_cryst = self.g_cryst.copy().astype('f8')
+        for ipol in range(3):
+            self.gk_cryst[ipol] += self.k_cryst[ipol]
