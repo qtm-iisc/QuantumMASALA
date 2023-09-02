@@ -4,6 +4,7 @@
 from __future__ import annotations
 __all__ = ['QTMConfig', 'qtmconfig', 'NDArray']
 
+from functools import cached_property
 from typing import Union  # Required import for Runtime checking
 
 import numpy as np
@@ -50,22 +51,22 @@ class QTMConfig:
         Refer to the `logger` submodule"""
         logger.qtmlogger_set_filehandle(self.logfile_dir)
 
-    @property
+    @cached_property
     def mpi4py_installed(self) -> bool:
         """True if `mpi4py` is installed, else False"""
         return find_spec('mpi4py') is not None
 
-    @property
+    @cached_property
     def mkl_fft_installed(self) -> bool:
         """True if `mkl_fft` is installed, else False"""
         return find_spec('mkl_fft') is not None
 
-    @property
+    @cached_property
     def pyfftw_installed(self) -> bool:
         """True if `pyfftw` is installed, else False"""
         return find_spec('pyfftw') is not None
 
-    @property
+    @cached_property
     def cupy_installed(self) -> bool:
         """True if `cupy` is installed, else False"""
         return find_spec('cupy') is not None
@@ -108,22 +109,7 @@ class QTMConfig:
                 "Refer to exception above for further info."
             ) from e
 
-    _use_gpu: bool = False
-    @property  # noqa : E301
-    def use_gpu(self) -> bool:
-        """enable GPU acceleration"""
-        return self._use_gpu
-
-    @use_gpu.setter
-    def use_gpu(self, flag: bool):
-        if not isinstance(flag, bool):
-            raise TypeError(f"'use_gpu' must be a boolean. got type {type(flag)}")
-        self._use_gpu = False
-        if flag:
-            self.check_cupy()
-            self._use_gpu = True
-
-    @property
+    @cached_property
     def fft_available_backends(self) -> list[str]:
         """list of supported fft libraries installed"""
         backends = ['scipy', 'numpy']
@@ -131,7 +117,7 @@ class QTMConfig:
             backends.insert(0, 'pyfftw')
         if self.mkl_fft_installed:
             backends.insert(0, 'mkl_fft')
-        if self.use_gpu and self.cupy_installed:
+        if self.cupy_installed:
             backends.append('cupy')
         return backends
 
