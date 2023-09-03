@@ -14,8 +14,8 @@ class FFT3DFull(FFT3D):
     """
     def __init__(self, shape: tuple[int, int, int],
                  idxgrid: NDArray, normalise_idft: bool,
-                 backend: str | None = None):
-        super().__init__(shape, idxgrid, normalise_idft, backend)
+                 backend: str | None = None, **kwargs):
+        super().__init__(shape, idxgrid, normalise_idft, backend, **kwargs)
         self.worker = self.FFTBackend(self.shape, (0, 1, 2),)
         self.worker.inp_bwd[:] = 0
 

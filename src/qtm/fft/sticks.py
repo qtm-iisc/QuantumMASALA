@@ -16,8 +16,8 @@ class FFT3DSticks(FFT3D):
     """
     def __init__(self, shape: tuple[int, int, int],
                  idxgrid: NDArray, normalise_idft: bool,
-                 backend: str | None = None):
-        super().__init__(shape, idxgrid, normalise_idft, backend)
+                 backend: str | None = None, **kwargs):
+        super().__init__(shape, idxgrid, normalise_idft, backend, **kwargs)
         if self.idxgrid is None:
             raise Exception("'idxgrid' is None. Use 'FFT3DSlab' instead")
 

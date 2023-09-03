@@ -95,6 +95,8 @@ class BasisAtoms:
             ppdata = None
         elif isinstance(ppdata, PseudoPotFile):
             valence = ppdata.valence
+        elif ppdata is None:
+            valence = -1
         else:
             raise TypeError(type_mismatch_msg('ppdata', ppdata, [PseudoPotFile, int]))
         self.valence: int = valence
@@ -140,7 +142,7 @@ class BasisAtoms:
         return self.reallat.cryst2alat(self.r_cryst)
 
     @classmethod
-    def from_cart(cls, label: str, ppdata: PseudoPotFile | int, mass: float | None,
+    def from_cart(cls, label: str, ppdata: PseudoPotFile | int | None, mass: float | None,
                   reallat: RealLattice, *r_cart) -> BasisAtoms:
         """Generates `BasisAtoms` instance from cartesian coordinates
 
