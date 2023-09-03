@@ -66,6 +66,10 @@ class FieldGType(BufferType):
     def to_g(self) -> FieldGType:
         return self
 
+    @property
+    def data_g0(self) -> NDArray:
+        return self.data[..., 0]
+
 
 class FieldRType(BufferType):
     """Container Template for storing periodic fields represented in real space

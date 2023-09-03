@@ -120,6 +120,14 @@ def get_DistFieldG(dist_gspc: DistGSpace) -> type[FieldGType]:
     class DistFieldG(DistBufferType, FieldGType, gspc=dist_gspc):
         gspc: DistGSpace
         BufferType = get_FieldG(dist_gspc.gspc_glob)
+
+        @property
+        def data_g0(self) -> NDArray:
+            with self.gspc.pwgrp_comm as comm:
+                return self.gspc.pwgrp_comm.bcast(
+                    self.data_g0[..., 0] if comm.rank == 0 else None
+                )
+
     return DistFieldG
 
 
@@ -150,7 +158,7 @@ def get_DistWavefunG(dist_gkspc: DistGkSpace, numspin: int) -> type[WavefunGType
             comm = self.gkspc.pwgrp_comm
             comm.Allreduce(comm.IN_PLACE, out, comm.SUM)
             return out
-        
+
     return DistWavefunG
 
 
