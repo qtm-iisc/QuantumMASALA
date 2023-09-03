@@ -40,7 +40,7 @@ def read_sigma_hp(filename):
                 
                 while line.strip():
                     split_line = line.strip().split()
-                    data_dict[ik]["n"].append([int(split_line[0])])
+                    data_dict[ik]["n"].append(int(split_line[0]))
                     for i in range(1,len(split_line)):
                         data_dict[ik][data_dict["header"][i]].append(float(split_line[i]))
                     line = next(f)
