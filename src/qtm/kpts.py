@@ -57,7 +57,6 @@ class KList:
         else:  # if coords_typ == 'tpiba':
             k_cryst = self.recilat.tpiba2cryst(k_coords)
         self.k_cryst = k_cryst
-        self.numkpts = self.k_cryst.shape[1]
 
         try:
             k_weights = np.asarray(k_weights, like=self.recilat.recvec)
@@ -71,6 +70,10 @@ class KList:
                 f'(k_coords.shape[1], ) = ({k_coords.shape[1]}, )'
             ))
         self.k_weights = k_weights
+
+    @property
+    def numkpts(self) -> int:
+        return self.k_cryst.shape[1]
 
     @classmethod
     def gamma(cls, recilat: ReciLattice):

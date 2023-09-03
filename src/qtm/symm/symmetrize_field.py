@@ -109,7 +109,6 @@ class SymmFieldMod:
         return out
 
     def symmetrize(self, field_g: FieldGType):
-        print('at symmetrize')
         if not isinstance(field_g, FieldGType):
             raise TypeError(type_mismatch_msg('field_g', field_g, FieldGType))
 

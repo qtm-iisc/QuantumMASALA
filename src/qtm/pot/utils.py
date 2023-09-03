@@ -2,11 +2,12 @@ from __future__ import annotations
 __all__ = ['check_rho', 'fieldg_grad', 'fieldg_div']
 
 import numpy as np
-from qtm.containers import BufferType, FieldGType
+from qtm.containers import FieldGType
+
 from qtm.msg_format import *
 
 
-def check_rho(rho: BufferType):
+def check_rho(rho: FieldGType):
     if not isinstance(rho, FieldGType):
         raise TypeError(type_mismatch_msg('rho', rho, FieldGType))
 

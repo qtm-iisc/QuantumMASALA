@@ -248,6 +248,9 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         vloc: FieldG_rho
         v_ion_g0: Number
 
+        def normalize_rho(rho: FieldGType):
+            rho *= crystal.numel / (sum(rho.data_g0) * rho.gspc.reallat_dv)
+
         def compute_vloc():
             nonlocal rho_in, v_hart, v_xc, vloc, v_ion_g0
             v_hart, en.hartree = hartree.compute(rho_in)
@@ -294,6 +297,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
 
             # Grid interpolation from gwfn -> grho goes here
             rho_out[:] = rho_wfn[:]
+            normalize_rho(rho_out)
             if symm_rho:
                 rho_out = symm_mod.symmetrize(rho_out)
 
@@ -331,6 +335,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
 
         idxiter = 0
         while idxiter < maxiter:
+            normalize_rho(rho_in)
             compute_vloc()
             vloc_g0 = np.sum(vloc, axis=-1) / np.prod(grho.grid_shape)
 
@@ -351,7 +356,6 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             update_rho_out()
             compute_en()
             e_error = mixmod.compute_error(rho_in, rho_out)
-            print(e_error)
             if e_error < conv_thr:
                 scf_converged = True
             elif idxiter == 0 and e_error < diago_thr * crystal.numel:
