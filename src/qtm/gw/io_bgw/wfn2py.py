@@ -8,7 +8,7 @@ from qtm.gspace import GkSpace, GSpace
 from qtm.klist import KList
 from qtm.lattice import RealLattice
 from qtm.crystal import BasisAtoms, Crystal 
-from qtm.dft.kswfn import KSWavefun
+from qtm.dft.kswfn import KSWfn
 # from qtm.gw.gwwfn import MeanFieldWavefun
 
 
@@ -35,7 +35,7 @@ class WfnData(NamedTuple):
     grho: GSpace
     kpts: KList
     l_gk: List[GkSpace]
-    l_wfn: List[KSWavefun]
+    l_wfn: List[KSWfn]
     symmetry: Symmetry
 
 
@@ -45,7 +45,7 @@ class UnfoldedWfnData(NamedTuple):
     grho: GSpace
     kpts: KList
     l_gk: List[GkSpace]
-    l_wfn: List[KSWavefun]
+    l_wfn: List[KSWfn]
 
 
 def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
@@ -63,7 +63,7 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
     grho : GSpace
     kpts : KList
     l_gk: List[GkSpace]
-    l_wfn : list[KSWavefun]
+    l_wfn : list[KSWfn]
     """
 
     # ---- Load wfn.h5 data ---------------------------------------------------
@@ -120,7 +120,7 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
     for ityp, typ_num in enumerate(l_typ):
         l_species.append(
             BasisAtoms.from_alat(
-                typ_num, None, None, reallat, *l_coords[ityp], valence=valence
+                typ_num, None, None, reallat, l_coords[ityp]#, valence=valence
             )
         )
 
@@ -179,7 +179,8 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
     # # GSpace
     # ========
     ecutrho = np.array(gspace["ecutrho"])
-    FFTgrid = np.array(gspace["FFTgrid"])
+    FFTgrid = [int(n) for n in gspace["FFTgrid"]]
+    # print("FFTgrid", FFTgrid)
 
     grho = GSpace(recilat, ecutrho * RYDBERG, tuple(FFTgrid))
     # NOTE: Check if FFTgrid needs to be reversed by generating WFN.h5
@@ -276,12 +277,13 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
     # WfnK = Wavefun(wfn_gspc, int(nspin), int(mnband))
 
     l_wfn = [
-        KSWavefun(
+        KSWfn(
             gkspc=l_gk[idxk],
             numbnd=int(mnband),
             is_noncolin=False,
+            k_weight=k_weight,
         )
-        # KSWavefun(
+        # KSWfn(
         #     gspc=wfn_gspc,
         #     k_cryst=k_cryst,
         #     k_weight=k_weight,
@@ -289,7 +291,7 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
         #     is_spin=is_spin,
         #     is_noncolin=False,
         # )
-        # KSWavefun(
+        # KSWfn(
         #     gspc=wfn_gspc,
         #     k_cryst=k_cryst,
         #     k_weight=k_weight,
@@ -338,8 +340,8 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
 
         # print(l_coeffs[ik][:, :, gk.idxbgw2pw])
         # exit()
-        wfn.evc._data[...] = l_coeffs[ik][:, :, gk.idxbgw2pw]
-        # print(wfn.evc._data[0,:5])
+        wfn.evc_gk._data[...] = l_coeffs[ik][:, :, gk.idxbgw2pw]
+        # print(wfn.evc_gk._data[0,:5])
         # print(l_coeffs.shape)
 
         assert np.allclose(
