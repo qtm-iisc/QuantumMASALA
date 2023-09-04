@@ -27,7 +27,7 @@ __all__ = ['FieldGType', 'get_FieldG',
            'FieldRType', 'get_FieldR',
            'FieldType']
 
-from functools import cache
+from functools import lru_cache
 from numbers import Number
 from typing import Union
 import numpy as np
@@ -115,7 +115,7 @@ class FieldRType(BufferType):
 FieldType = Union[FieldGType, FieldRType]
 
 
-@cache
+@lru_cache(maxsize=None)
 def get_FieldG(gspc: GSpace) -> Type[FieldGType]:
     if qtmconfig.mpi4py_installed:
         from qtm.mpi.gspace import DistGSpace
@@ -128,7 +128,7 @@ def get_FieldG(gspc: GSpace) -> Type[FieldGType]:
     return FieldG
 
 
-@cache
+@lru_cache(maxsize=None)
 def get_FieldR(gspc: GSpace) -> Type[FieldRType]:
     if qtmconfig.mpi4py_installed:
         from qtm.mpi.gspace import DistGSpace

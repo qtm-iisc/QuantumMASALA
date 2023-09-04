@@ -3,7 +3,7 @@ __all__ = ['WavefunGType', 'get_WavefunG',
            'WavefunRType', 'get_WavefunR',
            'WavefunType']
 
-from functools import cache, cached_property
+from functools import lru_cache, cached_property
 from typing import Union
 import numpy as np
 
@@ -177,7 +177,7 @@ class WavefunRType(BufferType):
 WavefunType = Union[WavefunGType, WavefunRType]
 
 
-@cache
+@lru_cache(maxsize=None)
 def get_WavefunG(gkspc: GkSpace, numspin: int) -> type[WavefunGType]:
     if qtmconfig.mpi4py_installed:
         from qtm.mpi.gspace import DistGkSpace
@@ -190,7 +190,7 @@ def get_WavefunG(gkspc: GkSpace, numspin: int) -> type[WavefunGType]:
     return WavefunG
 
 
-@cache
+@lru_cache(maxsize=None)
 def get_WavefunR(gkspc: GkSpace, numspin: int) -> type[WavefunRType]:
     if qtmconfig.mpi4py_installed:
         from qtm.mpi.gspace import DistGkSpace

@@ -10,7 +10,7 @@ __all__ = [
     'WavefunRType', 'get_WavefunR', 'get_DistWavefunR',
 ]
 from abc import ABC
-from functools import cache
+from functools import lru_cache
 import numpy as np
 from mpi4py import MPI
 
@@ -112,7 +112,7 @@ class DistBufferType(BufferType, ABC):
             return cls(data_loc.reshape((*shape, -1)))
 
 
-@cache
+@lru_cache(maxsize=None)
 def get_DistFieldG(dist_gspc: DistGSpace) -> type[FieldGType]:
     if not isinstance(dist_gspc, DistGSpace):
         raise TypeError(type_mismatch_msg('dist_gspc', dist_gspc, DistGSpace))
@@ -131,7 +131,7 @@ def get_DistFieldG(dist_gspc: DistGSpace) -> type[FieldGType]:
     return DistFieldG
 
 
-@cache
+@lru_cache(maxsize=None)
 def get_DistFieldR(dist_gspc: DistGSpace) -> type[FieldRType]:
     if not isinstance(dist_gspc, DistGSpace):
         raise TypeError(type_mismatch_msg('dist_gspc', dist_gspc, DistGSpace))
@@ -142,7 +142,7 @@ def get_DistFieldR(dist_gspc: DistGSpace) -> type[FieldRType]:
     return DistFieldR
 
 
-@cache
+@lru_cache(maxsize=None)
 def get_DistWavefunG(dist_gkspc: DistGkSpace, numspin: int) -> type[WavefunGType]:
     if not isinstance(dist_gkspc, DistGkSpace):
         raise TypeError(type_mismatch_msg('dist_gspc', dist_gkspc, DistGkSpace))
@@ -162,7 +162,7 @@ def get_DistWavefunG(dist_gkspc: DistGkSpace, numspin: int) -> type[WavefunGType
     return DistWavefunG
 
 
-@cache
+@lru_cache(maxsize=None)
 def get_DistWavefunR(dist_gkspc: DistGkSpace, numspin: int) -> type[WavefunRType]:
     if not isinstance(dist_gkspc, DistGkSpace):
         raise TypeError(type_mismatch_msg('dist_gspc', dist_gkspc, DistGkSpace))
