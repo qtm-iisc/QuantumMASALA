@@ -81,7 +81,7 @@ def compute_occ(dftcomm: DFTCommMod, l_wfn: list[list[KSWfn]], numel: int,
             comm.skip_with_block()
 
         # Aggregating all values to prevent repeated iteration across objects
-        l_evl = np.stack(wfn.evl for wfn_k in l_wfn for wfn in wfn_k)
+        l_evl = np.stack(tuple(wfn.evl for wfn_k in l_wfn for wfn in wfn_k))
         l_weights = np.array([wfn.k_weight for wfn_k in l_wfn for wfn in wfn_k],
                              like=l_evl)
 
