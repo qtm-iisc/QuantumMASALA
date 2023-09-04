@@ -5,7 +5,7 @@ if TYPE_CHECKING:
 __all__ = ['get_zgemm', 'ZGEMMWrapper']
 
 from sys import version_info
-from functools import cache
+from functools import lru_cache
 import numpy as np
 from qtm.config import qtmconfig
 
@@ -64,7 +64,7 @@ else:
     ZGEMMWrapper = 'ZGEMMWrapper'
 
 
-@cache
+@lru_cache(maxsize=None)
 def get_zgemm(arr_type: type) -> ZGEMMWrapper:
     if arr_type is np.ndarray:
         from scipy.linalg.blas import zgemm
