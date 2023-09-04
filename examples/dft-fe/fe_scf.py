@@ -7,7 +7,7 @@ from qtm.pseudo import UPFv2Data
 from qtm.kpts import gen_monkhorst_pack_grid
 from qtm.gspace import GSpace
 from qtm.mpi import QTMComm
-from qtm.dft import DFTCommMod, dftconfig, scf
+from qtm.dft import DFTCommMod, scf
 
 from qtm.io_utils.dft_printers import print_scf_status
 
@@ -17,7 +17,7 @@ qtmconfig.fft_backend = 'mkl_fft'
 
 from mpi4py.MPI import COMM_WORLD
 comm_world = QTMComm(COMM_WORLD)
-dftcomm = DFTCommMod(comm_world)
+dftcomm = DFTCommMod(comm_world, 1, 2)
 
 # Lattice
 reallat = RealLattice.from_alat(alat=5.1070,  # Bohr
@@ -64,8 +64,8 @@ diago_thr_init = 1E-2 * RYDBERG
 
 out = scf(dftcomm, crystal, kpts, grho, gwfn,
           numbnd, is_spin, is_noncolin,
-          rho_start=mag_start, occ_typ='smear', smear_typ='gauss', e_temp=1E-2 * RYDBERG,
-          conv_thr=1E-8 * RYDBERG, diago_thr_init=1E-2 * RYDBERG,
+          rho_start=mag_start, occ_typ='smear', smear_typ='gauss', e_temp=e_temp,
+          conv_thr=conv_thr, diago_thr_init=diago_thr_init,
           iter_printer=print_scf_status)
 
 scf_converged, rho, l_wfn_kgrp, en = out
