@@ -23,17 +23,15 @@ requires-python = ">=3.7"
 dependencies = [
     "numpy",
     "scipy",
-    "pyfftw",
     "spglib",
     "tqdm",
-    "h5py",
     "pylibxc2"
 ]
 
 [project.optional-dependencies]
 parallel = ["mpi4py"]
+pyfftw = ["pyfftw"]
 gpu = ["cupy"]
-primmme = ["primme"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
