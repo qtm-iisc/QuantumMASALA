@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from typing import Sequence
 __all__ = ['GkSpace']
 
 import numpy as np
@@ -15,12 +17,16 @@ class GkSpace(GSpaceBase):
     FFT3D = FFT3DFull
     _normalise_idft = False
 
-    def __init__(self, gwfn: GSpace, k_cryst: tuple[float, float, float]):
+    def __init__(self, gwfn: GSpace, k_cryst: tuple[float, float, float], ecutwfn:float=None):
         if not isinstance(gwfn, GSpace):
             raise TypeError("'gwfn' must be a 'GSpace' instance. "
                             f"got '{type(gwfn)}'")
         self.gwfn = gwfn
-        self.ecutwfn = self.gwfn.ecut / 4
+
+        if ecutwfn==None:
+            self.ecutwfn = self.gwfn.ecut / 4
+        else:
+            self.ecutwfn = ecutwfn
 
         self.k_cryst = tuple(k_cryst)
         g_cryst = self.gwfn.g_cryst[:, self.gwfn.idxsort]
@@ -56,3 +62,17 @@ class GkSpace(GSpaceBase):
     def gk_norm(self) -> NDArray:
         """(``(size, )``, ``'f8'``) Norm of G+k vectors."""
         return np.sqrt(self.gk_norm2)
+
+    def cryst_to_norm2(self, l_vecs: Sequence) -> Sequence:
+        """Calculate the norm^2 of a given list of vectors in crystal coordinates.
+        
+        Parameters
+        ----------
+        l_vec: Sequence
+            List of vectors in crystal coordinates. shape: (3,:)
+        
+        Returns
+        -------
+        np.ndarray of shape (:)
+        """
+        return np.sum(np.square(self.recilat.recvec @ l_vecs), axis=0)

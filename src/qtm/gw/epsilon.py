@@ -6,22 +6,20 @@ import numpy as np
 # from qtm import pw_logger
 from qtm.constants import RYDBERG
 from qtm.crystal import Crystal
-from qtm.gspace.fft.full import FFT3DFull
-from qtm.gspace.fft.utils import cryst2idxgrid
+from qtm.fft.backend.utils import get_fft_driver
 from qtm.klist import KList
-from qtm.gspace.fft import get_fft_driver
 from qtm.gspace.gkspc import GkSpace
 from qtm.gspace.gspc import minimal_grid_shape, GSpace
-from qtm.dft.kswfn import KSWavefun
+from qtm.dft.kswfn import KSWfn
 from qtm.gw.core import QPoints
 from qtm.gw.io_bgw.epsinp import Epsinp
 from qtm.gw.io_bgw.epsmat_read_write import read_mats, write_mats
 from qtm.gw.io_bgw.wfn2py import WfnData
 from qtm.gw.vcoul import Vcoul
-from qtm.gspace.fft.utils import idxgrid2cryst
+from qtm.gspace.base import cryst2idxgrid
 
 
-# #@pw_logger.time('epsilon')
+# @pw_logger.time('epsilon')
 class Epsilon:
     """Epsilon Matrix Class
     Generate (optionally frequency dependent) dielectric function and its inverse.
@@ -56,8 +54,8 @@ class Epsilon:
         gspace: GSpace,
         kpts: KList,
         kptsq: KList,
-        l_wfn: List[KSWavefun],
-        l_wfnq: List[KSWavefun],
+        l_wfn: List[KSWfn],
+        l_wfnq: List[KSWfn],
         l_gsp_wfn: List[GkSpace],
         l_gsp_wfnq: List[GkSpace],
         qpts: QPoints,
@@ -71,8 +69,8 @@ class Epsilon:
         gspace: GSpace
         kpts: KList
         kptsq: KList
-        l_wfn: List[KSWavefun]
-        l_wfnq: List[KSWavefun]
+        l_wfn: List[KSWfn]
+        l_wfnq: List[KSWfn]
         l_gsp_wfn: List[GkSpace]
         l_gsp_wfnq: List[GkSpace]
         qpts: QPoints
@@ -150,35 +148,32 @@ class Epsilon:
 
         """
 
-        # ** ALL K VECTORS, Q VECTORS, G VECTORS WILL BE IN CRYSTAL BASIS **
-
         # k points data
-
-        n_kpts = self.kpts.numk  # kpoints.nrk
-        evl = []  # kpoints.el
+        n_kpts = self.kpts.numk
+        evl = []
         evl_q = []
-        occ_all_bands = []  # kpoints.occ
+        occ_all_bands = []
 
         for i_k in range(n_kpts):
-            occ_all_bands.append(self.l_wfn[i_k].occ[0])
+            occ_all_bands.append(self.l_wfn[i_k].occ)
             evl.append(self.l_wfn[i_k].evl)
             evl_q.append(self.l_wfnq[i_k].evl)
 
         # List of k-points in crystal coords
-        l_k = self.kpts.cryst  # kpoints.rk
+        l_k = self.kpts.cryst
 
         # Wavefunction data
         gvecs = [self.l_wfn[i_k].gkspc.g_cryst for i_k in range(n_kpts)]
 
         # Load epsilon.inp data
         number_bands = self.epsinp.number_bands
-        is_q0 = self.qpts.is_q0  # np.array(inp.qpts[:, 4], dtype=bool)
-        l_q = self.qpts.cryst  # list of q-points in crystal coords
+        is_q0 = self.qpts.is_q0
+        l_q = self.qpts.cryst
 
         # Occupation numbers
         occ_all_bands = np.array(occ_all_bands)
 
-        occ = occ_all_bands[:, 0:number_bands]
+        occ = occ_all_bands[:,0:number_bands]
         # ^ indices for reference: [index of kpoint, band index]
         l_i_v = np.where(occ == 1)  # list of indices of occupied   bands
         l_i_c = np.where(occ == 0)  # list of indices of unoccupied bands
@@ -231,9 +226,8 @@ class Epsilon:
                 wfn_v = self.l_wfn[i_k_v]
                 gkspc = self.l_gsp_wfn[i_k_v]
 
-            # :gkspc.numgk])
             arr_r = np.zeros(self.gspace.grid_shape, dtype=complex)
-            gkspc._fft.g2r(wfn_v.evc._data[i_b_v, :], arr_out=arr_r)
+            gkspc._fft.g2r(wfn_v.evc_gk._data[i_b_v, :], arr_out=arr_r)
             return arr_r
 
         # MATRIX ELEMENTS CALCULATION ---------------------------------------------------
@@ -246,14 +240,13 @@ class Epsilon:
         for i_c in range(n_c):  # , desc="mtxel i_c loop"):
             i_k_c = l_i_c[0][i_c]  # unoccupied k indices, repeated
             i_b_c = l_i_c[1][i_c]  # unoccupied band indices, repeated
+            if i_b_c >= number_bands:
+                continue
 
             # phi_c: Fourier transform of wfn_c to real space
             wfn_c = self.l_wfn[i_k_c]
-
-            # :self.l_gsp_wfn[i_k_c].numgk])
             phi_c = np.zeros(wfn_c.gkspc.grid_shape, dtype=complex)
-            # print("wfn_c.evc.shape",wfn_c.evc.shape)
-            self.l_gsp_wfn[i_k_c]._fft.g2r(arr_inp=wfn_c.evc._data[i_b_c, :], arr_out=phi_c)
+            self.l_gsp_wfn[i_k_c]._fft.g2r(arr_inp=wfn_c.evc_gk._data[i_b_c, :], arr_out=phi_c)
 
             # To avoid re-calculation for different bands of the same k_c-vector:
             if prev_i_k_c != i_k_c:
@@ -263,16 +256,10 @@ class Epsilon:
 
                 idxgrid = cryst2idxgrid(shape=self.gspace.grid_shape, g_cryst=l_g_umklapp.astype(int))
 
-                # check
                 umklapped_fft_driver = get_fft_driver()(
                     self.gspace.grid_shape,
-                    # grid_g_umklapp,
                     idxgrid,
                     normalise_idft=False,
-                    # NOTE: normalise_idft=False will be the default for all gw code,
-                    # as this is the default for gkspc.fft_driver constructor call.
-                    # However, it matters only for ifft, i.e. g2r,
-                    # So not relevant for umklapped_fft_driver.
                 )
 
             # Obtain a list of indices of valence kpoints that match  k_c + q
@@ -295,7 +282,6 @@ class Epsilon:
                 # Do FFT
                 fft_prod = np.zeros(umklapped_fft_driver.idxgrid.shape, dtype=complex)
                 umklapped_fft_driver.r2g(prod, fft_prod)
-                fft_prod*=np.prod(self.gspace.grid_shape)**2
                 # The FFT result will be cut-off according to umklapped_fft_driver's cryst
                 sqrt_Ec_Ev = np.sqrt(evl_c[i_k_c][i_b_c] - evl_v[i_k_v][i_b_v])
 
@@ -373,7 +359,6 @@ class Epsilon:
 
         # Nice suggestion by SH: consider doing this multiplication within matrix_elements, to avoid using excess space.
         polarizability_matrix = -np.einsum("ijkl,ijkm->lm", np.conj(M), M)
-
         return (
             4 * polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
         )
@@ -415,7 +400,6 @@ class Epsilon:
         I = np.identity(len(polarizability_matrix))
 
         eps = I - np.einsum("j,ij->ij", vqg, polarizability_matrix, optimize=True)
-
         epsinv = np.linalg.inv(eps)
 
         if store:

@@ -17,7 +17,7 @@ maintainers = [
     {name = "S Shri Hari", email = "shriharis@iisc.ac.in"},
     {name = "Manish Jain", email = "mjain@iisc.ac.in"}
 ]
-keywords = ["python", "Density Functional Theory", "DFT", "Time-Dependent DFT", "TDDFT"]
+keywords = ["python", "Density Functional Theory", "DFT", "Time-Dependent DFT", "TDDFT","GW", "GW Approximation", "GW Method"]
 urls = {project-url = "https://www.physics.iisc.ac.in/~mjain/group/"}
 requires-python = ">=3.7"
 dependencies = [
@@ -25,6 +25,9 @@ dependencies = [
     "scipy",
     "pyfftw",
     "spglib",
+    "tqdm",
+    "h5py",
+    "pylibxc2"
 ]
 
 [project.optional-dependencies]

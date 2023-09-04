@@ -13,7 +13,8 @@ from qtm.config import qtmconfig
 from qtm.config import NDArray
 
 
-def check_g_idxgrid(shape: tuple[int, int, int], idxgrid: NDArray):
+
+def check_g_idxgrid(shape: tuple[int, int, int], idxgrid: NDArray, check_len:bool=True):
     """Function to validate `idxgrid`, the flattened indices corresponding
     to the G-vectors in a 3D FFT array with dimensions ``shape``
 
@@ -24,9 +25,9 @@ def check_g_idxgrid(shape: tuple[int, int, int], idxgrid: NDArray):
     assert isinstance(idxgrid, NDArray)
     assert idxgrid.ndim == 1
     assert idxgrid.dtype == 'i8'
-    assert len(idxgrid) == len(np.unique(idxgrid))
+    if check_len:
+        assert len(idxgrid) == len(np.unique(idxgrid)), f"idxgrid {idxgrid}"
     assert np.all(idxgrid >= 0) and np.all(idxgrid < np.prod(shape))
-
 
 class FFT3D(ABC):
     """FFT Module for transforming between real-space and the G-Space defined
@@ -47,10 +48,11 @@ class FFT3D(ABC):
     @abstractmethod
     def __init__(self, shape: tuple[int, int, int],
                  idxgrid: NDArray | None, normalise_idft: bool,
-                 backend: str | None):
+                 backend: str | None, skip_check_g_idxgrid_len:bool=False):
         if idxgrid is None:
             idxgrid = np.arange(np.prod(shape), dtype='i8')
-        check_g_idxgrid(shape, idxgrid)
+        if not skip_check_g_idxgrid_len:
+            check_g_idxgrid(shape, idxgrid)
         self.shape: tuple[int, int, int] = shape
         """shape of the FFT grid"""
 

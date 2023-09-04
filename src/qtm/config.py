@@ -12,6 +12,7 @@ from importlib.util import find_spec
 
 from qtm import logger
 
+fft_use_sticks = False
 
 class QTMConfig:
     """QuantumMASALA's configuration Manager.
