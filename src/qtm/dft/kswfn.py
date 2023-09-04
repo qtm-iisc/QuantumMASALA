@@ -1,4 +1,9 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 __all__ = ['KSWfn']
+
 import numpy as np
 
 from qtm.gspace import GkSpace
@@ -99,13 +104,13 @@ class KSWfn:
         np.multiply(data.real, np.exp(TPIJ * data.imag), out=data)
         self.evc_gk /= 1 + self.gkspc.gk_norm2
 
-    def compute_rho(self) -> FieldRType:
+    def compute_rho(self, ibnd: slice | Sequence[int] = slice(None)) -> FieldRType:
         """Constructs a density from the eigenkets `evc_gk` and occupation
         `occ`"""
-        self.evc_gk.normalize()
+        self.evc_gk[ibnd].normalize()
         rho: FieldRType = sum(
             occ * wfn.to_r().get_density(normalize=False)
-            for wfn, occ in zip(self.evc_gk, self.occ)
+            for wfn, occ in zip(self.evc_gk[ibnd], self.occ[ibnd])
         )
         rho /= rho.gspc.reallat_cellvol
-        return rho
+        return rho if self.is_noncolin else rho[0]

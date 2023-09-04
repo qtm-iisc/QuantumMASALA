@@ -22,7 +22,7 @@ from qtm.pseudo import (
 )
 from qtm.symm.symmetrize_field import SymmFieldMod
 
-from qtm.dft import DFTCommMod, dftconfig, KSWfn, KSHam, eigsolve, occup, mixing
+from qtm.dft import DFTCommMod, DFTConfig, KSWfn, KSHam, eigsolve, occup, mixing
 
 from qtm.mpi.check_args import check_system
 from qtm.mpi.utils import scatter_slice
@@ -79,7 +79,9 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         conv_thr: float = 1E-6*RYDBERG, maxiter: int = 100,
         diago_thr_init: float = 1E-2*RYDBERG,
         iter_printer: IterPrinter | None = None,
-        mix_beta: float = 0.7, mix_dim: int = 8
+        mix_beta: float = 0.7, mix_dim: int = 8,
+
+        dftconfig: DFTConfig | None = None
         ):
     if not isinstance(dftcomm, DFTCommMod):
         raise TypeError(
@@ -93,10 +95,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             raise NotImplementedError()
 
         numbnd = comm.bcast(numbnd)
-        if not isinstance(numbnd, int) or numbnd <= 0:
-            raise TypeError(type_mismatch_msg(
-                'numbnd', numbnd, 'a positive integer'
-            ))
+        assert isinstance(numbnd, int)
+        assert numbnd > 0
 
         is_spin = comm.bcast(is_spin)
         assert isinstance(is_spin, bool)
@@ -111,9 +111,6 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
 
         symm_rho = comm.bcast(symm_rho)
         assert isinstance(symm_rho, bool)
-        symm_mod = None
-        if symm_rho:
-            symm_mod = SymmFieldMod(crystal, grho)
 
         if isinstance(rho_start, FieldGType):
             assert rho_start.gspc is grho
@@ -177,6 +174,11 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         assert isinstance(mix_dim, int)
         assert mix_dim > 0
 
+        if dftconfig is None:
+            dftconfig = DFTConfig()
+        comm.bcast(dftconfig)
+        assert isinstance(dftconfig, DFTConfig)
+
     start_time = perf_counter()
     image_comm = dftcomm.image_comm
     pwgrp_inter_kgrp = dftcomm.pwgrp_inter_kgrp
@@ -188,6 +190,10 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         i_kpts_kgrp = range(kpts.numkpts)[
             scatter_slice(kpts.numkpts, n_kgrp, i_kgrp)
         ]
+
+        symm_mod = None
+        if symm_rho:
+            symm_mod = SymmFieldMod(crystal, grho)
 
         if wfn_init is None:
             def wfn_init(_, kswfn_k):
@@ -243,29 +249,38 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         rho_in, rho_out = rho_start, FieldG_rho.empty(1 + is_spin)
 
         # Defining local potential calculation subroutine
-        v_hart: FieldG_rho
-        v_xc: FieldG_rho
-        vloc: FieldG_rho
+        v_hart: FieldRType
+        v_xc: FieldRType
+        vloc: FieldRType
         v_ion_g0: Number
+        vloc_g0: list[Number]
 
         def normalize_rho(rho: FieldGType):
             rho *= crystal.numel / (sum(rho.data_g0) * rho.gspc.reallat_dv)
 
         def compute_vloc():
-            nonlocal rho_in, v_hart, v_xc, vloc, v_ion_g0
+            nonlocal rho_in, v_hart, v_xc, vloc, vloc_g0, v_ion_g0
             v_hart, en.hartree = hartree.compute(rho_in)
             v_xc, en.xc = xc.compute(rho_in, rho_core, *libxc_func)
             vloc = v_ion + v_hart + v_xc
 
             # Grid interpolation from grho -> gwfn goes here
             vloc /= np.prod(gwfn.grid_shape)
+            vloc_g0 = np.sum(vloc, axis=-1)
             pwgrp_inter_kgrp.bcast(vloc.data)
             image_comm.bcast(vloc.data)
             v_ion_g0 = np.sum(v_ion) / np.prod(grho.grid_shape)
 
+
         # Defining KS Hamiltonian solver routines
-        # if dftconfig.eigsolve_method == 'davidson':
-        solver = eigsolve.davidson
+        if dftconfig.eigsolve_method == 'davidson':
+            solver = eigsolve.davidson
+            solver_kwargs = {'numwork': dftconfig.davidson_numwork,
+                             'maxiter': dftconfig.davidson_maxiter,
+                             'vloc_g0': None}
+        elif dftconfig.eigsolve_method == 'scipy':
+            solver = eigsolve.scipy_eigsh
+            solver_kwargs = {}
 
         def solve_kswfn(kswfn_k: list[KSWfn]):
             numiter = 0
@@ -273,8 +288,9 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                 kswfn_ = kswfn_k[ispin]
                 ksham = KSHam(kswfn_.gkspc, is_noncolin,
                               vloc if is_noncolin else vloc[ispin], l_nloc)
+                solver_kwargs['vloc_g0'] = vloc_g0
                 _, niter = solver.solve(dftcomm, ksham, kswfn_, diago_thr,
-                                        v_ion_g0)
+                                        **solver_kwargs)
                 numiter += niter
             numiter /= 2 if is_spin and not is_noncolin else 1
             return numiter
@@ -288,12 +304,13 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                 for kswfn_k in l_kswfn_kgrp:
                     for ispin, kswfn in enumerate(kswfn_k):
                         k_weight = kswfn.k_weight
-                        rho_k_spin = kswfn.compute_rho()
+                        rho_k_spin = kswfn.compute_rho(sl_bnd)
                         if is_noncolin:
                             rho_wfn[:] += k_weight * rho_k_spin.to_g()
                         else:
-                            rho_wfn[ispin] += k_weight * rho_k_spin[0].to_g()
-            pwgrp_inter_kgrp.allreduce(rho_wfn.data)
+                            rho_wfn[ispin] += k_weight * rho_k_spin.to_g()
+                with dftcomm.pwgrp_inter_image as comm:
+                    comm.Allreduce(comm.IN_PLACE, rho_wfn.data)
 
             # Grid interpolation from gwfn -> grho goes here
             rho_out[:] = rho_wfn[:]
@@ -313,10 +330,13 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                     for kswfn_ in kswfn_k
                 )
             with kroot_intra:
+                if kroot_intra.is_null:
+                    kroot_intra.skip_with_block()
                 e_eigen = kroot_intra.allreduce(e_eigen)
             e_eigen = image_comm.bcast(e_eigen)
             v_hxc = v_hart + v_xc
-            en.one_el = e_eigen - sum((v_hxc * rho_out.to_r())).integrate_unitcell()
+            e_vhxc = sum((v_hxc * rho_out.to_r())).integrate_unitcell()
+            en.one_el = (e_eigen - e_vhxc).real
             en.total = en.one_el + en.ewald + en.hartree + en.xc
             en.hwf = e_eigen - sum((v_hxc * rho_in.to_r())).integrate_unitcell()
             if occ_typ == 'smear':
@@ -356,6 +376,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             update_rho_out()
             compute_en()
             e_error = mixmod.compute_error(rho_in, rho_out)
+            e_error = image_comm.bcast(e_error)
+
             if e_error < conv_thr:
                 scf_converged = True
             elif idxiter == 0 and e_error < diago_thr * crystal.numel:
@@ -376,7 +398,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             scf_converged = image_comm.bcast(scf_converged)
             diago_thr = image_comm.bcast(diago_thr)
             image_comm.barrier()
-            if iter_printer is not None:
+            if iter_printer is not None and image_comm.rank == 0:
                 iter_printer(
                     idxiter, perf_counter() - start_time, scf_converged,
                     e_error, diago_thr, diago_avgiter, en

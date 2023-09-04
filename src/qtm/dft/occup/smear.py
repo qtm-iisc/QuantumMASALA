@@ -118,13 +118,14 @@ def compute_occ(dftcomm: DFTCommMod, l_wfn: list[list[KSWfn]], numel: int,
             for wfn in wfn_k:
                 wfn.occ[:] = _compute_occ(wfn.evl, e_fermi, smear_typ, degauss)
                 e_smear += wfn.k_weight * _compute_en(wfn, e_fermi, smear_typ, degauss)
-                dftcomm.kgrp_intra.Bcast(wfn.occ)
         e_smear = comm.allreduce(e_smear, comm.SUM)
         e_smear *= 2 if not is_spin else 1
 
     with dftcomm.kgrp_intra as comm:
-        e_fermi = comm.bcast(e_fermi)
-        e_smear = comm.bcast(e_smear)
-
+        for wfn_k in l_wfn:
+            for wfn in wfn_k:
+                comm.Bcast(wfn.occ)
+        e_fermi = comm.bcast(e_fermi if comm.rank == 0 else None)
+        e_smear = comm.bcast(e_smear if comm.rank == 0 else None)
 
     return e_fermi, e_smear

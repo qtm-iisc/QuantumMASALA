@@ -13,11 +13,11 @@ def compute(rho: FieldGType) -> tuple[FieldRType, float]:
 
     Parameters
     ----------
-    rho : FieldG
+    rho : FieldGType
         Input Charge density. `rho.shape` must be ``(2, )`` or ``(1, )``
     Returns
     -------
-    v_hart : FieldR
+    v_hart : FieldRType
         Hartree Potential. Is a scalar field as it is spin independent
     en_hart : float
         Interaction Energy per unit cell

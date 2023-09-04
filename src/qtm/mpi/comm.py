@@ -129,9 +129,13 @@ class QTMComm:
         """Overloaded to disable all methods if instance is a
         null communicator i.e `is_null` is True"""
         out = super().__getattribute__(item)
-        if isinstance(out, MethodType) and self.is_null:
+        if not isinstance(out, MethodType):
+            return out
+        elif item == 'skip_with_block':
+            return out
+        elif self.is_null:
             raise AttributeError("'CommMod' instance is a null communicator. "
-                                 "All methods are disabled.")
+                                 "All methods are disabled")
         return out
 
     def __enter__(self) -> QTMComm:
@@ -306,7 +310,7 @@ class QTMComm:
                   recvbuf: BufSpecV):  # noqa: N802
         """Alias of `mpi4py.MPI.Comm.Allgatherv`"""
         if self.mpi4py_installed:
-            self.comm.Allgather(sendbuf, recvbuf)
+            self.comm.Allgatherv(sendbuf, recvbuf)
         elif sendbuf != IN_PLACE:
             recvbuf[0][:] = sendbuf
 

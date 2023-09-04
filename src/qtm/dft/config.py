@@ -2,11 +2,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Literal
-__all__ = ['DFTCommMod', 'dftconfig']
+__all__ = ['DFTCommMod', 'DFTConfig']
 
 from qtm.mpi.comm import QTMComm, split_comm_pwgrp
 
-from qtm.config import qtmconfig
 from qtm.msg_format import *
 
 
@@ -29,14 +28,7 @@ class DFTCommMod:
                              f"pwgrp_size = {pwgrp_size} and n_kgrp = {n_kgrp}, "
                              f"it is not possible.")
         self.n_kgrp = n_kgrp
-
         self.n_bgrp = self.n_pwgrp // self.n_kgrp
-        self.i_bgrp = self.pwgrp_inter_image.rank // self.n_bgrp
-        key = self.pwgrp_inter_image.rank % self.n_bgrp
-        self.pwgrp_inter_kgrp = self.pwgrp_inter_image.Split(self.i_bgrp, key)
-        self.pwgrp_inter_kroot = self.pwgrp_inter_image.Incl(
-            tuple(ikgrp * self.n_bgrp for ikgrp in range(self.n_kgrp))
-        )
 
         kgrp_size = self.n_bgrp * pwgrp_size
         self.i_kgrp = self.image_comm.rank // kgrp_size
@@ -44,6 +36,12 @@ class DFTCommMod:
         self.kgrp_intra = self.image_comm.Split(self.i_kgrp, key)
         self.kroot_intra = self.image_comm.Incl(
             tuple(ikgrp * kgrp_size for ikgrp in range(self.n_kgrp))
+        )
+
+        self.i_bgrp = self.pwgrp_inter_image.rank % self.n_bgrp
+        self.pwgrp_inter_kgrp = self.pwgrp_inter_image.Split(self.i_kgrp, self.i_bgrp)
+        self.pwgrp_inter_kroot = self.pwgrp_inter_image.Incl(
+            tuple(ikgrp * self.n_bgrp for ikgrp in range(self.n_kgrp))
         )
 
 
@@ -54,23 +52,7 @@ class DFTConfig:
     spglib_symprec: float = 1E-5
 
     _eigsolve_method: Literal['davidson', 'scipy'] = 'davidson'
-
-    _use_gpu: bool = False
     @property  # noqa : E301
-    def use_gpu(self) -> bool:
-        """enable GPU acceleration"""
-        return self._use_gpu
-
-    @use_gpu.setter
-    def use_gpu(self, flag: bool):
-        if not isinstance(flag, bool):
-            raise TypeError(f"'use_gpu' must be a boolean. got type {type(flag)}")
-        self._use_gpu = False
-        if flag:
-            qtmconfig.check_cupy()
-            self._use_gpu = True
-
-    @property
     def eigsolve_method(self):
         return self._eigsolve_method
 
@@ -121,5 +103,3 @@ class DFTConfig:
                 'DFTConfig.mixing_method', val, l_mixers
             ))
 
-
-dftconfig: DFTConfig = DFTConfig()

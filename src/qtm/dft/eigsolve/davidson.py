@@ -9,22 +9,19 @@ import numpy as np
 from scipy.linalg import eigh
 
 from qtm.containers import WavefunGType
-from qtm.dft import KSWfn, KSHam, DFTCommMod, dftconfig
+from qtm.dft import KSWfn, KSHam, DFTCommMod
 
 from qtm.logger import qtmlogger
 from qtm.config import NDArray
 
 
-@qtmlogger.time('davidson:solve')
+@qtmlogger.time('davidson')
 def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
-          vloc_g0: complex) -> tuple[KSWfn, int]:
+          vloc_g0: list[complex], numwork: int, maxiter: int) -> tuple[KSWfn, int]:
     assert isinstance(dftcomm, DFTCommMod)
 
     kgrp_intra = dftcomm.kgrp_intra
     bgrp_inter = dftcomm.pwgrp_inter_kgrp
-
-    numwork = dftconfig.davidson_numwork
-    maxiter = dftconfig.davidson_maxiter
 
     with kgrp_intra as comm:
         assert isinstance(ksham, KSHam)
@@ -44,8 +41,10 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
         maxiter = comm.bcast(maxiter)
         assert isinstance(maxiter, int) and maxiter > 1
 
-    gkspc = ksham.gkspc
-    basis_size = kswfn.evc_gk.basis_size
+    WavefunG: type[WavefunGType] = type(kswfn.evc_gk)
+    gkspc = WavefunG.gkspc
+    basis_size = WavefunG.basis_size
+    is_noncolin = kswfn.is_noncolin
     numeig = kswfn.numbnd
     with kgrp_intra as comm:
         comm.Bcast(kswfn.evl)
@@ -56,8 +55,12 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     # Only the diagonal part of the Ham is considered and 'approximately'
     # inverted so that the small terms will not be transformed to large
     # quantities
-    ham_diag = ksham.ke_gk + ksham.vnl_diag + vloc_g0
+    ham_diag = ksham.ke_gk + ksham.vnl_diag
+    ham_diag.data[..., :gkspc.size_g] += vloc_g0[0]
+    if is_noncolin:
+        ham_diag.data[..., gkspc.size_g:] += vloc_g0[1]
 
+    @qtmlogger.time('davidson:apply_g_psi')
     def apply_g_psi(l_wfn: WavefunGType, l_evl: NDArray):
         scala = 2
         for wfn_, evl_ in zip(l_wfn, l_evl):
@@ -71,7 +74,6 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     n_unconv = numeig
 
     ndim_max = numwork * numeig
-    WavefunG: type[WavefunGType] = type(evc)
     psi = WavefunG.empty(ndim_max)
     hpsi = WavefunG.empty(ndim_max)
     ham_red = np.zeros((ndim_max, ndim_max), dtype='c16', like=evl)
@@ -102,6 +104,7 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
         grprank = np.arange(grpsize, dtype='i8')
         return (len_ // grpsize) + (grprank < len_ % grpsize)
 
+    @qtmlogger.time('davidson:compute_hpsi')
     def compute_hpsi(istart, istop):
         with bgrp_inter as comm:
             sl_psi = slice(istart, istop)
@@ -117,9 +120,8 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     # Grouping the unconverged eigenvectors of the reduced hamiltonian together
     # For batched operations using matmul (GEMM)
     def move_unconv():
-        with kgrp_intra:
-            evc_red[:n_unconv] = evc_red[unconv_flag]
-            evl_red[:n_unconv] = evl_red[unconv_flag]
+        evc_red[:n_unconv] = evc_red[unconv_flag]
+        evl_red[:n_unconv] = evl_red[unconv_flag]
 
     # Since only the lower triangular matrix is used anyway
     # This is not required
@@ -143,6 +145,7 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     # of the reduced hamiltonian. The residual of the resulting wavefunctions
     # are used to expand the subspace. Preconditioning is applied to the
     # residuals before adding to the basis of the subspace
+    @qtmlogger.time('davidson:expand_psi')
     def expand_psi():
         nonlocal ndim
         sl_curr = slice(ndim)
@@ -177,7 +180,6 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
         with bgrp_inter as comm:
             sl_bgrp = scatter_slice(sl_new, comm.size, comm.rank)
             if sl_new.stop > sl_new.start:
-                compute_hpsi(sl_bgrp.start, sl_bgrp.stop)
                 ham_red_[sl_bgrp] = psi[sl_bgrp].vdot(hpsi[:ndim])
                 ovl_red_[sl_bgrp] = psi[sl_bgrp].vdot(psi[:ndim])
             comm.barrier()
@@ -240,7 +242,7 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
             with bgrp_inter as comm:
                 sl_bgrp = scatter_slice(slice(ndim), comm.size, comm.rank)
                 np.matmul(evc_red[:numeig, sl_bgrp], psi[sl_bgrp], out=evc[:])
-                comm.Allreduce(kgrp_intra.IN_PLACE, evc.data)
+                comm.Allreduce(comm.IN_PLACE, evc.data)
                 if n_unconv == 0:
                     break
                 # debug: print('restart')
