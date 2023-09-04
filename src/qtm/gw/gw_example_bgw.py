@@ -1,14 +1,3 @@
-# %% [markdown]
-# # G<sub>0</sub>W<sub>0</sub> Approximation Tutorial Notebook
-# 
-# In this notebook, we present an example calculation of quasiparticle energies using QuatumMASALA's `gw` module.
-
-# %%
-%load_ext autoreload
-%autoreload 2
-
-# %%
-# Imports
 from __future__ import annotations
 import numpy as np
 import sys
