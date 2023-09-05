@@ -1,9 +1,12 @@
 from __future__ import annotations
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from typing import Literal
 __all__ = ['WavefunGType', 'get_WavefunG',
            'WavefunRType', 'get_WavefunR',
            'WavefunType']
 
-from functools import lru_cache, cached_property
+from functools import lru_cache
 from typing import Union
 import numpy as np
 
@@ -36,19 +39,36 @@ class WavefunGType(BufferType):
         cls.numspin, cls.basis_size = numspin, numspin * gkspc.size_g
         cls.ndarray = type(cls.gspc.g_cryst)
 
-    @cached_property
-    def zgemm(self):
-        """
+    @classmethod
+    def zgemm(cls, a: NDArray, b: NDArray, trans_a: Literal[0, 1, 2] = 0,
+              trans_b: Literal[0, 1, 2] = 0, alpha: complex = 1.0,
+              out: NDArray | None = None, beta: complex = 0.0) -> NDArray:
+        """Implements C := alpha*op( A )*op( B ) + beta*C, where op( X ) is
+        one of: op( X ) = X or op( X ) = X**T or op( X ) = X**H
 
-        Notes
-        -----
-        Ideally this should be a class attribute that is set within
-        `__init_subclass__` and not an instance property. But, doing so
-        results in unexpected behaviour, which has to do with caching
-        functions that has default values for its kwargs.
+        Array arguments are expected to be in Fortran contiguous order.
+        `trans_a` and `trans_b` take 0, 1 or 2 where:
 
+        * 0 -> op( X ) = X
+        * 1 -> op( X ) = X**T (transpose)
+        * 2 -> op( X ) = X**H (transpose conjugate)
+
+        Parameters
+        ----------
+        a : NDArray
+        b : NDArray
+        trans_a: Literal[0, 1, 2], default=0
+        trans_b: Literal[0, 1, 2], default=0
+        alpha: complex, default=1.0
+        out: Optional[NDArray], default=None
+            If None, a new array is allocated and C above is taken to be zero
+        beta: complex, default=0.0
+
+        Returns
+        -------
+        out : NDarray
         """
-        return get_zgemm(self.ndarray)
+        return get_zgemm(cls.ndarray)(a, b, trans_a, trans_b, alpha, out, beta)
 
     def to_r(self) -> WavefunRType:
         wfn_r = get_WavefunR(self.gkspc, self.numspin).empty(self.shape)
