@@ -9,8 +9,8 @@ __all__ = ['QTMComm', 'QTMComm',
 from collections.abc import Sequence
 from types import MethodType
 
-from qtm import qtmconfig
-if qtmconfig.mpi4py_installed:
+from qtm.config import MPI4PY_INSTALLED
+if MPI4PY_INSTALLED:
     from mpi4py.MPI import COMM_WORLD, COMM_NULL, COMM_SELF
     from mpi4py.MPI import Op, IN_PLACE
     InPlace = type(IN_PLACE)
@@ -30,14 +30,15 @@ else:
     WORLD_SIZE, WORLD_RANK = 1, 0
     Group = None
 
+from typing import Tuple
 from qtm.config import NDArray
 BufSpec = NDArray
-BufSpecV = tuple[NDArray, Sequence[int]]
+BufSpecV = Tuple[NDArray, Sequence[int]]
 
 
 class QTMComm:
 
-    mpi4py_installed = qtmconfig.mpi4py_installed
+    mpi4py_installed = MPI4PY_INSTALLED
     comm_world = COMM_WORLD
     comm_null = COMM_NULL
     comm_self = COMM_SELF

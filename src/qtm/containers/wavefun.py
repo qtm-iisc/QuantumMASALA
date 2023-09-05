@@ -11,7 +11,7 @@ from qtm.gspace import GkSpace
 from .buffer import BufferType
 from .field import get_FieldR
 from .gemm_wrappers import get_zgemm
-from qtm.config import qtmconfig
+from qtm.config import MPI4PY_INSTALLED
 
 from qtm.config import NDArray
 from qtm.msg_format import *
@@ -179,7 +179,7 @@ WavefunType = Union[WavefunGType, WavefunRType]
 
 @lru_cache(maxsize=None)
 def get_WavefunG(gkspc: GkSpace, numspin: int) -> type[WavefunGType]:
-    if qtmconfig.mpi4py_installed:
+    if MPI4PY_INSTALLED:
         from qtm.mpi.gspace import DistGkSpace
         from qtm.mpi.containers import get_DistWavefunG
         if isinstance(gkspc, DistGkSpace):
@@ -192,7 +192,7 @@ def get_WavefunG(gkspc: GkSpace, numspin: int) -> type[WavefunGType]:
 
 @lru_cache(maxsize=None)
 def get_WavefunR(gkspc: GkSpace, numspin: int) -> type[WavefunRType]:
-    if qtmconfig.mpi4py_installed:
+    if MPI4PY_INSTALLED:
         from qtm.mpi.gspace import DistGkSpace
         from qtm.mpi.containers import get_DistWavefunR
         if isinstance(gkspc, DistGkSpace):

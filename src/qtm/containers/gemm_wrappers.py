@@ -7,9 +7,8 @@ __all__ = ['get_zgemm', 'ZGEMMWrapper']
 from sys import version_info
 from functools import lru_cache
 import numpy as np
-from qtm.config import qtmconfig
 
-from qtm.config import NDArray
+from qtm.config import CUPY_INSTALLED, NDArray
 
 
 if version_info[1] >= 8:
@@ -87,7 +86,7 @@ def get_zgemm(arr_type: type) -> ZGEMMWrapper:
             return out
 
         return zgemm_sp
-    elif qtmconfig.cupy_installed:
+    elif CUPY_INSTALLED:
         import cupy as cp
         if arr_type is cp.ndarray:
             from cupy.cublas import gemm

@@ -10,7 +10,7 @@ from qtm.kpts import KList
 
 from .comm import QTMComm
 
-from qtm.config import qtmconfig
+from qtm.config import MPI4PY_INSTALLED
 from qtm.msg_format import obj_mismatch_msg
 
 EPS = 1E-8
@@ -80,7 +80,7 @@ def check_gspace(comm: QTMComm, gspc: GSpace):
         for ipol in range(3):
             assert gspc.grid_shape[ipol] == comm.bcast(gspc.grid_shape[ipol])
         is_dist = False
-        if qtmconfig.mpi4py_installed:
+        if MPI4PY_INSTALLED:
             from .gspace import DistGSpace
             if isinstance(gspc, DistGSpace):
                 is_dist = True
@@ -104,7 +104,7 @@ def check_gkspace(comm: QTMComm, gkspc: GkSpace, check_gwfn: bool = False):
         for ipol in range(3):
             assert gkspc.k_cryst[ipol] == comm.bcast(gkspc.k_cryst[ipol])
         is_dist = False
-        if qtmconfig.mpi4py_installed:
+        if MPI4PY_INSTALLED:
             from .gspace import DistGkSpace
             if isinstance(gkspc, DistGkSpace):
                 is_dist = True

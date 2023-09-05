@@ -75,7 +75,7 @@ def get_FFTBackend(backend: str | None = None) -> Type[FFTBackend]:
     Type[FFTBackend]
         `FFTBackend` class corresponding to the library given by `backend`
     """
-    from qtm.config import qtmconfig
+    from qtm.config import qtmconfig, FFT_AVAILABLE_BACKENDS
     if backend == 'cupy':
         if not qtmconfig.use_gpu:
             raise RuntimeError(
@@ -83,9 +83,8 @@ def get_FFTBackend(backend: str | None = None) -> Type[FFTBackend]:
                 "True to enable GPU routines."
             )
 
-    available_backends = qtmconfig.fft_available_backends
     if backend not in backend_map:
         raise ValueError(
-            value_not_in_list_msg('backend', backend, available_backends)
+            value_not_in_list_msg('backend', backend, FFT_AVAILABLE_BACKENDS)
         )
     return backend_map[backend]

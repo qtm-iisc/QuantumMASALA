@@ -1,6 +1,6 @@
-from qtm.config import qtmconfig
 from .comm import *
 from .utils import *
-if qtmconfig.mpi4py_installed:
+from qtm.config import MPI4PY_INSTALLED
+if MPI4PY_INSTALLED:
     from .gspace import *
     from .containers import *

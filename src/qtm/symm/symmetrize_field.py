@@ -7,7 +7,7 @@ from qtm.gspace import GSpace
 from qtm.crystal import Crystal
 from qtm.containers import FieldGType
 
-from qtm.config import qtmconfig
+from qtm.config import MPI4PY_INSTALLED
 
 from qtm.msg_format import *
 from qtm.constants import TPIJ
@@ -27,7 +27,7 @@ class SymmFieldMod:
                 type_mismatch_msg('gspc', gspc, GSpace)
             )
 
-        if qtmconfig.mpi4py_installed:
+        if MPI4PY_INSTALLED:
             from qtm.mpi.gspace import DistGSpace
             if isinstance(gspc, DistGSpace):
                 gspc = gspc.gspc_glob
@@ -113,7 +113,7 @@ class SymmFieldMod:
             raise TypeError(type_mismatch_msg('field_g', field_g, FieldGType))
 
         is_dist = False
-        if qtmconfig.mpi4py_installed:
+        if MPI4PY_INSTALLED:
             from qtm.mpi.containers import DistBufferType
             if isinstance(field_g, DistBufferType):
                 is_dist = True
@@ -136,4 +136,3 @@ class SymmFieldMod:
         out = type(field_g).empty(field_g.shape)
         out.data[:] = field_g_.data[..., out.gspc.ig_loc]
         return out
-

@@ -2,9 +2,10 @@
 
 """
 from __future__ import annotations
-__all__ = ['QTMConfig', 'qtmconfig', 'NDArray']
+__all__ = ['QTMConfig', 'qtmconfig', 'NDArray',
+           'MPI4PY_INSTALLED', 'MKL_FFT_INSTALLED', 'PYFFTW_INSTALLED',
+           'CUPY_INSTALLED', 'FFT_AVAILABLE_BACKENDS']
 
-from functools import cached_property
 from typing import Union  # Required import for Runtime checking
 
 import numpy as np
@@ -12,7 +13,21 @@ from importlib.util import find_spec
 
 from qtm import logger
 
+MPI4PY_INSTALLED = find_spec('mpi4py') is not None
+MKL_FFT_INSTALLED = find_spec('mkl_fft') is not None
+PYFFTW_INSTALLED = find_spec('pyfftw') is not None
+CUPY_INSTALLED = find_spec('cupy') is not None
+
+FFT_AVAILABLE_BACKENDS = ['scipy', 'numpy']
+if PYFFTW_INSTALLED:
+    FFT_AVAILABLE_BACKENDS.insert(0, 'pyfftw')
+if MKL_FFT_INSTALLED:
+    FFT_AVAILABLE_BACKENDS.insert(0, 'mkl_fft')
+if CUPY_INSTALLED:
+    FFT_AVAILABLE_BACKENDS.append('cupy')
+
 fft_use_sticks = False
+
 
 class QTMConfig:
     """QuantumMASALA's configuration Manager.
@@ -52,26 +67,6 @@ class QTMConfig:
         Refer to the `logger` submodule"""
         logger.qtmlogger_set_filehandle(self.logfile_dir)
 
-    @cached_property
-    def mpi4py_installed(self) -> bool:
-        """True if `mpi4py` is installed, else False"""
-        return find_spec('mpi4py') is not None
-
-    @cached_property
-    def mkl_fft_installed(self) -> bool:
-        """True if `mkl_fft` is installed, else False"""
-        return find_spec('mkl_fft') is not None
-
-    @cached_property
-    def pyfftw_installed(self) -> bool:
-        """True if `pyfftw` is installed, else False"""
-        return find_spec('pyfftw') is not None
-
-    @cached_property
-    def cupy_installed(self) -> bool:
-        """True if `cupy` is installed, else False"""
-        return find_spec('cupy') is not None
-
     def check_cupy(self, suppress_exception: bool = False) -> bool:
         """Checks if CuPy is installed and working
 
@@ -96,7 +91,7 @@ class QTMConfig:
             If CuPy is installed, but throws exception(s) when allocating an array
             on device.
         """
-        if not self.cupy_installed:
+        if not CUPY_INSTALLED:
             return False
         try:
             import cupy as cp
@@ -110,17 +105,10 @@ class QTMConfig:
                 "Refer to exception above for further info."
             ) from e
 
-    @cached_property
+    @property
     def fft_available_backends(self) -> list[str]:
         """list of supported fft libraries installed"""
-        backends = ['scipy', 'numpy']
-        if self.pyfftw_installed:
-            backends.insert(0, 'pyfftw')
-        if self.mkl_fft_installed:
-            backends.insert(0, 'mkl_fft')
-        if self.cupy_installed:
-            backends.append('cupy')
-        return backends
+        return FFT_AVAILABLE_BACKENDS
 
     _fft_backend = None
     @property  # noqa : E301
@@ -129,14 +117,14 @@ class QTMConfig:
         ``'mkl_fft'``, ``'pyfftw'``, ``'numpy'``, ``'scipy'``.
         Requires the corresponding library to be installed."""
         if self._fft_backend is None:
-            self._fft_backend = self.fft_available_backends[0]
+            self._fft_backend = FFT_AVAILABLE_BACKENDS[0]
         return self._fft_backend
 
     @fft_backend.setter
     def fft_backend(self, val):
-        if val not in self.fft_available_backends:
+        if val not in FFT_AVAILABLE_BACKENDS:
             raise ValueError("'fft_backend' must be one of the following: "
-                             f"{str(self.fft_available_backends)[1:-1]}. got {val}")
+                             f"{str(FFT_AVAILABLE_BACKENDS)[1:-1]}. got {val}")
         self._fft_backend = val
 
     _fft_threads: int = 1
@@ -187,13 +175,13 @@ class QTMConfig:
     @rng_seed.setter
     def rng_seed(self, val):
         self._rng_seed = val
-        if self.mpi4py_installed:
+        if MPI4PY_INSTALLED:
             from mpi4py.MPI import COMM_WORLD
             self._rng_seed = COMM_WORLD.bcast(self._rng_seed)
 
 
 qtmconfig: QTMConfig = QTMConfig()
-if qtmconfig.cupy_installed:
+if CUPY_INSTALLED:
     import cupy as cp
     NDArray = Union[np.ndarray, cp.ndarray]
 else:

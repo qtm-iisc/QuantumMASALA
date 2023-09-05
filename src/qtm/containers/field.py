@@ -34,7 +34,7 @@ import numpy as np
 
 from qtm.gspace import GSpace
 from .buffer import BufferType
-from qtm.config import qtmconfig
+from qtm.config import MPI4PY_INSTALLED
 
 from qtm.config import NDArray
 from qtm.msg_format import *
@@ -117,7 +117,7 @@ FieldType = Union[FieldGType, FieldRType]
 
 @lru_cache(maxsize=None)
 def get_FieldG(gspc: GSpace) -> Type[FieldGType]:
-    if qtmconfig.mpi4py_installed:
+    if MPI4PY_INSTALLED:
         from qtm.mpi.gspace import DistGSpace
         from qtm.mpi.containers import get_DistFieldG
         if isinstance(gspc, DistGSpace):
@@ -130,7 +130,7 @@ def get_FieldG(gspc: GSpace) -> Type[FieldGType]:
 
 @lru_cache(maxsize=None)
 def get_FieldR(gspc: GSpace) -> Type[FieldRType]:
-    if qtmconfig.mpi4py_installed:
+    if MPI4PY_INSTALLED:
         from qtm.mpi.gspace import DistGSpace
         from qtm.mpi.containers import get_DistFieldR
         if isinstance(gspc, DistGSpace):

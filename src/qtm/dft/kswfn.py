@@ -10,7 +10,7 @@ from qtm.gspace import GkSpace
 from qtm.containers import WavefunGType, get_WavefunG, FieldRType
 from qtm.constants import TPIJ
 
-from qtm.config import qtmconfig, NDArray
+from qtm.config import CUPY_INSTALLED, qtmconfig, NDArray
 
 
 def get_rng_module(arr: NDArray):
@@ -19,7 +19,7 @@ def get_rng_module(arr: NDArray):
     """
     if isinstance(arr, np.ndarray):
         return np.random
-    if qtmconfig.cupy_installed:
+    if CUPY_INSTALLED:
         import cupy as cp
         if isinstance(arr, cp.ndarray):
             return cp.random
