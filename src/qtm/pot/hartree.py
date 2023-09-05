@@ -26,7 +26,7 @@ def compute(rho: FieldGType) -> tuple[FieldRType, float]:
     gspc = rho.gspc
     rho: FieldGType = sum(rho)
     v_g = FPI * rho
-    with np.errstate(divide='ignore'):
+    with np.errstate(divide='ignore', invalid='ignore'):
         v_g /= gspc.g_norm2
     if gspc.has_g0:
         v_g.data[..., 0] = 0
