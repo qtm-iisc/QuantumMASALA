@@ -25,7 +25,7 @@ dependencies = [
     "scipy",
     "spglib",
     "tqdm",
-    "pylibxc2"
+    "h5py"
 ]
 
 [project.optional-dependencies]
