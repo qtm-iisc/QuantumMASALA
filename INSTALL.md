@@ -22,7 +22,9 @@ Reactivate the environment for the changes to take place.
 conda deactivate
 conda activate qtm
 ```
-Inside the `QuantumMASALA` root directory, execute the following to complete the installation.
+Inside the `QuantumMASALA` root directory, execute the following to complete the installation. 
+> [!NOTE]
+> Please verify that that the `python` command points to the environment's python installation by running `which python`. If it does not point to the right python installation, we recommend specifying the full `python` path (i.e. `$CONDAPREFIX/bin/python`) for the following commands.
 ```
 python -m pip install -e .
 ```
@@ -53,7 +55,9 @@ If you are working on an Intel system, we recommend using `mkl_fft` for optimal 
 ```
 conda install -c conda-forge mkl_fft
 ```
-Inside the `QuantumMASALA` root directory, execute the following to complete the installation.
+Inside the `QuantumMASALA` root directory, execute the following to complete the installation. 
+> [!NOTE]
+> Please verify that that the `python` command points to the environment's python installation by running `which python`. If it does not point to the right python installation, we recommend specifying the full `python` path (i.e. `$CONDAPREFIX/bin/python`) for the following commands.
 ```
 python -m pip install -e .
 ```
