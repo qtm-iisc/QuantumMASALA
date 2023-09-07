@@ -1,6 +1,6 @@
 # Installation Instructions for QuantumMASALA
 
-These installation instructions require `conda`. I you don't have a functioning `conda` installation, we recommend installing it by following these quick-install instructions:
+These installation instructions require `conda`. If you don't have a functioning `conda` installation, we recommend installing it by following these quick-install instructions:
 https://docs.conda.io/projects/miniconda/en/latest/#quick-command-line-install
 
 
