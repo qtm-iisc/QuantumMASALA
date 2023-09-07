@@ -28,6 +28,16 @@ Inside the `QuantumMASALA` root directory, execute the following to complete the
 ```
 python -m pip install -e .
 ```
+As the numpy that comes with conda is often slow, you can overwrite this numpy with the one that uses Apple's Accelerate framework (Veclib). To install that use the following commands.
+```
+python -m pip install --no-binary :all: --no-use-pep517 --force numpy
+```
+To test whether it is using the correct backend libraries, you can check with the following commands.
+```
+python
+import numpy
+numpy.show_config()
+```
 
 Test the installation by running the following example: (Replace `10` with the number of cores)
 ```
