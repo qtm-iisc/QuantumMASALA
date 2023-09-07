@@ -52,6 +52,10 @@ conda create -n qtm python=3.11
 conda activate qtm
 conda install -c conda-forge pyfftw pylibxc mpi4py
 ```
+If you are working on an Intel system, we recommend using `mkl_fft` for optimal performance.
+```
+conda install -c conda-forge mkl_fft
+```
 For optimal performance, we recommend the setting the `OMP_NUM_THREADS` environment variable to 1:
 ```
 conda env config vars set OMP_NUM_THREADS=1
@@ -60,10 +64,6 @@ Reactivate the environment for the changes to take place.
 ```
 conda deactivate
 conda activate qtm
-```
-If you are working on an Intel system, we recommend using `mkl_fft` for optimal performance.
-```
-conda install -c conda-forge mkl_fft
 ```
 Inside the `QuantumMASALA` root directory, execute the following to complete the installation. 
 > [!NOTE]
