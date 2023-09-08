@@ -9,7 +9,7 @@ https://docs.conda.io/projects/miniconda/en/latest/#quick-command-line-install
 ```
 conda create -n qtm python=3.11
 conda activate qtm
-conda install pyfftw pylibxc mpi4py cython pybind11
+conda install -c conda-forge pyfftw pylibxc mpi4py cython pybind11
 ```
 For optimal performance, we recommend the setting the relevant `..._NUM_THREADS` environment variables to 1:
 ```
