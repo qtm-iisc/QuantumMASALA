@@ -42,7 +42,7 @@ class MixModBase(ABC):
             0.5 * FPI * self.grho.reallat_dv / np.prod(self.grho.grid_shape)
         )
 
-        with np.errstate(divide='ignore'):
+        with np.errstate(divide='ignore', invalid='ignore'):
             dotvec = chden1.conj() * chden2 / self.grho.g_norm2
             if self.grho.has_g0:
                 dotvec.data[..., 0] = 0
