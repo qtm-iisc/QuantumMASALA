@@ -13,7 +13,6 @@ from qtm.config import qtmconfig
 from qtm.config import NDArray
 
 
-
 def check_g_idxgrid(shape: tuple[int, int, int], idxgrid: NDArray, check_len:bool=True):
     """Function to validate `idxgrid`, the flattened indices corresponding
     to the G-vectors in a 3D FFT array with dimensions ``shape``
@@ -22,12 +21,13 @@ def check_g_idxgrid(shape: tuple[int, int, int], idxgrid: NDArray, check_len:boo
      non-negative and bounded by the prodcut of `shape`. This ensures
      indices are within bounds.
     """
-    assert isinstance(idxgrid, NDArray)
+    assert isinstance(idxgrid, NDArray.__args__)
     assert idxgrid.ndim == 1
     assert idxgrid.dtype == 'i8'
     if check_len:
         assert len(idxgrid) == len(np.unique(idxgrid)), f"idxgrid {idxgrid}"
     assert np.all(idxgrid >= 0) and np.all(idxgrid < np.prod(shape))
+
 
 class FFT3D(ABC):
     """FFT Module for transforming between real-space and the G-Space defined

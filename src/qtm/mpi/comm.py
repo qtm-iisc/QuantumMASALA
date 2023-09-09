@@ -6,7 +6,6 @@ __all__ = ['QTMComm', 'QTMComm',
            'BufSpec', 'BufSpecV',
            'split_comm_pwgrp']
 
-from collections.abc import Sequence
 from types import MethodType
 
 from qtm.config import MPI4PY_INSTALLED
@@ -30,7 +29,7 @@ else:
     WORLD_SIZE, WORLD_RANK = 1, 0
     Group = None
 
-from typing import Tuple
+from typing import Tuple, Sequence
 from qtm.config import NDArray
 BufSpec = NDArray
 BufSpecV = Tuple[NDArray, Sequence[int]]

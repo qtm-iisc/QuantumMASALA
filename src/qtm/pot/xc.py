@@ -1,3 +1,4 @@
+from __future__ import annotations
 __all__ = ['get_libxc_func', 'check_libxc_func', 'compute']
 import numpy as np
 

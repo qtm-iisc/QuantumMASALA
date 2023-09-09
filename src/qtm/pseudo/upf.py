@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 import copy
 import numpy as np
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 from qtm.crystal.basis_atoms import PseudoPotFile
 from qtm.constants import RYDBERG
@@ -72,8 +72,8 @@ class UPFv2Data(PseudoPotFile):
     vloc: np.ndarray
 
     # Fields in 'PP_NONLOCAL' (Parsed and ordered into lists; Ultrasoft not implemented).
-    l_kb_rbeta: list[np.ndarray]
-    l_kb_l: list[int]
+    l_kb_rbeta: List[np.ndarray]
+    l_kb_l: List[int]
     dij: np.ndarray
 
     # Fields in 'PP_RHOATOM'.

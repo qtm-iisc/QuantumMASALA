@@ -1,3 +1,4 @@
+from __future__ import annotations
 __all__ = ['compute_occ']
 
 import numpy as np
