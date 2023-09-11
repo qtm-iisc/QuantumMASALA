@@ -48,7 +48,7 @@ class Crystal:
     @property
     def numel(self) -> int:
         """Total number of valence elecrons per unit cell in crystal"""
-        return sum(sp.valence for sp in self.l_atoms)
+        return sum(sp.valence * sp.numatoms for sp in self.l_atoms)
 
     def gen_supercell(self, repeats: tuple[int, int, int]) -> Crystal:
         """Generates a supercell """

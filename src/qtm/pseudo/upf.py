@@ -160,4 +160,5 @@ class UPFv2Data(PseudoPotFile):
         if funcname.lower() in _LIBXC_MAP:
             data['libxc_func'] = _LIBXC_MAP[funcname.lower()]
 
-        return cls(dirname, data['z_valence'], **data)
+        valence = int(np.rint(data['z_valence']))
+        return cls(dirname, valence, **data)
