@@ -140,7 +140,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                 rho_start[1] = ((1 - mag) / 2) * rho_atomic_sp
         else:
             rho_start = sum(loc_generate_rhoatomic(sp, grho)
-                            for sp in crystal.l_atoms)
+                            for sp in crystal.l_atoms).reshape(1)
 
         libxc_func = comm.bcast(libxc_func)
 
@@ -363,7 +363,6 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             for kswfn_ in l_kswfn_kgrp:
                 diago_avgiter += solve_kswfn(kswfn_)
             diago_avgiter /= len(i_kpts_kgrp)
-
             if occ_typ == 'fixed':
                 en.HO_level, en.LU_level = occup.fixed.compute_occ(
                     dftcomm, l_kswfn_kgrp, crystal.numel

@@ -6,7 +6,6 @@ from scipy.special import erf, erfc, xlogy
 
 from qtm.dft.kswfn import KSWfn
 from qtm.dft.config import DFTCommMod
-from .utils import check_args
 
 from qtm.constants import TPI, SQRT_PI
 SMEAR_THRESHOLD = 50
@@ -90,10 +89,7 @@ def compute_occ(dftcomm: DFTCommMod, l_wfn: list[list[KSWfn]], numel: int,
         mu_min = comm.allreduce(np.amin(l_evl), comm.MIN)
         mu_max = comm.allreduce(np.amax(l_evl), comm.MAX)
 
-        # If spin-unpolarized, numel needs to be divided by 2
         numel = comm.bcast(numel)
-        if not comm.bcast(is_spin):
-            numel = numel / 2
 
         # Computes average occupation for given fermi level
         def compute_numel(e_mu):
@@ -120,7 +116,6 @@ def compute_occ(dftcomm: DFTCommMod, l_wfn: list[list[KSWfn]], numel: int,
                 wfn.occ[:] = _compute_occ(wfn.evl, e_fermi, smear_typ, degauss)
                 e_smear += wfn.k_weight * _compute_en(wfn, e_fermi, smear_typ, degauss)
         e_smear = comm.allreduce(e_smear, comm.SUM)
-        e_smear *= 2 if not is_spin else 1
 
     with dftcomm.kgrp_intra as comm:
         for wfn_k in l_wfn:
