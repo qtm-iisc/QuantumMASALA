@@ -5,7 +5,6 @@ import numpy as np
 
 from qtm.dft.kswfn import KSWfn
 from qtm.dft.config import DFTCommMod
-from .utils import check_args
 
 
 def compute_occ(dftcomm: DFTCommMod, l_kswfn: list[list[KSWfn]], numel: int):

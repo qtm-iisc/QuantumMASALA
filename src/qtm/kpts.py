@@ -97,7 +97,7 @@ class KList:
         k_cryst = self.k_cryst[:, item]
         weights = self.k_weights[item]
         if weights.ndim == 0:
-            return k_cryst, weights
+            return tuple(k_cryst.tolist()), weights
         return KList(self.recilat, k_cryst, weights)
 
     def scatter(self, n_kgrp: int, i_kgrp: int) -> KList:
@@ -149,12 +149,12 @@ def gen_monkhorst_pack_grid(
     else:
         if is_time_reversal:
             ki = [
-                np.arange(ni // 2 + 1) + 0.5 * si / ni
+                (np.arange(ni // 2 + 1) + 0.5 * si) / ni
                 for ni, si in zip(grid_shape, shifts)
             ]
         else:
             ki = [
-                np.arange(-ni // 2 + 1, ni // 2 + 1) + 0.5 * si / ni
+                (np.arange(-ni // 2 + 1, ni // 2 + 1) + 0.5 * si) / ni
                 for ni, si in zip(grid_shape, shifts)
             ]
         k_mesh_cryst = np.meshgrid(*ki, indexing="ij")
