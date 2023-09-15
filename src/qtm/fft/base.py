@@ -48,7 +48,7 @@ class FFT3D(ABC):
     @abstractmethod
     def __init__(self, shape: tuple[int, int, int],
                  idxgrid: NDArray | None, normalise_idft: bool,
-                 backend: str | None, skip_check_g_idxgrid_len:bool=False):
+                 backend: str | None, skip_check_g_idxgrid_len: bool = False):
         if idxgrid is None:
             idxgrid = np.arange(np.prod(shape), dtype='i8')
         if not skip_check_g_idxgrid_len:
@@ -70,6 +70,7 @@ class FFT3D(ABC):
 
         if backend is None:
             backend = qtmconfig.fft_backend
+        self.backend = backend
         self.FFTBackend = get_FFTBackend(backend)
 
     @abstractmethod

@@ -97,7 +97,9 @@ def _sort_g(grid_shape: tuple[int, int, int], idxgrid: NDArray) -> NDArray:
     parallel to X-axis and distributed as evenly as possibly.
     """
     ix, iy, iz = np.unravel_index(idxgrid, grid_shape, order='C')
-    return np.lexsort((ix, iz, iy))
+    # Arrays stacked below because CuPy's lexsort works with a single 2D array
+    # and not tuple of 1d arrays
+    return np.lexsort(np.stack((ix, iz, iy)))
 
 
 class GSpaceBase:
@@ -106,7 +108,7 @@ class GSpaceBase:
     _normalise_idft: bool = True
 
     def __init__(self, recilat: ReciLattice, grid_shape: tuple[int, int, int],
-                 g_cryst: NDArray):
+                 g_cryst: NDArray, backend: str | None = None):
         self.recilat: ReciLattice = recilat
         """Reciprocal Lattice"""
 
@@ -141,7 +143,8 @@ class GSpaceBase:
         """Differential volume used when evaluating integrals across a unit-cell
         of the real-space lattice"""
         self._fft = self.FFT3D(
-            self.grid_shape, self.idxgrid, normalise_idft=self._normalise_idft
+            self.grid_shape, self.idxgrid, normalise_idft=self._normalise_idft,
+            backend=backend,
         )
         """FFT Module"""
 

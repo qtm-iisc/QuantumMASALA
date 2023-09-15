@@ -1,11 +1,16 @@
-from qtm.config import NDArray
+from __future__ import annotations
+__all__ = ['GSpaceCuPy', 'GkSpaceCuPy']
 
+from functools import lru_cache
+import numpy as np
 import cupy as cp
 
 from qtm.lattice import ReciLattice
 from qtm.gspace import GSpace, GkSpace
 
-from qtm.gspace.fft import FFT3DFull
+from qtm.fft import FFT3DFull
+
+from qtm.config import NDArray
 
 
 class FFT3DFullCuPy(FFT3DFull):
@@ -17,20 +22,9 @@ class FFT3DFullCuPy(FFT3DFull):
     """
 
     def __init__(self, shape: tuple[int, int, int],
-                 idxgrid: NDArray, normalise_idft: bool
+                 idxgrid: NDArray, normalise_idft: bool, backend: str | None = 'cupy',
                  ):
         super().__init__(shape, idxgrid, normalise_idft, 'cupy')
-
-    def r2g(self, arr_inp: NDArray, arr_out: NDArray) -> None:
-        self._work[:] = arr_inp
-        self.worker.fft()
-        self._work.take(self.idxgrid, out=arr_out)
-
-    def g2r(self, arr_inp: NDArray, arr_out: NDArray) -> None:
-        self._work[:].fill(0)
-        self._work.put(self.idxgrid, arr_inp)
-        self.worker.ifft(self.normalise_idft)
-        arr_out[:] = self._work
 
 
 class GSpaceCuPy(GSpace):
@@ -38,14 +32,25 @@ class GSpaceCuPy(GSpace):
     FFT3D = FFT3DFullCuPy
     _normalise_idft = True
 
-    def __init__(self, gspc_host: GSpace):
-        recilat = gspc_host.recilat
-        recilat = ReciLattice(recilat.tpiba, cp.asarray(recilat.recvec))
-
-        ecut = gspc_host.ecut
-        grid_shape = gspc_host.grid_shape
-
+    def __init__(self, recilat: ReciLattice, ecut: float,
+                 grid_shape: tuple[int, int, int] | None = None):
+        assert isinstance(recilat, ReciLattice)
+        assert isinstance(recilat.recvec, cp.ndarray)
         super().__init__(recilat, ecut, grid_shape)
+
+    @classmethod
+    @lru_cache(maxsize=None)
+    def from_cpu(cls, gspc_cpu: GSpace):
+        assert isinstance(gspc_cpu, GSpace)
+        assert isinstance(gspc_cpu.g_cryst, np.ndarray)
+
+        recilat_cpu = gspc_cpu.recilat
+        recilat = ReciLattice(recilat_cpu.tpiba, cp.asarray(recilat_cpu.recvec))
+
+        ecut = gspc_cpu.ecut
+        grid_shape = gspc_cpu.grid_shape
+
+        return cls(recilat, ecut, grid_shape)
 
 
 class GkSpaceCuPy(GkSpace):
@@ -53,8 +58,16 @@ class GkSpaceCuPy(GkSpace):
     FFT3D = FFT3DFullCuPy
     _normalise_idft = False
 
-    def __init__(self, gspc_dev: GSpaceCuPy, k_cryst: tuple[float, float, float]):
-        if not isinstance(gspc_dev, GSpaceCuPy):
+    def __init__(self, gspc: GSpaceCuPy, k_cryst: tuple[float, float, float]):
+        if not isinstance(gspc, GSpaceCuPy):
             raise TypeError(f"'gspc' must be a '{GSpaceCuPy}' instance. "
-                            f"got '{type(gspc_dev)}'")
-        super().__init__(gspc_dev, k_cryst)
+                            f"got '{type(gspc)}'")
+        super().__init__(gspc, k_cryst)
+
+    @classmethod
+    @lru_cache(maxsize=None)
+    def from_cpu(cls, gkspc_cpu: GkSpace):
+        assert isinstance(gkspc_cpu, GkSpace)
+        assert isinstance(gkspc_cpu.gk_cryst, np.ndarray)
+
+        return cls(GSpaceCuPy.from_cpu(gkspc_cpu.gwfn), gkspc_cpu.k_cryst)
