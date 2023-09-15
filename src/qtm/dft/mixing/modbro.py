@@ -21,7 +21,8 @@ class ModBroyden(MixModBase):
 
             self.l_del_rho = self.FieldG.empty((self.mixdim, self.numspin))
             self.l_del_res = self.FieldG.empty((self.mixdim, self.numspin))
-            self.overlap = self.grho.allocate_array((self.mixdim, self.mixdim))
+            self.overlap = np.empty((self.mixdim, self.mixdim), dtype='c16',
+                                    like=self.grho.g_cryst)
         else:
             self.rho_old, self.res_old = None, None
             self.l_del_rho, self.l_del_res, self.overlap = None, None, None
@@ -57,7 +58,7 @@ class ModBroyden(MixModBase):
             for i in range(numdim):
                 overlap_inv[:i, i] = overlap_inv[i, :i]
 
-            l_dot = self.grho.allocate_array(numdim)
+            l_dot = np.empty(numdim, dtype='c16', like=self.grho.g_cryst)
             for i in range(numdim):
                 l_dot[i] = self._dot(self.l_del_res[i], res)
 
