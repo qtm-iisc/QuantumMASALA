@@ -141,11 +141,11 @@ def check_system(comm: QTMComm, crystal: Crystal, grho: GSpace, gwfn: GSpace,
     with comm:
         check_crystal(comm, crystal)
         check_gspace(comm, grho)
-        assert grho.recilat is crystal.recilat, obj_mismatch_msg(
+        assert grho.recilat == crystal.recilat, obj_mismatch_msg(
             'grho.recilat', grho.recilat, 'crystal.recilat', crystal.recilat
         )
         check_gspace(comm, gwfn)
-        assert gwfn.recilat is crystal.recilat, obj_mismatch_msg(
+        assert gwfn.recilat is grho.recilat, obj_mismatch_msg(
             'gwfn.recilat', gwfn.recilat, 'crystal.recilat', crystal.recilat
         )
         check_kpts(comm, kpts)

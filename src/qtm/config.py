@@ -26,6 +26,10 @@ if MKL_FFT_INSTALLED:
 if CUPY_INSTALLED:
     FFT_AVAILABLE_BACKENDS.append('cupy')
 
+if CUPY_INSTALLED:
+    from cupyx import seterr
+    seterr(linalg='raise')
+
 fft_use_sticks = False
 
 
