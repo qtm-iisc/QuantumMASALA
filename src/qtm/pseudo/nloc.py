@@ -2,8 +2,7 @@ from __future__ import annotations
 __all__ = ["NonlocGenerator"]
 
 import numpy as np
-from scipy.special import spherical_jn, sph_harm
-from scipy.linalg import block_diag
+from scipy.special import sph_harm
 
 from qtm.crystal.basis_atoms import BasisAtoms
 from qtm.gspace import GSpace, GkSpace
@@ -11,13 +10,80 @@ from qtm.containers import get_WavefunG, WavefunGType
 from .upf import UPFv2Data
 
 from qtm.config import NDArray
-from qtm.msg_format import value_mismatch_msg
+from qtm.msg_format import type_mismatch_msg
 from qtm.logger import qtmlogger
 
 from qtm.constants import FPI, TPIJ
 
 
 DEL_Q = 1e-2
+
+
+def semifact(n):
+    return np.prod(np.arange(n, 0, -2, dtype='i8'))
+
+
+def spherical_jn(n: int, x_: np.ndarray) -> np.ndarray:
+    # assert isinstance(n, int), type(n)
+    assert n >= 0
+    if n > 6:
+        return NotImplemented
+    assert x_.ndim == 1
+    # x is expected to be in ascending order
+    small_x = np.asarray(0.05, like=x_)
+    isplit = np.searchsorted(x_, small_x, 'right')
+
+    j_ = np.empty_like(x_)
+    if isplit != 0:
+        x, j = x_[:isplit], j_[:isplit]
+        x2 = x ** 2
+        xn = x ** n
+        j[:] = (
+            xn / semifact(2*n + 1)
+            * (1 - (x2/1/2/(2*n + 3)
+                    * (1 - (x2/2/2/(2*n + 5)
+                            * (1 - (x2/3/2/(2*n + 7)
+                                    * (1 - x2/4/2/(2*n + 9))))))))
+        )
+    if isplit == x_.shape[0]:
+        return j_
+
+    x, j = x_[isplit:], j_[isplit:]
+    sx = np.sin(x)
+    if n == 0:
+        j[:] = sx / x
+        return j_
+
+    cx = np.cos(x)
+    x2 = x ** 2
+    if n == 1:
+        j[:] = (sx / x2) - (cx / x)
+        return j_
+    elif n == 2:
+        j[:] = ((3 / x - x) * sx - 3 * cx) / x2
+        return j_
+
+    x3 = x * x2
+    if n == 3:
+        j[:] = ((15 / x - 6 * x) * sx + (x2 - 15) * cx) / x3
+        return j_
+
+    x4 = x2 * x2
+    x5 = x2 * x3
+    if n == 5:
+        j[:] = (
+            cx * (-1 - 945/x4 + 105/x2)
+            + sx * (945/x5 - 420/x3 + 15/x)
+        ) / x
+        return j_
+
+    x6 = x3 * x3
+    if n == 6:
+        j[:] = (
+            cx * (-10395/5 + 1260/x3 - 21/x)
+            + sx * (-1 + 10395/x6 - 4725/x4 + 210/x2)
+        ) / x
+        return j_
 
 
 class NonlocGenerator:
@@ -34,29 +100,29 @@ class NonlocGenerator:
     """
 
     @qtmlogger.time('nloc:init')
-    def __init__(self, sp: BasisAtoms, ecutwfn: float):
+    def __init__(self, sp: BasisAtoms, gwfn: GSpace):
         # Setting Up
         if sp.ppdata is None:
             raise ValueError(f"{BasisAtoms} instance 'sp' does not have "
                              f"pseudopotential data i.e 'sp.ppdata' is None.")
         if not isinstance(sp.ppdata, UPFv2Data):
             raise NotImplementedError("only 'UPFv2Data' supported")
-        if not isinstance(ecutwfn, float) or ecutwfn <= 0:
-            raise ValueError(
-                value_mismatch_msg('ecutwfn', ecutwfn, "a positive number")
+        if not isinstance(gwfn, GSpace):
+            raise ValueError(type_mismatch_msg('gwfn', gwfn, GSpace)
             )
         self.species: BasisAtoms = sp
-        self.ecut: float = ecutwfn
+        self.gwfn: GSpace = gwfn
+        self.ecut: float = self.gwfn.ecut / 4
 
         ppdata: UPFv2Data = self.species.ppdata
         # Radial Mesh specified in Pseudopotential Data
-        r = ppdata.r
-        r_ab = ppdata.r_ab
+        r = np.asarray(ppdata.r, like=self.gwfn.g_cryst)
+        r_ab = np.asarray(ppdata.r_ab, like=self.gwfn.g_cryst)
 
         # Getting the beta projectors
         self.numbeta = ppdata.number_of_proj
-        self.beta_l = np.array(ppdata.l_kb_l)
-        l_kb_rbeta = ppdata.l_kb_rbeta
+        self.beta_l = ppdata.l_kb_l
+        l_kb_rbeta = np.asarray(ppdata.l_kb_rbeta, like=self.gwfn.g_cryst)
 
         # Defining Function for Simpsons' Integration
         def simpson(f_r: np.ndarray):
@@ -69,8 +135,9 @@ class NonlocGenerator:
 
         # Computing beta projectors in reciprocal space across a fine mesh of q-points for interpolation
         self.numq = int(np.ceil(np.sqrt(2 * self.ecut) / DEL_Q + 4))
-        self.q = np.arange(self.numq) * DEL_Q
-        self.beta_q = np.empty((self.numbeta, self.numq), dtype="f8")
+        self.q = np.arange(self.numq, like=self.gwfn.g_cryst) * DEL_Q
+        self.beta_q = np.empty((self.numbeta, self.numq), dtype="f8",
+                               like=self.gwfn.g_cryst)
         for iq in range(self.numq):
             q = self.q[iq]
             for ibeta in range(self.numbeta):
@@ -80,21 +147,34 @@ class NonlocGenerator:
                 self.beta_q[ibeta, iq] = simpson(rbeta * r * sph_jl_qr)
 
         # Generating mappings between KB projectors and quantum numbers
-        self.vkb_idxbeta = np.concatenate(
-            [[ibeta for _ in range(-l, l + 1)] for ibeta, l in enumerate(self.beta_l)]
-        )
-        self.vkb_l = np.concatenate(
-            [[l for _ in range(-l, l + 1)] for l in self.beta_l]
-        )
-        self.vkb_m = np.concatenate(
-            [
-                [((i + 1) // 2) * (-1) ** (i % 2) for i in range(2 * l + 1)]
-                for l in self.beta_l
-            ]
-        )
+        # self.vkb_idxbeta = np.concatenate(
+        #     [[ibeta for _ in range(-l, l + 1)] for ibeta, l in enumerate(self.beta_l)],
+        #     like=self.gwfn.g_cryst
+        # )
+        self.vkb_idxbeta = np.asarray([
+            ibeta for ibeta, l in enumerate(self.beta_l) for _ in range(-l, l + 1)
+        ], like=self.gwfn.g_cryst)
+        # self.vkb_l = np.concatenate(
+        #     [[l for _ in range(-l, l + 1)] for l in self.beta_l],
+        #     like=self.gwfn.g_cryst
+        # )
+        self.vkb_l = np.asarray([
+            l for ibeta, l in enumerate(self.beta_l) for _ in range(-l, l + 1)
+        ], like=self.gwfn.g_cryst)
+        # self.vkb_m = np.concatenate(
+        #     [
+        #         [((i + 1) // 2) * (-1) ** (i % 2) for i in range(2 * l + 1)]
+        #         for l in self.beta_l
+        #     ],
+        #     like=self.gwfn.g_cryst
+        # )
+        self.vkb_m = np.asarray([
+            ((i + 1) // 2) * (-1) ** (i % 2)
+            for l in self.beta_l for i in range(2 * l + 1)
+        ], like=self.gwfn.g_cryst)
         self.numvkb = len(self.vkb_l)
 
-        self.dij_beta = ppdata.dij
+        self.dij_beta = np.asarray(ppdata.dij, like=self.gwfn.g_cryst)
 
     @qtmlogger.time('nloc:gen_vkb_dij')
     def gen_vkb_dij(self, gkspc: GkSpace) -> tuple[WavefunGType, NDArray, WavefunGType]:
@@ -124,9 +204,10 @@ class NonlocGenerator:
         gk_norm = gkspc.gk_norm
         beta_fac = FPI / np.sqrt(gkspc.reallat_cellvol)
 
-        theta = np.arccos(
-            np.divide(gk_z, gk_norm, out=np.zeros_like(gk_z), where=gk_norm > 1e-7)
-        )
+        # theta = np.arccos(
+        #     np.divide(gk_z, gk_norm, out=np.zeros_like(gk_z), where=gk_norm > 1e-7)
+        # )
+        theta = np.arccos(gk_z / gk_norm)
         phi = np.arctan2(gk_y, gk_x)
 
         l_vkb_atom = gkspc.allocate_array((self.numvkb, numgk))
@@ -204,6 +285,11 @@ class NonlocGenerator:
                 phase * l_vkb_atom * (-(1j**self.vkb_l)).reshape(-1, 1)
             )
             vkb_diag += np.sum(l_vkb_iat * (dij_atom @ l_vkb_iat.conj()), axis=0)
-        dij_full = block_diag(*[dij_atom for _ in range(numatoms)])
+
+        dij_full = gkspc.allocate_array((self.numvkb * numatoms,
+                                         self.numvkb * numatoms))
+        for iat in range(numatoms):
+            sl = (slice(iat * self.numvkb, (iat + 1) * self.numvkb))
+            dij_full[sl, sl] = dij_atom
 
         return l_vkb_full, dij_full, vkb_diag
