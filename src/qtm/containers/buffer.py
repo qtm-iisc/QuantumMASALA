@@ -112,6 +112,14 @@ class BufferType(NDArrayOperatorsMixin, ABC):
         """Rank of the array, which equals ``data.ndim - 1``"""
         return self._data.ndim - 1
 
+    @property
+    def real(self) -> Self:
+        return type(self)(self._data.real)
+
+    @property
+    def imag(self) -> Self:
+        return type(self)(self._data.imag)
+
     @classmethod
     def empty(cls, shape: int | Sequence[int] = (),
               dtype: str = 'c16') -> Self:
