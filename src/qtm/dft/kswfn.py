@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Union
 if TYPE_CHECKING:
     from collections.abc import Sequence
 __all__ = ['KSWfn']
@@ -114,3 +114,52 @@ class KSWfn:
         )
         rho /= rho.gspc.reallat_cellvol
         return rho if self.is_noncolin else rho[0]
+
+    def overlap(
+        bra,
+        ket: KSWfn,
+        bra_bands: Union[int, List[int]],
+        ket_bands: Union[int, List[int]],
+        umklapp_vec: List[int] = [0, 0, 0],
+    ):
+        """Calculate psi_self^*(r) . psi_other(r).
+        So `reduce=True` will give inner products.
+        If the results are not to be cached, pass self_cache or other_cache=False, as required.
+        """
+        # bra_evc = bra.evc_gk[0, bra_bands, :]
+        # ket_evc = ket.evc_gk[0, ket_bands, :]
+
+        def idxgrid_to_dict(meanfieldwfn:KSWfn, umkl: List[int] , bands: Union[int, List[int]]):
+            hashed_indices = bra.gcryst2int(meanfieldwfn.gkspc, umkl)
+            dictionary = {}
+            for i in range(meanfieldwfn.gkspc.size_g):
+                dictionary[hashed_indices[i]] = meanfieldwfn.evc_gk.data[bands,i]
+            return dictionary
+        
+        bra_dict = idxgrid_to_dict(bra, [0,0,0], bra_bands)
+        ket_dict = idxgrid_to_dict(ket, umklapp_vec, ket_bands)
+
+        dot = np.zeros((len(bra_bands), len(ket_bands)), dtype=complex)
+        for key in bra_dict:
+            if key in ket_dict:
+                dot += np.outer(np.conjugate(bra_dict[key]), ket_dict[key])
+        
+        return dot
+        
+    
+    @property
+    def indices_occupied(self):
+        # print(np.where(self.occ >= 0.5))
+        return tuple(np.where(self.occ >= 0.5)[0])
+
+    @property
+    def indices_empty(self):
+        return tuple(np.where(self.occ < 0.5)[0])
+    
+    
+    def gcryst2int(self, gkspc:GkSpace,umklapp: List[int] = [0, 0, 0]):
+        cryst = gkspc.g_cryst
+        cryst = cryst + np.array(umklapp)[:,None]
+        cryst = np.mod(cryst.T, gkspc.grid_shape).T
+        hash = cryst[0,:] + cryst[1,:]*gkspc.grid_shape[0] + cryst[2,:]*gkspc.grid_shape[0]*gkspc.grid_shape[1]
+        return hash
