@@ -3,7 +3,7 @@ from typing import List, NamedTuple
 import h5py
 import numpy as np
 
-from qtm.constants import RYDBERG
+from qtm.constants import RYDBERG, RYDBERG_HART
 from qtm.gspace import GkSpace, GSpace
 from qtm.klist import KList
 from qtm.lattice import RealLattice
@@ -322,8 +322,9 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
         axis=2,
     )
 
-    for ik, wfn in enumerate(l_wfn):
-        wfn.evl[:] = kpoints["el"][:, ik, :]
+    for ik, wfns in enumerate(l_wfn):
+        wfn=wfns
+        wfn.evl[:] = kpoints["el"][:, ik, :] * RYDBERG_HART
         wfn.occ[:] = kpoints["occ"][:, ik, :]
 
         # Duplicated code for reference
