@@ -12,7 +12,7 @@ from typing import List, NamedTuple
 import numpy as np
 from tqdm import trange
 
-from qtm.constants import ELECTRONVOLT_RYD, RYDBERG_HART
+from qtm.constants import ELECTRONVOLT_RYD, RYDBERG_HART, ELECTRONVOLT_HART
 from qtm.crystal import Crystal
 from qtm.dft.kswfn import KSWfn
 from qtm.fft.backend.utils import get_fft_driver
@@ -23,9 +23,9 @@ from qtm.gw.io_bgw.wfn2py import WfnData
 from qtm.gw.io_h5.h5_utils import *
 from qtm.gw.vcoul import Vcoul
 from qtm.klist import KList
-from qtm.mpi.comm import qtmconfig
+from qtm.mpi.comm import MPI4PY_INSTALLED
 
-if qtmconfig.mpi4py_installed:
+if MPI4PY_INSTALLED:
     from mpi4py import MPI
     from mpi4py.MPI import COMM_WORLD
 
@@ -123,7 +123,7 @@ class Sigma:
         self.comm = None
         self.comm_size = None
         if parallel:
-            if qtmconfig.mpi4py_installed:
+            if MPI4PY_INSTALLED:
                 self.comm = MPI.COMM_WORLD
                 self.comm_size = self.comm.Get_size()
                 if self.comm.Get_size() > 1:
@@ -488,11 +488,11 @@ class Sigma:
                 for i_b_bra in range(n_bra):
                     E_bra[i_k_ket_in_mtxel_call, i_b_bra] = self.l_wfn[i_k_bra].evl[
                         i_b_bra + i_b_bra_beg
-                    ]
+                    ]  * 2
                 for i_b_ket in range(n_ket):
                     E_ket[i_k_ket_in_mtxel_call, i_b_ket] = self.l_wfn[i_k_ket].evl[
                         i_b_ket + i_b_ket_beg
-                    ]
+                    ]  * 2
 
         # Matrix elements calculation
 
@@ -1092,9 +1092,13 @@ class Sigma:
         rho = self.rho
 
         i_g0 = i_gmgpvec = self.rho_dict[self.rhohash([0, 0, 0])]
+        # print("self.rhohash([0, 0, 0])", self.rhohash([0, 0, 0]))
+        # print("i_g0", i_g0)
         if i_g0 < 0:  # The difference does not exist in rho gvecs list
             raise ValueError("G=0 vector not found in G-vectors list of RHO.")
         nelec = rho.rho[i_g0]
+        
+        # print("nelec = rho.rho[i_g0]", nelec)
 
         # define ω_p^2
         wp2 = self.ryd**2 * 16 * np.pi * nelec / self.crystal.reallat.cellvol
@@ -1216,6 +1220,7 @@ class Sigma:
             # shapes for reference:
             #   E_bra: (n_kpts, n_bands_bra or 1)
             #   E_ket: (n_kpts, n_bands_ket)
+            # print(E_ket)
             added_dimension_to_E_bra = True if len(E_bra.shape) < 2 else False
             if added_dimension_to_E_bra:
                 E_bra = E_bra[:, np.newaxis]
@@ -1612,7 +1617,7 @@ class Sigma:
         ]
 
         # Emf data
-        emf_factor = 1 / ELECTRONVOLT_RYD
+        emf_factor = 1 / ELECTRONVOLT_HART
         emf = np.array([self.l_wfn[i_k].evl for i_k in self.l_k_indices])
         emf = np.array(emf[:, band_index_min - 1 : band_index_max]) * emf_factor
         sigma_x_mat = self.sigma_x()
@@ -1738,7 +1743,7 @@ class Sigma:
         ]
 
         # Emf data
-        emf_factor = 1 / ELECTRONVOLT_RYD
+        emf_factor = 1 / ELECTRONVOLT_HART
 
         emf = np.array([self.l_wfn[i_k].evl for i_k in self.l_k_indices])
         emf = np.array(emf[:, band_index_min - 1 : band_index_max]) * emf_factor
@@ -1823,7 +1828,10 @@ class Sigma:
         # they mention Ecor, whereas, sigma_hp.log shows Eo, which is Emf for us
 
         dE[:] = 1.0
-        dE /= emf_factor
+        dE *= ELECTRONVOLT_RYD
+        print("dE", dE)
+        # FIXME: Remove later, while converting the entire code to Hartree. Presently, the methods in Sigma are in ryd units.
+        # dE/=2
 
         sigma_ch_gpp_mat_2, _ = self.sigma_ch_gpp(dE)
         sigma_sx_gpp_mat_2 = self.sigma_sx_gpp(dE)
@@ -1837,7 +1845,7 @@ class Sigma:
         dSigdE = (
             (sigma_sx_gpp_mat_2 + sigma_ch_gpp_mat_2)
             - (sigma_sx_gpp_mat + sigma_ch_gpp_mat)
-        ) / (dE * emf_factor)
+        ) / (dE / ELECTRONVOLT_RYD)
         slope = dSigdE / (1 - dSigdE)
         Z = 1 / (1 - dSigdE)
 
@@ -1945,7 +1953,7 @@ if __name__ == "__main__":
     from qtm.gw.io_bgw import inp
     from qtm.gw.io_bgw.epsmat_read_write import read_mats
 
-    if qtmconfig.mpi4py_installed and COMM_WORLD.Get_size() > 1:
+    if MPI4PY_INSTALLED and COMM_WORLD.Get_size() > 1:
         in_parallel = True
     else:
         in_parallel = False
