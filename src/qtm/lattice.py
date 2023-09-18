@@ -63,7 +63,7 @@ class Lattice:
     def axes_cart(self) -> list[tuple[float, float, float]]:
         """tuple of the three primitive vectors in atomic units
         """
-        return list(tuple(vec) for vec in self.primvec.T)
+        return list(tuple(vec.tolist()) for vec in self.primvec.T)
 
     def cart2cryst(self, arr: NDArray, axis: int = 0) -> NDArray:
         """Transforms array of vector components in cartesian coords
@@ -209,6 +209,14 @@ class Lattice:
             Raised if value of ``coords`` is invalid.
         """
         return np.sqrt(self.norm2(l_vec, coords))
+
+    def __eq__(self, other: Lattice):
+        if type(self) is not type(other):
+            return False
+        return np.linalg.norm(
+            self.primvec
+            - np.asarray(other.primvec, like=self.primvec)
+        ) <= 1E-5
 
 
 class RealLattice(Lattice):

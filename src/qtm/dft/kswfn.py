@@ -100,8 +100,8 @@ class KSWfn:
         seed_k = np.array(self.k_cryst).view('uint')
         rng = rng_mod.default_rng([seed_k, qtmconfig.rng_seed])
         data = self.evc_gk.data
-        rng.random(out=data.view('f8'))
-        np.multiply(data.real, np.exp(TPIJ * data.imag), out=data)
+        np.multiply(rng.random(data.shape), np.exp(TPIJ * rng.random(data.shape)),
+                    out=data)
         self.evc_gk /= 1 + self.gkspc.gk_norm2
 
     def compute_rho(self, ibnd: slice | Sequence[int] = slice(None)) -> FieldRType:

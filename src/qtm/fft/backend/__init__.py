@@ -75,9 +75,9 @@ def get_FFTBackend(backend: str | None = None) -> Type[FFTBackend]:
     Type[FFTBackend]
         `FFTBackend` class corresponding to the library given by `backend`
     """
-    from qtm.config import qtmconfig, FFT_AVAILABLE_BACKENDS
+    from qtm.config import CUPY_INSTALLED, FFT_AVAILABLE_BACKENDS
     if backend == 'cupy':
-        if not qtmconfig.use_gpu:
+        if not CUPY_INSTALLED:
             raise RuntimeError(
                 "GPU acceleration is disabled. Set 'qtmconfig.use_gpu' to "
                 "True to enable GPU routines."

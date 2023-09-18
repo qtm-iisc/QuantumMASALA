@@ -11,6 +11,8 @@ from qtm.containers import FieldGType, FieldRType, get_FieldR
 from qtm.logger import qtmlogger
 from .utils import check_rho, fieldg_grad, fieldg_div
 
+from qtm.config import CUPY_INSTALLED
+
 
 def get_libxc_func(crystal: Crystal) -> tuple[str, str]:
     libxc_func = None
@@ -42,7 +44,7 @@ def check_libxc_func(libxc_func):
             )
 
 
-def _get_sigma(rhoaux: FieldGType) -> np.ndarray:
+def _get_sigma(rhoaux: FieldGType) -> FieldRType:
     r"""Generates the contracted gradient 'sigma' of input electron density.
     Required by libxc for computing potentials for GGA Functionals.
 
@@ -53,9 +55,9 @@ def _get_sigma(rhoaux: FieldGType) -> np.ndarray:
 
     Returns
     -------
-    sigma_r : np.ndarray
-        'sigma' array to be passed to `pylibxc.LibXCFunctional` for evaluating
-        GGA Functional
+    sigma_r : FieldRType
+        contains 'sigma' array to be passed to `pylibxc.LibXCFunctional`
+        for evaluating GGA Functional
 
     Notes
     -----
@@ -67,11 +69,12 @@ def _get_sigma(rhoaux: FieldGType) -> np.ndarray:
     numspin = rhoaux.shape[0]
     grad_rhoaux = fieldg_grad(rhoaux).to_r()
 
-    sigma = np.empty((grho.size_r, 2*numspin - 1), dtype='f8')
-    sigma[:, 0] = np.sum(grad_rhoaux[0] * grad_rhoaux[0], axis=0).data.real
+    RField = type(grad_rhoaux)
+    sigma = RField.empty(2*numspin - 1, dtype='f8')
+    sigma[0] = np.sum(grad_rhoaux[0] * grad_rhoaux[0], axis=0).real
     if numspin == 2:
-        sigma[:, 1] = np.sum(grad_rhoaux[0] * grad_rhoaux[1], axis=0).data.real
-        sigma[:, 2] = np.sum(grad_rhoaux[1] * grad_rhoaux[1], axis=0).data.real
+        sigma[1] = np.sum(grad_rhoaux[0] * grad_rhoaux[1], axis=0).real
+        sigma[2] = np.sum(grad_rhoaux[1] * grad_rhoaux[1], axis=0).real
     return sigma
 
 
@@ -125,15 +128,22 @@ def compute(rho: FieldGType, rhocore: FieldGType,
     grad_rho_r = None
     if need_grad:
         grad_rho_r = fieldg_grad(rho).to_r()
-        xc_inp["sigma"] = _get_sigma(rhoaux)
+        xc_inp["sigma"] = np.copy(_get_sigma(rhoaux).data.T, 'C')
 
     FieldR: type[FieldRType] = type(rho_r)
 
     v_xc = FieldR.zeros(numspin)
     en_xc = 0
 
+    if CUPY_INSTALLED:
+        import cupy as cp
+        for key, val in xc_inp.items():
+            xc_inp[key] = val.get() if isinstance(val, cp.ndarray) else val
+
     for xcfunc in [exch_func, corr_func]:
         xcfunc_out = xcfunc.compute(xc_inp)
+        for key in xcfunc_out:
+            xcfunc_out[key] = np.asarray(xcfunc_out[key], like=grho.g_cryst)
         zk_r = FieldR.from_array(xcfunc_out['zk'].T)
         v_r = FieldR.from_array(xcfunc_out['vrho'].T.reshape((numspin, -1)))
         v_xc += v_r

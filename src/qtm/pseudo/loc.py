@@ -1,12 +1,14 @@
 from __future__ import annotations
 __all__ = ['loc_generate_rhoatomic', 'loc_generate_pot_rhocore']
 import numpy as np
-from scipy.special import erf, spherical_jn
+from scipy.special import erf
 
 from qtm.crystal.basis_atoms import BasisAtoms
 from qtm.gspace import GSpace
 from qtm.containers import get_FieldG, FieldGType
 from .upf import UPFv2Data
+
+from qtm.constants import PI
 
 from qtm.config import NDArray
 from qtm.msg_format import type_mismatch_msg
@@ -29,21 +31,22 @@ def _simpson(f_r: NDArray, r_ab: NDArray):
         integral += 2.5 * (f_r[-1] * r_ab[-1] / 3.)
     return integral
 
+
 def _sph2pw(r: NDArray, r_ab: NDArray, f_times_r2: NDArray, g: NDArray):
     numg = g.shape[0]
-    f_g = np.empty((*f_times_r2.shape[:-1], numg), dtype='c16')
+    f_g = np.empty((*f_times_r2.shape[:-1], numg), dtype='c16', like=f_times_r2)
     numr = r.shape[0]
 
     r_ab = r_ab.copy()
     r_ab *= 1./3
     r_ab[1:-1:2] *= 4
     r_ab[2:-1:2] *= 2
-    f_g[:] = spherical_jn(0, g * r[0]) * f_times_r2[..., 0] * r_ab[0]
+    f_g[:] = np.sinc(g * r[0] / PI) * f_times_r2[..., 0] * r_ab[0]
 
     g = g.reshape(-1, 1)
     f_times_r2 = np.expand_dims(f_times_r2, axis=-2)
     for idxr in range(numr):
-        f_g[:] += np.sum(spherical_jn(0, g * r[idxr])
+        f_g[:] += np.sum(np.sinc(g * r[idxr] / PI)
                          * f_times_r2[..., idxr] * r_ab[idxr],
                          axis=-1)
     return f_g
@@ -81,9 +84,6 @@ def loc_generate_rhoatomic(sp: BasisAtoms, grho: GSpace) -> FieldGType:
 
     upfdata: UPFv2Data = sp.ppdata
     # Radial Mesh specified in Pseudopotential Data
-    r = upfdata.r
-    r_ab = upfdata.r_ab
-
     g_cryst = grho.g_cryst
     g_norm = grho.g_norm
     FieldG: type[FieldGType] = get_FieldG(grho)
@@ -92,11 +92,13 @@ def loc_generate_rhoatomic(sp: BasisAtoms, grho: GSpace) -> FieldGType:
         np.exp((-2 * np.pi * 1j) * (sp.r_cryst.T @ g_cryst)), axis=0
     ))
 
-    rhoatom = upfdata.rhoatom
+    r = np.asarray(upfdata.r, like=g_cryst)
+    r_ab = np.asarray(upfdata.r_ab, like=g_cryst)
+    rhoatom = np.asarray(upfdata.rhoatom, like=g_cryst)
 
     rho = FieldG.empty(None)
 
-    f_times_r2 = np.empty((1, len(r)), dtype='f8')
+    f_times_r2 = np.empty((1, len(r)), dtype='f8', like=g_cryst)
     f_times_r2[0] = rhoatom
 
     rho.data[:] = _sph2pw(r, r_ab, f_times_r2, g_norm[:])
@@ -130,9 +132,6 @@ def loc_generate_pot_rhocore(sp: BasisAtoms,
     _check_args(sp, grho)
 
     upfdata: UPFv2Data = sp.ppdata
-    # Radial Mesh specified in Pseudopotential Data
-    r = upfdata.r
-    r_ab = upfdata.r_ab
 
     # Setting constants and aliases
     cellvol = grho.reallat_cellvol
@@ -146,20 +145,26 @@ def loc_generate_pot_rhocore(sp: BasisAtoms,
 
     valence = upfdata.z_valence
 
+    sp_r_cryst = np.asarray(sp.r_cryst, like=g_cryst)
     struct_fac = FieldG(np.sum(
-        np.exp((-2 * np.pi * 1j) * (sp.r_cryst.T @ g_cryst)), axis=0
+        np.exp((-2 * np.pi * 1j) * (sp_r_cryst.T @ g_cryst)), axis=0
     ))
 
-    vloc = upfdata.vloc
+    # Radial Mesh specified in Pseudopotential Data
+    r = np.asarray(upfdata.r, like=g_cryst)
+    r_ab = np.asarray(upfdata.r_ab, like=g_cryst)
+
+    vloc = np.asarray(upfdata.vloc, like=g_cryst)
     if upfdata.core_correction:
-        rho_atc = upfdata.rho_atc
+        rho_atc = np.asarray(upfdata.rho_atc, like=g_cryst)
     else:
         rho_atc = None
 
     v_ion = FieldG.empty(None)
     rho_core = FieldG.empty(None)
 
-    f_times_r2 = np.empty((1 + upfdata.core_correction, len(r)), dtype='f8')
+    f_times_r2 = np.empty((1 + upfdata.core_correction, len(r)),
+                          dtype='f8', like=g_cryst)
     f_times_r2[0] = (vloc * r + valence * erf(r)) * r
     if upfdata.core_correction:
         f_times_r2[1] = rho_atc * r**2
