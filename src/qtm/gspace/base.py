@@ -41,7 +41,7 @@ def check_g_cryst(shape: tuple[int, int, int], g_cryst: NDArray) -> None:
     assert all(isinstance(ni, int) and ni > 0 for ni in shape)
 
     # Check if 'g_cryst' is an array with correct shape and dtype
-    assert isinstance(g_cryst, NDArray.__args__)
+    assert isinstance(g_cryst, NDArray)
     assert g_cryst.ndim == 2
     assert g_cryst.dtype == 'i8'
     assert g_cryst.shape[0] == 3
