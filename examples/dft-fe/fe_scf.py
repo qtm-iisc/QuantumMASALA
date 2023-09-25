@@ -13,11 +13,11 @@ from qtm.io_utils.dft_printers import print_scf_status
 
 from qtm import qtmconfig
 from qtm.logger import qtmlogger
-qtmconfig.fft_backend = 'mkl_fft'
+# qtmconfig.fft_backend = 'mkl_fft'
 
 from mpi4py.MPI import COMM_WORLD
 comm_world = QTMComm(COMM_WORLD)
-dftcomm = DFTCommMod(comm_world, 1, 2)
+dftcomm = DFTCommMod(comm_world, comm_world.size, 1)
 
 # Lattice
 reallat = RealLattice.from_alat(alat=5.1070,  # Bohr
@@ -60,6 +60,16 @@ e_temp = 1E-2 * RYDBERG
 
 conv_thr = 1E-8 * RYDBERG
 diago_thr_init = 1E-2 * RYDBERG
+
+
+print('diago_thr_init :', diago_thr_init) #debug statement
+print('e_temp :', e_temp) #debug statement
+print('conv_thr :', conv_thr) #debug statement
+print('smear_typ :', smear_typ) #debug statement
+print('is_spin :', is_spin) #debug statement
+print('is_noncolin :', is_noncolin) #debug statement
+print('ecut_wfn :', ecut_wfn) #debug statement
+print('ecut_rho :', ecut_rho) #debug statement
 
 
 out = scf(dftcomm, crystal, kpts, grho, gwfn,
