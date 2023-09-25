@@ -9,10 +9,10 @@ from tqdm import trange
 
 from qtm.constants import RYDBERG_HART
 from qtm.gspace import GkSpace, GSpace
-from qtm.mpi.comm import qtmconfig
+from qtm.config import MPI4PY_INSTALLED
 from qtm.gw.core import QPoints, sort_cryst_like_BGW
 
-if qtmconfig.mpi4py_installed:
+if MPI4PY_INSTALLED:
     from mpi4py import MPI
 
 
@@ -111,7 +111,7 @@ class Vcoul:
         self.comm = None
         self.comm_size = None
         if parallel:
-            if qtmconfig.mpi4py_installed:
+            if MPI4PY_INSTALLED:
                 self.comm = MPI.COMM_WORLD
                 self.comm_size = self.comm.Get_size()
                 if self.comm_size > 1:

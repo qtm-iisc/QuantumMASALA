@@ -68,20 +68,19 @@ else:
 def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         grho: GSpace, gwfn: GSpace, numbnd: int,
         is_spin: bool, is_noncolin: bool,
-        symm_rho: bool = True, rho_start: FieldGType | tuple[float, ...] | None = None,
+        symm_rho: bool = True, 
+        rho_start: FieldGType | tuple[float, ...] | None = None,
         wfn_init: WfnInit | None = None,
         libxc_func: tuple[str, str] | None = None,
-
         occ_typ: Literal['fixed', 'smear'] = 'smear',
         smear_typ: Literal['gauss', 'fd', 'mv'] = 'gauss',
         e_temp: float = 1E-3,
-
         conv_thr: float = 1E-6*RYDBERG, maxiter: int = 100,
         diago_thr_init: float = 1E-2*RYDBERG,
         iter_printer: IterPrinter | None = None,
         mix_beta: float = 0.7, mix_dim: int = 8,
-
-        dftconfig: DFTConfig | None = None
+        dftconfig: DFTConfig | None = None,
+        ret_vxc:bool=False
         ):
     if not isinstance(dftcomm, DFTCommMod):
         raise TypeError(
@@ -355,6 +354,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
 
         idxiter = 0
         while idxiter < maxiter:
+            print(end="",flush=True)
             normalize_rho(rho_in)
             compute_vloc()
             vloc_g0 = np.sum(vloc, axis=-1) / np.prod(grho.grid_shape)
@@ -407,4 +407,20 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             else:
                 idxiter += 1
 
-    return scf_converged, rho_in, l_kswfn_kgrp, en
+        if ret_vxc:
+            def calculate_vxc_data():
+                vxc_arr = np.zeros((len(l_kswfn_kgrp), numbnd))
+                v_xc, en.xc = xc.compute(rho_in, rho_core, *libxc_func)
+                for ik, kswfn in enumerate(l_kswfn_kgrp):
+                    wfn = kswfn[0]
+                    psi_r_allbands = wfn.evc_gk.to_r()
+                    for iband in range(wfn.numbnd):
+                        psi_r = psi_r_allbands[iband]
+                        hpsi_r = sum((v_xc * psi_r.get_density())).integrate_unitcell()
+                        vxc_arr[ik,iband] = hpsi_r
+                return np.array(vxc_arr)
+            
+            vxc_arr = calculate_vxc_data()
+            return scf_converged, rho_in, l_kswfn_kgrp, en, vxc_arr
+        else:
+            return scf_converged, rho_in, l_kswfn_kgrp, en

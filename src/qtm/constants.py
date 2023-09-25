@@ -31,7 +31,7 @@ HARTREE_SI = 4.3597447222071e-18  #: Hartree Energy in J
 
 # Units of Charge: Hartree atomic unit and Rydberg atomic unit
 ELECTRON_HART = 1.                #: Charge of electron in Hartree Atomic Units
-ELECTRON_RYD = 1. / sqrt(2)       #: Charge of electron in Rydberg Atomic Units
+ELECTRON_RYD = sqrt(2)       #: Charge of electron in Rydberg Atomic Units
 
 # Units of Energy: Electronvolt, Hartree and Rydberg
 ELECTRONVOLT_SI = ELECTRON_SI     #: Electronvolt in J
