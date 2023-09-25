@@ -3,6 +3,7 @@ Sigma
 =====
 """
 
+from collections import namedtuple
 import datetime
 import sys
 from copy import deepcopy
@@ -10,9 +11,10 @@ from functools import lru_cache
 from typing import List, NamedTuple
 
 import numpy as np
+from qtm.gw.epsilon import Epsilon
 from tqdm import trange
 
-from qtm.constants import ELECTRONVOLT_RYD, RYDBERG_HART
+from qtm.constants import ELECTRONVOLT_RYD, RYDBERG_HART, ELECTRONVOLT_HART
 from qtm.crystal import Crystal
 from qtm.dft.kswfn import KSWfn
 from qtm.fft.backend.utils import get_fft_driver
@@ -23,9 +25,9 @@ from qtm.gw.io_bgw.wfn2py import WfnData
 from qtm.gw.io_h5.h5_utils import *
 from qtm.gw.vcoul import Vcoul
 from qtm.klist import KList
-from qtm.mpi.comm import qtmconfig
+from qtm.mpi.comm import MPI4PY_INSTALLED
 
-if qtmconfig.mpi4py_installed:
+if MPI4PY_INSTALLED:
     from mpi4py import MPI
     from mpi4py.MPI import COMM_WORLD
 
@@ -123,7 +125,7 @@ class Sigma:
         self.comm = None
         self.comm_size = None
         if parallel:
-            if qtmconfig.mpi4py_installed:
+            if MPI4PY_INSTALLED:
                 self.comm = MPI.COMM_WORLD
                 self.comm_size = self.comm.Get_size()
                 if self.comm.Get_size() > 1:
@@ -208,6 +210,50 @@ class Sigma:
             )
 
         return
+
+    @classmethod
+    def from_qtm_scf(
+        cls,
+        crystal: Crystal,
+        gspace: GSpace,
+        kpts: KList,
+        kptsq: KList,
+        l_wfn_kgrp: List[List[KSWfn]],
+        l_wfn_kgrp_q: List[List[KSWfn]],
+        sigmainp: NamedTuple,
+        epsinp: NamedTuple,
+        epsilon:Epsilon,
+        rho: NamedTuple,
+        vxc: NamedTuple,
+        outdir: str = None,
+        parallel: bool = True,       
+    ):
+        rho_temp = deepcopy(rho)
+        rho_temp._data *= crystal.numel / (sum(rho_temp.data_g0))
+
+        rho_nt = namedtuple("RHO", ["rho", "gvecs"])(rho_temp.data[0], rho_temp.gspc.g_cryst.T)
+        vxc_nt = namedtuple("VXC", ["vxc"])(vxc/ELECTRONVOLT_HART)
+
+
+        sigma = Sigma(
+            crystal = crystal,
+            gspace = gspace,
+            kpts = kpts,
+            kptsq=kptsq,
+            l_wfn = [wfn[0] for wfn in l_wfn_kgrp],
+            l_wfnq = [wfn[0] for wfn in l_wfn_kgrp_q],
+            l_gsp_wfn = [wfn[0].gkspc for wfn in l_wfn_kgrp],
+            l_gsp_wfnq = [wfn[0].gkspc for wfn in l_wfn_kgrp_q],
+            qpts = QPoints.from_cryst(kpts.recilat, epsinp.is_q0, *epsinp.qpts),
+            sigmainp=sigmainp,
+            epsinp = epsinp,
+            l_epsmats=epsilon.l_epsinv,
+            rho=rho_nt,
+            vxc=vxc_nt,
+            outdir=outdir,
+            parallel=parallel
+        )
+        return sigma
 
     @classmethod
     def from_data(
@@ -339,7 +385,11 @@ class Sigma:
 
     def pprint_sigma_mat(self, mat):
         _mat = deepcopy(mat).real.T
-        for row in _mat.reshape(-1, _mat.shape[-1]):
+        print("  n  ",end="")
+        print(("    ik={:<5}" * _mat.shape[-1]).format(*self.l_k_indices+1))
+        
+        for i,row in enumerate(_mat.reshape(-1, _mat.shape[-1])):
+            print(f"{i+self.sigmainp.band_index_min:>3} ",end="")
             print(("{:12.6f}" * _mat.shape[-1]).format(*np.around(row, 6)))
 
     # ==================================================================
@@ -488,11 +538,11 @@ class Sigma:
                 for i_b_bra in range(n_bra):
                     E_bra[i_k_ket_in_mtxel_call, i_b_bra] = self.l_wfn[i_k_bra].evl[
                         i_b_bra + i_b_bra_beg
-                    ]
+                    ]  * 2
                 for i_b_ket in range(n_ket):
                     E_ket[i_k_ket_in_mtxel_call, i_b_ket] = self.l_wfn[i_k_ket].evl[
                         i_b_ket + i_b_ket_beg
-                    ]
+                    ]  * 2
 
         # Matrix elements calculation
 
@@ -1612,7 +1662,7 @@ class Sigma:
         ]
 
         # Emf data
-        emf_factor = 1 / ELECTRONVOLT_RYD
+        emf_factor = 1 / ELECTRONVOLT_HART
         emf = np.array([self.l_wfn[i_k].evl for i_k in self.l_k_indices])
         emf = np.array(emf[:, band_index_min - 1 : band_index_max]) * emf_factor
         sigma_x_mat = self.sigma_x()
@@ -1738,7 +1788,7 @@ class Sigma:
         ]
 
         # Emf data
-        emf_factor = 1 / ELECTRONVOLT_RYD
+        emf_factor = 1 / ELECTRONVOLT_HART
 
         emf = np.array([self.l_wfn[i_k].evl for i_k in self.l_k_indices])
         emf = np.array(emf[:, band_index_min - 1 : band_index_max]) * emf_factor
@@ -1823,7 +1873,10 @@ class Sigma:
         # they mention Ecor, whereas, sigma_hp.log shows Eo, which is Emf for us
 
         dE[:] = 1.0
-        dE /= emf_factor
+        dE *= ELECTRONVOLT_RYD
+        # print("dE", dE)
+        # FIXME: Remove later, while converting the entire code to Hartree. Presently, the methods in Sigma are in ryd units.
+        # dE/=2
 
         sigma_ch_gpp_mat_2, _ = self.sigma_ch_gpp(dE)
         sigma_sx_gpp_mat_2 = self.sigma_sx_gpp(dE)
@@ -1837,7 +1890,7 @@ class Sigma:
         dSigdE = (
             (sigma_sx_gpp_mat_2 + sigma_ch_gpp_mat_2)
             - (sigma_sx_gpp_mat + sigma_ch_gpp_mat)
-        ) / (dE * emf_factor)
+        ) / (dE / ELECTRONVOLT_RYD)
         slope = dSigdE / (1 - dSigdE)
         Z = 1 / (1 - dSigdE)
 
@@ -1945,7 +1998,7 @@ if __name__ == "__main__":
     from qtm.gw.io_bgw import inp
     from qtm.gw.io_bgw.epsmat_read_write import read_mats
 
-    if qtmconfig.mpi4py_installed and COMM_WORLD.Get_size() > 1:
+    if MPI4PY_INSTALLED and COMM_WORLD.Get_size() > 1:
         in_parallel = True
     else:
         in_parallel = False
