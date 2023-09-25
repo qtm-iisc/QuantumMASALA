@@ -7,9 +7,17 @@ https://docs.conda.io/projects/miniconda/en/latest/#quick-command-line-install
 ## Installing on Mac
 
 ```
+conda create -n qtm python=3.11 numpy "libblas=*=*accelerate"
+```
+> [!NOTE]
+> For older versions of python one may need to install numpy separately and the 'conda create -n qtm2 python=3.11 numpy "libblas=*=*accelerate"' may not work. As the numpy that comes with conda is often slow, you can overwrite this numpy with the one that uses Apple's Accelerate framework (Veclib) later (see below). For these older versions, first create the qtm environment.
+```
 conda create -n qtm python=3.11
+```
+We then activate the environment and install packages in it.
+```
 conda activate qtm
-conda install -c conda-forge pyfftw pylibxc mpi4py cython pybind11
+conda install -c conda-forge pyfftw pylibxc mpi4py scipy cython pybind11
 ```
 For optimal performance, we recommend the setting the relevant `..._NUM_THREADS` environment variables to 1:
 ```
@@ -28,7 +36,8 @@ Inside the `QuantumMASALA` root directory, execute the following to complete the
 ```
 python -m pip install -e .
 ```
-As the numpy that comes with conda is often slow, you can overwrite this numpy with the one that uses Apple's Accelerate framework (Veclib). To install that use the following commands.
+> [!NOTE]
+> For older versions of python one may need to install numpy separately and the 'conda create -n qtm2 python=3.11 numpy "libblas=*=*accelerate"' may not work. As the numpy that comes with conda is often slow, you can overwrite this numpy with the one that uses Apple's Accelerate framework (Veclib). To install that use the following commands.
 ```
 python -m pip install --no-binary :all: --no-use-pep517 --force numpy
 ```
