@@ -56,8 +56,8 @@ class Epsilon:
         kptsq: KList,
         l_wfn: List[KSWfn],
         l_wfnq: List[KSWfn],
-        l_gsp_wfn: List[GkSpace],
-        l_gsp_wfnq: List[GkSpace],
+        # l_gsp_wfn: List[GkSpace],
+        # l_gsp_wfnq: List[GkSpace],
         qpts: QPoints,
         epsinp: Epsinp,
     ):
@@ -80,10 +80,10 @@ class Epsilon:
         self.gspace = gspace
         self.kpts = kpts
         self.kptsq = kptsq
-        self.l_wfn = l_wfn
-        self.l_wfnq = l_wfnq
-        self.l_gsp_wfn = l_gsp_wfn
-        self.l_gsp_wfnq = l_gsp_wfnq
+        self.l_wfn = [wfn[0] for wfn in l_wfn]
+        self.l_wfnq = [wfn[0] for wfn in l_wfnq]
+        self.l_gsp_wfn = [wfn.gkspc for wfn in self.l_wfn]
+        self.l_gsp_wfnq = [wfn.gkspc for wfn in self.l_wfnq]
         self.qpts = qpts
         self.epsinp = epsinp
 
@@ -144,7 +144,7 @@ class Epsilon:
         Yields
         ------
         M: np.ndarray
-            Plane wave matrix elements
+            Plane wave matrix elements with shape (n_kpts, n_c_max, n_v_max, self.l_gq[i_q].size_g)
 
         """
 
@@ -315,32 +315,32 @@ class Epsilon:
 
         if epsinp.no_min_fftgrid == True or epsinp.epsilon_cutoff is None:
             gspace = wfndata.grho
-            l_gk = wfndata.l_gk
-            l_gk_q = wfnqdata.l_gk
+            # l_gk = wfndata.l_gk
+            # l_gk_q = wfnqdata.l_gk
         else:
             eps_fftgrid_ecut = wfndata.l_wfn[0].gkspc.ecutwfn + epsinp.epsilon_cutoff
             epsilon_grid_shape = minimal_grid_shape(
                 wfndata.crystal.recilat, eps_fftgrid_ecut
             )
             gspace = GSpace(wfndata.crystal.recilat, eps_fftgrid_ecut, epsilon_grid_shape)
-            l_gk = [
-                GkSpace(gspace, k_cryst, wfndata.l_wfn[0].gkspc.ecutwfn)
-                for k_cryst in wfndata.kpts.cryst
-            ]
-            l_gk_q = [
-                GkSpace(gspace, k_cryst, wfndata.l_wfn[0].gkspc.ecutwfn)
-                for k_cryst in wfnqdata.kpts.cryst
-            ]
+            # l_gk = [
+            #     GkSpace(gspace, k_cryst, wfndata.l_wfn[0].gkspc.ecutwfn)
+            #     for k_cryst in wfndata.kpts.cryst
+            # ]
+            # l_gk_q = [
+            #     GkSpace(gspace, k_cryst, wfndata.l_wfn[0].gkspc.ecutwfn)
+            #     for k_cryst in wfnqdata.kpts.cryst
+            # ]
 
         return Epsilon(
             wfndata.crystal,
             gspace,
             wfndata.kpts,
             wfnqdata.kpts,
-            wfndata.l_wfn,
-            wfnqdata.l_wfn,
-            l_gk,
-            l_gk_q,
+            [[wfn] for wfn in wfndata.l_wfn],
+            [[wfn] for wfn in wfnqdata.l_wfn],
+            # l_gk,
+            # l_gk_q,
             qpts,
             epsinp,
         )
@@ -375,7 +375,7 @@ class Epsilon:
         """
 
         polarizability_matrix = np.zeros(
-            (self.l_gq[i_q].numgk, self.l_gq[i_q].numgk), dtype=complex
+            (self.l_gq[i_q].gk_cryst.shape[-1], self.l_gq[i_q].gk_cryst.shape[-1]), dtype=complex
         )
         for M in self.matrix_elements(i_q=i_q, yielding=True):
             polarizability_matrix += -np.einsum("l,m->lm", np.conj(M), M)
@@ -397,6 +397,10 @@ class Epsilon:
         """
 
         vqg = self.vcoul.v_bare(i_q)
+        
+        # FIXME: This is a temporary measure to check correctness of this file while changing units from Ryd to Hartree. Please remove
+        vqg/=2.0
+        
         I = np.identity(len(polarizability_matrix))
 
         eps = I - np.einsum("j,ij->ij", vqg, polarizability_matrix, optimize=True)
