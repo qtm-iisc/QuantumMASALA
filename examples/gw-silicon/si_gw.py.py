@@ -4,8 +4,8 @@
 # In this notebook, we present an example calculation of quasiparticle energies using QuatumMASALA's `gw` module.
 
 # %%
-%load_ext autoreload
-%autoreload 2
+# %load_ext autoreload
+# %autoreload 2
 
 # %%
 # Imports
