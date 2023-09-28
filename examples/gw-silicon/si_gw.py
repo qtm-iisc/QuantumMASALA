@@ -4,8 +4,8 @@
 # In this notebook, we present an example calculation of quasiparticle energies using QuatumMASALA's `gw` module.
 
 # %%
-# %load_ext autoreload
-# %autoreload 2
+%load_ext autoreload
+%autoreload 2
 
 # %%
 # Imports
@@ -16,6 +16,11 @@ sys.path.append(".")
 
 dirname = "./"
 
+# %% [markdown]
+# ### DFT Calculation
+# 
+# We will start with a DFT calculation to get the energy eigenfunctions and eigenvalues.
+
 # %%
 import numpy as np
 
@@ -24,7 +29,6 @@ from qtm.kpts import KList
 from qtm.lattice import RealLattice
 from qtm.crystal import BasisAtoms, Crystal
 from qtm.pseudo import UPFv2Data
-# from qtm.klist import gen_monkhorst_pack_grid
 from qtm.gspace import GSpace
 from qtm.mpi import QTMComm
 from qtm.dft import DFTCommMod, scf
@@ -63,30 +67,26 @@ kcryst = np.vstack([xx.flatten(),yy.flatten(),zz.flatten()])
 
 kpts = KList(recilat=crystal.recilat, k_coords=kcryst, k_weights=np.ones(kcryst.shape[1])/kcryst.shape[1])
 
-# mpgrid_shift = (True,True,True)
-# kpts = gen_monkhorst_pack_grid(crystal, mpgrid_shape, mpgrid_shift)
-# print(kpts.numkpts)
+
 # -----Setting up G-Space of calculation-----
 ecut_wfn = 25 * RYDBERG
-# NOTE: In future version, hard grid (charge/pot) and smooth-grid (wavefun)
-# can be set independently
 ecut_rho = 4 * ecut_wfn
 grho = GSpace(crystal.recilat, ecut_rho)
 gwfn = grho
 
 # -----Spin-polarized (collinear) calculation-----
 is_spin, is_noncolin = False, False
-# Starting with asymmetric spin distribution else convergence may yield only
-# non-magnetized states
 mag_start = [0.0]
-numbnd = 30  # Ensure adequate # of bands if system is not an insulator
+numbnd_occ = 4
+numbnd_nscf = 30
 
 occ = 'fixed'
-smear_typ = 'gauss'
-e_temp = 0.0001 * RYDBERG
 
 conv_thr = 1E-8 * RYDBERG
 diago_thr_init = 1E-2 * RYDBERG
+
+# %% [markdown]
+# ### DFT: SCF calculation for occupied bands
 
 # %%
 from qtm.constants import ELECTRONVOLT_HART
@@ -95,46 +95,60 @@ from qtm.kpts import KList
 
 kpts = KList(recilat=crystal.recilat, k_coords=kpts.k_cryst, k_weights=np.ones(kpts.k_cryst.shape[1])/kpts.k_cryst.shape[1])
 
-out = scf(dftcomm, crystal, kpts, grho, gwfn,
-          numbnd, is_spin, is_noncolin,
+scf_out = scf(dftcomm, crystal, kpts, grho, gwfn,
+          numbnd_occ, is_spin, is_noncolin,
           rho_start=mag_start, occ_typ=occ,
           conv_thr=conv_thr, diago_thr_init=diago_thr_init,
           iter_printer=print_scf_status,
           ret_vxc=True)
 
-scf_converged, rho, l_wfn_kgrp, en, vxc = out
-
 
 print("SCF Routine has exited")
-print(qtmlogger)
+# print(qtmlogger)
 
-# print(vxc/ELECTRONVOLT_HART)
-
-# for wfn in l_wfn_kgrp:
-#     wfn.evc_gk/=(np.linalg.norm(wfn.evc_gk, axis=-1, keepdims=True))
-    # wfn.evl*=2
-    # wfn.normalize()
+# %% [markdown]
+# #### DFT: NSCF calculation for unshifted grid
+# Observe that `maxiter` has been set to `1` and `diago_thr_init` has been set to a high value.
 
 # %%
-kpts_q = KList(recilat=crystal.recilat, k_coords=kpts.k_cryst+np.array([[0,0,0.001]]).T, k_weights=np.ones(kpts.k_cryst.shape[1])/kpts.k_cryst.shape[0])
+rho = scf_out[1].copy()
+nscf_out = scf(dftcomm, crystal, kpts, grho, gwfn,
+          numbnd_nscf, is_spin, is_noncolin,
+          rho_start=rho, 
+          occ_typ=occ,
+          conv_thr=conv_thr, 
+          diago_thr_init=(conv_thr/crystal.numel)/10,
+          iter_printer=print_scf_status,
+          maxiter=1,
+          ret_vxc=True)
 
+scf_converged_nscf, rho_nscf, l_wfn_kgrp, en_nscf, vxc = nscf_out
+
+# %% [markdown]
+# #### DFT: NSCF calculation for shifted grid
+# 
+# Dielectric matrix calculation for the $q\to 0$ point will require energy eigenfunctions for a slightly shifted $k$-grid.
+
+# %%
+k_coords_q = kpts.k_cryst+np.array([[0,0,0.001]]).T
+k_weights_q = np.ones(k_coords_q.shape[1])/k_coords_q.shape[1]
+kpts_q = KList(recilat=crystal.recilat, k_coords=k_coords_q, k_weights=k_weights_q)
+
+rho = scf_out[1].copy()
 out_q = scf(dftcomm, crystal, kpts_q, grho, gwfn,
-          numbnd, is_spin, is_noncolin,
-          rho_start=mag_start, occ_typ=occ, smear_typ='gauss', e_temp=e_temp,
-          conv_thr=conv_thr, diago_thr_init=diago_thr_init,
-          iter_printer=print_scf_status)
+          numbnd_nscf, is_spin, is_noncolin,
+          rho_start=rho, 
+          occ_typ=occ,
+          conv_thr=conv_thr, 
+          diago_thr_init=(conv_thr/crystal.numel)/10,
+          iter_printer=print_scf_status,
+          maxiter=1)
 
-scf_converged_q, rho_q, l_wfn_kgrp_q, en_q = out_q
+scf_converged_nscf_q, rho_nscf_q, l_wfn_kgrp_q, en_nscf_q = out_q
 
 
 print("Shifted SCF Routine has exited")
-print(qtmlogger)
-
-# %% [markdown]
-# ### Load Input Files
-# Input data is handled by the ``EpsInp`` class.\
-# The data can be provided either by constructing the ``EpsInp`` object or by reading BGW-compatible input file ``epsilon.inp``.\
-# The attributes have been supplied with docstrings from BerkeleyGW's input specification, so they will be accessible directly in most IDEs.
+# print(qtmlogger)
 
 # %% [markdown]
 # ### Load Input Files
@@ -246,19 +260,12 @@ def calculate_epsilon(numq=None, writing=False):
 
         # Calculate matrix elements
         M = next(epsilon.matrix_elements(i_q=i_q))
-        # if i_q==0:
-        #     N=10
-        #     print(M.shape)
-        #     print(M[0,0,0,:N].real)
-        #     break
 
         # Calculate polarizability matrix (faster, but not memory-efficient)
         chimat = epsilon.polarizability(M)
 
         # Calculate polarizability matrix (memory-efficient)
         # chimat = epsilon.polarizability_active(i_q)
-
-        # chimat/=2
         
         # Calculate epsilon inverse matrix
         epsinv = epsilon.epsilon_inverse(i_q=i_q, polarizability_matrix=chimat, store=True)
@@ -300,6 +307,13 @@ calculate_epsilon()
 
 # %% [markdown]
 # ### Sigma Calculation
+# 
+# Here we demonstate the calculation of diagonal matrix elements of $\Sigma_{\text{QP}}$. The input parameters for sigma calculation are being read from `sigma.inp` file, but the same parameters can also be provided by manually constructing a `SigmaInp` object. 
+# 
+# Here we will calculate $\bra{nk}\Sigma_{\text{QP}}\ket{nk}$ for the following k-points:
+# - $\Gamma$: `k=(0,0,0)`
+# - $L$: `k=(0.5,0.5,0)`
+# - $X$: `k=(0,0.5,0)`
 
 # %%
 from qtm.gw.sigma import Sigma
@@ -321,6 +335,7 @@ sigma = Sigma.from_qtm_scf(
     vxc=vxc
 )
 
+# Alternatively, the Sigma object can also be intitialized from pw2bgw.x output data (after being procesed by wfn2hdf5.x).
 # sigma = Sigma.from_data(
 #     wfndata=wfndata,
 #     wfnqdata=wfnqdata,
@@ -349,8 +364,8 @@ cohsex_result = sigma.calculate_static_cohsex()
 
 # %%
 sigma.print_condition=True
-sigma_ch_exact_mat = sigma.sigma_ch_static_exact()    
 print("Sigma CH COHSEX EXACT")
+sigma_ch_exact_mat = sigma.sigma_ch_static_exact()    
 sigma.pprint_sigma_mat(sigma_ch_exact_mat)
 
 # %%
