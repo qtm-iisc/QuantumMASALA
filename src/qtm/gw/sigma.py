@@ -386,7 +386,7 @@ class Sigma:
     def pprint_sigma_mat(self, mat):
         _mat = deepcopy(mat).real.T
         print("  n  ",end="")
-        print(("    ik={:<5}" * _mat.shape[-1]).format(*self.l_k_indices+1))
+        print(("    ik={:<5}" * _mat.shape[-1]).format(*self.l_k_indices))
         
         for i,row in enumerate(_mat.reshape(-1, _mat.shape[-1])):
             print(f"{i+self.sigmainp.band_index_min:>3} ",end="")
@@ -840,7 +840,7 @@ class Sigma:
         l_q[self.qpts.index_q0] *= 0
         g_cryst = [self.l_gq[i_q].g_cryst for i_q in range(self.qpts.numq)]
         sort_order = sort_cryst_like_BGW(self.l_gq[0].gk_cryst, self.l_gq[0].gk_norm2)
-        print(sort_order.shape)
+        # print(sort_order.shape)
 
         if not self.in_parallel:
             iterable = trange(len(l_q), desc="Sigma_SX_Static")
@@ -1714,6 +1714,7 @@ class Sigma:
         if self.print_condition:
             print()
             for k in range(len(self.l_k_indices)):
+                print(f"\n       k =  {self.kpts.cryst[k,0]:.6f}  {self.kpts.cryst[k,1]:.6f}  {self.kpts.cryst[k,2]:.6f} ik =  {k} spin = 1")
                 print(
                     "   n         Emf          Eo           X        SX-X          CH         Sig         Vxc        Eqp0        Eqp1         CH`        Sig`       Eqp0`       Eqp1`         Znk"
                 )
@@ -1929,6 +1930,7 @@ class Sigma:
         )
         if self.print_condition:
             for k in range(len(self.l_k_indices)):
+                print(f"\n       k =  {self.kpts.cryst[k,0]:.6f}  {self.kpts.cryst[k,1]:.6f}  {self.kpts.cryst[k,2]:.6f} ik =  {k} spin = 1")
                 print(
                     "   n         Emf          Eo           X        SX-X          CH         Sig         Vxc        Eqp0        Eqp1         CH`        Sig`       Eqp0`       Eqp1`         Znk"
                 )

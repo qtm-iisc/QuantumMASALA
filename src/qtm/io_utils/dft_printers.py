@@ -31,6 +31,7 @@ def print_scf_status(idxiter: int, scf_runtime: float,
         print(f" Fermi Level:     {en.fermi / ELECTRONVOLT:17.8f} eV")
     else:
         print(f"    HO Level:     {en.HO_level / ELECTRONVOLT:17.8f} eV")
-        print(f"    LU Level:     {en.LU_level / ELECTRONVOLT:17.8f} eV")
+        if en.LU_level != None:
+            print(f"    LU Level:     {en.LU_level / ELECTRONVOLT:17.8f} eV")
     print('-'*40)
     print()
