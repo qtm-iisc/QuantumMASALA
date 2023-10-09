@@ -19,6 +19,13 @@ from qtm.constants import FPI, TPIJ
 DEL_Q = 1e-2
 
 
+def small_x_thr_fn(n):
+    if n>2:
+        small_x_thr = 0.05 * 2.5**(n-2) + 0.05*(n-3)
+    else:
+        small_x_thr=0.05
+    return small_x_thr
+
 def semifact(n):
     return np.prod(np.arange(n, 0, -2, dtype='i8'))
 
@@ -30,7 +37,8 @@ def spherical_jn(n: int, x_: np.ndarray) -> np.ndarray:
         return NotImplemented
     assert x_.ndim == 1
     # x is expected to be in ascending order
-    small_x = np.asarray(0.05, like=x_)
+    small_x_thr = small_x_thr_fn(n)
+    small_x = np.asarray(small_x_thr, like=x_)
     isplit = np.searchsorted(x_, small_x, 'right')
 
     j_ = np.empty_like(x_)
@@ -70,6 +78,10 @@ def spherical_jn(n: int, x_: np.ndarray) -> np.ndarray:
 
     x4 = x2 * x2
     x5 = x2 * x3
+    if n == 4:
+        j[:] = ((105 - 45 * x2 + x4) * sx + (10 * x3 - 105 * x ) * cx) / x5
+        return j_
+    
     if n == 5:
         j[:] = (
             cx * (-1 - 945/x4 + 105/x2)
@@ -80,10 +92,11 @@ def spherical_jn(n: int, x_: np.ndarray) -> np.ndarray:
     x6 = x3 * x3
     if n == 6:
         j[:] = (
-            cx * (-10395/5 + 1260/x3 - 21/x)
+            cx * (-10395/x5 + 1260/x3 - 21/x)
             + sx * (-1 + 10395/x6 - 4725/x4 + 210/x2)
         ) / x
         return j_
+
 
 
 class NonlocGenerator:
@@ -207,7 +220,9 @@ class NonlocGenerator:
         # theta = np.arccos(
         #     np.divide(gk_z, gk_norm, out=np.zeros_like(gk_z), where=gk_norm > 1e-7)
         # )
+        # print('np.where(gk_norm <= 1e-5) :',np.where(gk_norm <= 1e-5)) #debug statement
         theta = np.arccos(gk_z / gk_norm)
+        theta[np.where(gk_norm <= 1e-7)] =0.0
         phi = np.arctan2(gk_y, gk_x)
 
         l_vkb_atom = gkspc.allocate_array((self.numvkb, numgk))
