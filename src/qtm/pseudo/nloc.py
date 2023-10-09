@@ -3,6 +3,7 @@ __all__ = ["NonlocGenerator"]
 
 import numpy as np
 from scipy.special import sph_harm
+from scipy.linalg import block_diag
 
 from qtm.crystal.basis_atoms import BasisAtoms
 from qtm.gspace import GSpace, GkSpace
@@ -301,8 +302,9 @@ class NonlocGenerator:
             )
             vkb_diag += np.sum(l_vkb_iat * (dij_atom @ l_vkb_iat.conj()), axis=0)
 
-        dij_full = gkspc.allocate_array((self.numvkb * numatoms,
-                                         self.numvkb * numatoms))
+        # dij_full = block_diag(*[dij_atom for _ in range(numatoms)])
+        dij_full = gkspc.allocate_array((self.numvkb * numatoms, self.numvkb * numatoms))
+        dij_full*=0
         for iat in range(numatoms):
             sl = (slice(iat * self.numvkb, (iat + 1) * self.numvkb))
             dij_full[sl, sl] = dij_atom
