@@ -3,7 +3,6 @@ __all__ = ["NonlocGenerator"]
 
 import numpy as np
 from scipy.special import sph_harm
-from scipy.linalg import block_diag
 
 from qtm.crystal.basis_atoms import BasisAtoms
 from qtm.gspace import GSpace, GkSpace
