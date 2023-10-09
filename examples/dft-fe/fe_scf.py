@@ -17,7 +17,7 @@ qtmconfig.fft_backend = 'mkl_fft'
 
 from mpi4py.MPI import COMM_WORLD
 comm_world = QTMComm(COMM_WORLD)
-dftcomm = DFTCommMod(comm_world, 1, 2)
+dftcomm = DFTCommMod(comm_world, comm_world.size, 1)
 
 # Lattice
 reallat = RealLattice.from_alat(alat=5.1070,  # Bohr
