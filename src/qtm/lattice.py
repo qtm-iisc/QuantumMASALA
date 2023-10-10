@@ -6,7 +6,7 @@ __all__ = ['Lattice', 'RealLattice', 'ReciLattice']
 
 import numpy as np
 
-from qtm.config import NDArray
+from qtm.config import NDArray, qtmconfig
 from qtm.constants import TPI, ANGSTROM
 
 
@@ -35,6 +35,11 @@ class Lattice:
                 f"shape={primvec.shape if hasattr(primvec, 'shape') else 'NA'}, "
                 f"dtype={primvec.dtype if hasattr(primvec, 'dtype') else 'NA'}"
             )
+
+        
+        if qtmconfig.gpu_enabled:
+            import cupy
+            primvec = cupy.asarray(primvec)
 
         self.primvec: NDArray = primvec.copy('C').astype('f8')
         r"""(``(3, 3)``, ``'f8'``, ``'C'``) Matrix containing
@@ -242,6 +247,10 @@ class RealLattice(Lattice):
         self.latvec: NDArray = self.primvec
         """(``(3, 3)``, ``'f8'``) Alias of ``primvec``
         """
+        if qtmconfig.gpu_enabled:
+            import cupy
+            self.latvec = cupy.asarray(self.latvec)
+            print('type(self.latvec) :',type(self.latvec)) #debug statement
         self.latvec_inv: NDArray = self.primvec_inv
         """(``(3, 3)``, ```'f8'``) Alias of ``primvec_inv``
         """
@@ -311,6 +320,7 @@ class RealLattice(Lattice):
             given by ``a1``, ``a2`` and ``a3``
         """
         latvec = alat * np.stack((a1, a2, a3), axis=1)
+
         return cls(alat, latvec)
 
     @classmethod
