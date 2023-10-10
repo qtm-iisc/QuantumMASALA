@@ -1,5 +1,7 @@
 import numpy as np
 
+
+from qtm.config import qtmconfig
 from qtm.constants import RYDBERG, ELECTRONVOLT
 from qtm.lattice import RealLattice
 from qtm.crystal import BasisAtoms, Crystal
@@ -11,13 +13,16 @@ from qtm.dft import DFTCommMod, scf
 
 from qtm.io_utils.dft_printers import print_scf_status
 
-from qtm import qtmconfig
 from qtm.logger import qtmlogger
-qtmconfig.fft_backend = 'mkl_fft'
+# qtmconfig.fft_backend = 'mkl_fft'
+
+
+if qtmconfig.gpu_enabled:
+    qtmconfig.fft_backend = 'cupy'
 
 from mpi4py.MPI import COMM_WORLD
 comm_world = QTMComm(COMM_WORLD)
-dftcomm = DFTCommMod(comm_world, 1, 2)
+dftcomm = DFTCommMod(comm_world, comm_world.size, 1)
 
 # Lattice
 reallat = RealLattice.from_alat(alat=5.1070,  # Bohr

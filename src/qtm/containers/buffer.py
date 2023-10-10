@@ -12,7 +12,7 @@ import numpy as np
 from numpy.lib.mixins import NDArrayOperatorsMixin
 from qtm.gspace import GSpaceBase
 
-from qtm.config import NDArray
+from qtm.config import NDArray, qtmconfig
 
 
 class BufferType(NDArrayOperatorsMixin, ABC):
@@ -80,6 +80,9 @@ class BufferType(NDArrayOperatorsMixin, ABC):
         # self._check_data(data, suppress_exc=False)
         self._data: NDArray = data
         """Array instance containing the data"""
+        if qtmconfig.gpu_enabled:
+            import cupy
+            self._data = cupy.asarray(self._data)
 
     @classmethod
     def _check_data(cls, data: NDArray, suppress_exc: bool = True):
