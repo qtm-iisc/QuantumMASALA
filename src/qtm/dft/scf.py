@@ -377,7 +377,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             e_error = float(mixmod.compute_error(rho_in, rho_out))
             e_error = image_comm.bcast(e_error)
 
-            if e_error < conv_thr:
+            if e_error < conv_thr and diago_thr < max(1e-13, 0.1*conv_thr/crystal.numel):
                 scf_converged = True
             elif idxiter == 0 and e_error < diago_thr * crystal.numel:
                 if iter_printer is not None:
