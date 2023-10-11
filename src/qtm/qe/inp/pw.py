@@ -9,19 +9,40 @@ if __name__=="__main__":
 
 
     filename = "./P-test.scf.in"
+    npools = None
+    nband = None
     if len(sys.argv)>1:
         filename = sys.argv[1]
     pwscfin = PWscfIn.from_file(filename)
-
     pprint(pwscfin)
 
-    from qtm.qe.inp.parse_inp import parse_inp
 
+    def fetch_arg(argstr):
+        arg = None
+        if argstr in sys.argv:
+            index_argstr = sys.argv.index(argstr)
+            if len(sys.argv)>index_argstr+1:
+                if sys.argv[index_argstr+1].isnumeric():
+                    arg=sys.argv[index_argstr+1]
+        return arg
+    
+    if fetch_arg("-nk") != None:
+        npools = int(fetch_arg("-nk"))
+    elif fetch_arg("-npools") != None:
+        npools = int(fetch_arg("-npools"))
+
+    # Deactivated for now
+    # if fetch_arg("-nb") != None:
+    #     nband = int(fetch_arg("-nb"))
+    # elif fetch_arg("-nband") != None:
+    #     nband = int(fetch_arg("-nband"))
+    # else:
+    #     nband = 1
+
+
+    from qtm.qe.inp.parse_inp import parse_inp
     pwin, cryst, kpts = parse_inp(pwscfin)
 
-    # print('pwin :',pwin) #debug statement
-    # print('cryst :',cryst) #debug statement
-    # print('kpts :',kpts) #debug statement
 
     # ### Run QuantumMASALA with the input
 
@@ -40,11 +61,15 @@ if __name__=="__main__":
 
     from qtm import qtmconfig
     from qtm.logger import qtmlogger
-    qtmconfig.fft_backend = 'mkl_fft'
+    # qtmconfig.fft_backend = 'mkl_fft'
 
     from mpi4py.MPI import COMM_WORLD
     comm_world = QTMComm(COMM_WORLD)
-    dftcomm = DFTCommMod(comm_world, comm_world.size, 1)
+    if npools==None:
+        npools = comm_world.size#//nband
+        
+    # n_pw = comm_world.size
+    dftcomm = DFTCommMod(comm_world, npools)#, n_pw)
 
 
     # -----Setting up G-Space of calculation-----
@@ -61,14 +86,12 @@ if __name__=="__main__":
     # non-magnetized states
     mag_start = pwin.system.starting_magnetization
     mag_start = list(mag_start.values())
-    print('mag_start :', mag_start) #debug statement
-    # exit()
     numbnd = pwin.system.nbnd  # Ensure adequate # of bands if system is not an insulator
 
     occ = pwin.system.occupations
     if occ == "smearing":
         occ="smear"
-    # print(occ)
+
     smear_typ = pwin.system.smearing
     e_temp = pwin.system.degauss * RYDBERG
 
