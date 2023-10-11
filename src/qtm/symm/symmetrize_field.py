@@ -47,17 +47,23 @@ class SymmFieldMod:
         # Sorting G-vectors such that they are grouped by their lengths, within
         # which they are sorted by their corresponding 'idxgrid'
         i1, i2, i3 = g_cryst
-        idxsort = np.lexsort((i3 + n3 * (i3 < 0),
-                              i2 + n2 * (i2 < 0),
-                              i1 + n1 * (i1 < 0),
-                              g_norm2))
+        # CUPY NOTE: Arrays stacked below because CuPy's lexsort works with a
+        # single 2D array and not tuple of 1d arrays
+        idxsort = np.lexsort(np.stack((
+            i3 + n3 * (i3 < 0),
+            i2 + n2 * (i2 < 0),
+            i1 + n1 * (i1 < 0),
+            g_norm2
+        )))
 
         # Splitting the set of G-vectors into groups with same lengths (shells)
         _, isplit = np.unique(g_norm2[idxsort], return_index=True)
 
         shells_ig = []
         shells_phase = []
-        for ig in np.split(idxsort, isplit)[1:]:
+        # CUPY NOTE: CuPy supports only sequence of integers for the second
+        # argument of 'split' and not ndarray.
+        for ig in np.split(idxsort, isplit.tolist())[1:]:
             # Rotating all G-vectors in shell with all symmetries
             g_cryst_shell = g_cryst[:, ig]
             g_cryst_rot = np.tensordot(recilat_rot, g_cryst_shell, axes=1)

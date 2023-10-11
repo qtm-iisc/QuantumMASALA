@@ -22,7 +22,7 @@ class FFT3DFull(FFT3D):
     def r2g(self, arr_inp: NDArray, arr_out: NDArray) -> None:
         self.worker.inp_fwd[:] = arr_inp
         out = self.worker.fft()
-        out.take(self.idxgrid, out=arr_out, mode='clip')
+        out.take(self.idxgrid, out=arr_out)
 
     def g2r(self, arr_inp: NDArray, arr_out: NDArray) -> None:
         self.worker.inp_bwd.put(self.idxgrid, arr_inp)

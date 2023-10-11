@@ -13,7 +13,7 @@ def check_rho(rho: FieldGType):
 
     if rho.shape not in [(1, ), (2, )]:
         raise ValueError(value_mismatch_msg(
-            'rho.shape', 'rho.shape', "either (1, ) or (2, )"
+            'rho.shape', rho.shape, "either (1, ) or (2, )"
         ))
 
 

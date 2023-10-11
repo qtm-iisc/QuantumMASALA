@@ -6,7 +6,7 @@ __all__ = ['Lattice', 'RealLattice', 'ReciLattice']
 
 import numpy as np
 
-from qtm.config import NDArray
+from qtm.config import NDArray, qtmconfig
 from qtm.constants import TPI, ANGSTROM
 
 
@@ -36,6 +36,11 @@ class Lattice:
                 f"dtype={primvec.dtype if hasattr(primvec, 'dtype') else 'NA'}"
             )
 
+        
+        if qtmconfig.gpu_enabled:
+            import cupy
+            primvec = cupy.asarray(primvec)
+
         self.primvec: NDArray = primvec.copy('C').astype('f8')
         r"""(``(3, 3)``, ``'f8'``, ``'C'``) Matrix containing
         lattice translation vectors. 
@@ -63,7 +68,7 @@ class Lattice:
     def axes_cart(self) -> list[tuple[float, float, float]]:
         """tuple of the three primitive vectors in atomic units
         """
-        return list(tuple(vec) for vec in self.primvec.T)
+        return list(tuple(vec.tolist()) for vec in self.primvec.T)
 
     def cart2cryst(self, arr: NDArray, axis: int = 0) -> NDArray:
         """Transforms array of vector components in cartesian coords
@@ -210,6 +215,14 @@ class Lattice:
         """
         return np.sqrt(self.norm2(l_vec, coords))
 
+    def __eq__(self, other: Lattice):
+        if type(self) is not type(other):
+            return False
+        return np.linalg.norm(
+            self.primvec
+            - np.asarray(other.primvec, like=self.primvec)
+        ) <= 1E-5
+
 
 class RealLattice(Lattice):
     """Represents Real-Space Lattice of a Crystal.
@@ -234,6 +247,10 @@ class RealLattice(Lattice):
         self.latvec: NDArray = self.primvec
         """(``(3, 3)``, ``'f8'``) Alias of ``primvec``
         """
+        if qtmconfig.gpu_enabled:
+            import cupy
+            self.latvec = cupy.asarray(self.latvec)
+            print('type(self.latvec) :',type(self.latvec)) #debug statement
         self.latvec_inv: NDArray = self.primvec_inv
         """(``(3, 3)``, ```'f8'``) Alias of ``primvec_inv``
         """
@@ -303,6 +320,7 @@ class RealLattice(Lattice):
             given by ``a1``, ``a2`` and ``a3``
         """
         latvec = alat * np.stack((a1, a2, a3), axis=1)
+
         return cls(alat, latvec)
 
     @classmethod

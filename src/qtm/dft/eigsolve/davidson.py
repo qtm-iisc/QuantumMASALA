@@ -12,7 +12,7 @@ from qtm.containers import WavefunGType
 from qtm.dft import KSWfn, KSHam, DFTCommMod
 
 from qtm.logger import qtmlogger
-from qtm.config import NDArray
+from qtm.config import NDArray, CUPY_INSTALLED
 
 
 @qtmlogger.time('davidson')
@@ -101,7 +101,7 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
         return slice(sca_start, sca_stop)
 
     def gen_bufspec(len_, grpsize):
-        grprank = np.arange(grpsize, dtype='i8')
+        grprank = np.arange(grpsize, dtype='i8', like=evl)
         return (len_ // grpsize) + (grprank < len_ % grpsize)
 
     @qtmlogger.time('davidson:compute_hpsi')
@@ -197,19 +197,55 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
 
     # The reduced hamiltonian is solved and the corresponding eigenpairs
     # are broadcasted to all processes in kgrp
-    def solve_red():
-        ham_red_ = ham_red[:ndim, :ndim]
-        ovl_red_ = ovl_red[:ndim, :ndim]
-        evc_red_ = evc_red[:, :ndim].T
+    if WavefunG.ndarray is np.ndarray:
+        def solve_red():
+            ham_red_ = ham_red[:ndim, :ndim]
+            ovl_red_ = ovl_red[:ndim, :ndim]
+            evc_red_ = evc_red[:, :ndim].T
 
-        with kgrp_intra as comm:
-            if comm.rank == 0:
-                evl_red[:], evc_red_[:] = eigh(
-                    ham_red_, ovl_red_, subset_by_index=[0, numeig - 1],
-                    lower=True
-                )
-            comm.Bcast(evc_red)
-            comm.Bcast(evl_red)
+            with kgrp_intra as comm:
+                if comm.rank == 0:
+                    evl_red[:], evc_red_[:] = eigh(
+                        ham_red_, ovl_red_, subset_by_index=[0, numeig - 1],
+                        lower=True
+                    )
+                comm.Bcast(evc_red)
+                comm.Bcast(evl_red)
+    elif CUPY_INSTALLED:
+        import cupy as cp
+        if WavefunG.ndarray is not cp.ndarray:
+            raise TypeError
+
+        from cupyx import seterr
+        seterr(linalg='raise')
+        def solve_red():
+            ham_red_ = ham_red[:ndim, :ndim]
+            ovl_red_ = ovl_red[:ndim, :ndim]
+            # print('solve', np.sum(np.isnan(ham_red_)), np.sum(np.isnan(ovl_red_)))
+            # print(ovl_red_)
+
+            with kgrp_intra as comm:
+                if comm.rank == 0:
+                    # Generalized Eigenvalue Problem Ax = eBx
+                    A, B = ham_red_, ovl_red_
+                    L = cp.linalg.cholesky(B)
+                    # print(np.sum(np.isnan(L)))
+                    L_inv = cp.linalg.inv(L)
+                    # print(np.sum(np.isnan(L_inv)))
+                    A = cp.tril(A, -1) + cp.tril(A, -1).T.conj() \
+                        + cp.diag(cp.diag(A).real)
+                    A_ = L_inv @ A @ L_inv.conj().T
+                    # print(np.sum(np.isnan(A_)))
+                    A_evl, A_evc = cp.linalg.eigh(A_, 'L')
+                    evl_red[:numeig] = A_evl[:numeig]
+                    evc_red[:, :ndim] = cp.linalg.solve(L.conj().T, A_evc[:, :numeig]).T
+                comm.Bcast(evc_red)
+                comm.Bcast(evl_red)
+            # print('solve', np.sum(np.isnan(ham_red_)), np.sum(np.isnan(ovl_red_)),
+            #       np.sum(np.isnan(evl[:numeig])), np.sum(np.isnan(evc_red[:, :ndim])))
+            # print(evl_red)
+    else:
+        raise TypeError('not supported')
 
     # Starting with input wavefunctions
     compute_hpsi(0, ndim)
@@ -263,4 +299,5 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     kswfn.evc_gk[:] = evc
 
     kswfn.evl[:] = np.array(evl.real, like=kswfn.evl)
+    # print(kswfn.evl)
     return kswfn, idxiter

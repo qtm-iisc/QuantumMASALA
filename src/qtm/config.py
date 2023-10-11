@@ -26,6 +26,10 @@ if MKL_FFT_INSTALLED:
 if CUPY_INSTALLED:
     FFT_AVAILABLE_BACKENDS.append('cupy')
 
+if CUPY_INSTALLED:
+    from cupyx import seterr
+    seterr(linalg='raise')
+
 fft_use_sticks = False
 
 
@@ -39,6 +43,8 @@ class QTMConfig:
     # Default values
     _RNG_DEFAULT_SEED = 489
     _LOGFILE_DEFAULT_DIR = './qtmpy.log'
+
+
 
     _logging_enabled: bool = False
     @property  # noqa : E301
@@ -179,10 +185,22 @@ class QTMConfig:
             from mpi4py.MPI import COMM_WORLD
             self._rng_seed = COMM_WORLD.bcast(self._rng_seed)
 
+    
+    def __init__(self, gpu_enabled=True):
+        self.set_gpu(gpu_enabled=gpu_enabled)
 
-qtmconfig: QTMConfig = QTMConfig()
-if CUPY_INSTALLED:
+    def set_gpu(self, gpu_enabled):
+        if self.check_cupy() and gpu_enabled:
+            self.gpu_enabled = True
+        else:
+            self.gpu_enabled = False
+
+
+qtmconfig: QTMConfig = QTMConfig(gpu_enabled=False)
+# if CUPY_INSTALLED:
+if qtmconfig.gpu_enabled:
     import cupy as cp
-    NDArray = Union[np.ndarray, cp.ndarray]
+    NDArray = cp.ndarray #Union[np.ndarray, cp.ndarray]
+    qtmconfig.fft_backend = 'cupy'
 else:
     NDArray = np.ndarray

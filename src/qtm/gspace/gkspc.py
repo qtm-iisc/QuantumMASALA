@@ -36,7 +36,7 @@ class GkSpace(GSpaceBase):
         gk_norm2 = self.gwfn.recilat.norm2(gk_cryst)
         self.idxgk = np.nonzero(gk_norm2 <= 2 * self.ecutwfn)[0]
         super().__init__(self.gwfn.recilat, self.gwfn.grid_shape,
-                         g_cryst[:, self.idxgk],
+                         g_cryst[:, self.idxgk], self.gwfn._fft.backend,
                          )
 
         self.gk_cryst = self.g_cryst.copy().astype('f8')
@@ -75,4 +75,4 @@ class GkSpace(GSpaceBase):
         -------
         np.ndarray of shape (:)
         """
-        return np.sum(np.square(self.recilat.recvec @ l_vecs), axis=0)
+        return self.recilat.norm2(l_vecs, 'cryst')

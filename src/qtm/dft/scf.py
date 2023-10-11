@@ -191,8 +191,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         ]
 
         symm_mod = None
-        if symm_rho:
-            symm_mod = SymmFieldMod(crystal, grho)
+        # if symm_rho:
+        symm_mod = SymmFieldMod(crystal, grho)
 
         if wfn_init is None:
             def wfn_init(_, kswfn_k):
@@ -230,7 +230,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             v_ion_sp, rho_core_sp = loc_generate_pot_rhocore(sp, grho)
             v_ion += v_ion_sp
             rho_core += rho_core_sp
-            l_nloc.append(NonlocGenerator(sp, gwfn.ecut / 4))
+            l_nloc.append(NonlocGenerator(sp, gwfn))
         v_ion = v_ion.to_r()
 
         en = EnergyData()
@@ -374,7 +374,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
 
             update_rho_out()
             compute_en()
-            e_error = mixmod.compute_error(rho_in, rho_out)
+            e_error = float(mixmod.compute_error(rho_in, rho_out))
             e_error = image_comm.bcast(e_error)
 
             if e_error < conv_thr:

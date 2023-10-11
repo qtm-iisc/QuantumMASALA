@@ -4,6 +4,7 @@ __all__ = ['Crystal', 'CrystalSymm']
 import numpy as np
 from spglib import get_symmetry
 
+from qtm.config import qtmconfig
 from qtm.lattice import RealLattice, ReciLattice
 from qtm.crystal.basis_atoms import BasisAtoms
 
@@ -100,7 +101,12 @@ class CrystalSymm:
         numbers = np.repeat(range(len(positions)),
                             [len(pos) for pos in positions])
         positions = np.concatenate(positions, axis=0)
-        reallat_symm = get_symmetry((lattice, positions, numbers),
+        
+        if qtmconfig.gpu_enabled:
+            reallat_symm = get_symmetry((lattice.get(), positions.get(), numbers),
+                                    symprec=self.symprec)
+        else:
+            reallat_symm = get_symmetry((lattice, positions, numbers),
                                     symprec=self.symprec)
         del reallat_symm['equivalent_atoms']
         if reallat_symm is None:
