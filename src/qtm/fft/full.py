@@ -25,5 +25,6 @@ class FFT3DFull(FFT3D):
         out.take(self.idxgrid, out=arr_out)
 
     def g2r(self, arr_inp: NDArray, arr_out: NDArray) -> None:
+        self.worker.inp_bwd.fill(0.0)
         self.worker.inp_bwd.put(self.idxgrid, arr_inp)
         arr_out[:] = self.worker.ifft(self.normalise_idft)
