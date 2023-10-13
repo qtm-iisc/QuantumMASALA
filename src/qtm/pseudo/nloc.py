@@ -3,13 +3,14 @@ __all__ = ["NonlocGenerator"]
 
 import numpy as np
 from scipy.special import sph_harm
+from scipy.linalg import block_diag
 
 from qtm.crystal.basis_atoms import BasisAtoms
 from qtm.gspace import GSpace, GkSpace
 from qtm.containers import get_WavefunG, WavefunGType
 from .upf import UPFv2Data
 
-from qtm.config import NDArray
+from qtm.config import NDArray, qtmconfig
 from qtm.msg_format import type_mismatch_msg
 from qtm.logger import qtmlogger
 
@@ -302,11 +303,20 @@ class NonlocGenerator:
             )
             vkb_diag += np.sum(l_vkb_iat * (dij_atom @ l_vkb_iat.conj()), axis=0)
 
-        # dij_full = block_diag(*[dij_atom for _ in range(numatoms)])
-        dij_full = gkspc.allocate_array((self.numvkb * numatoms, self.numvkb * numatoms))
-        dij_full*=0
-        for iat in range(numatoms):
-            sl = (slice(iat * self.numvkb, (iat + 1) * self.numvkb))
-            dij_full[sl, sl] = dij_atom
+        if qtmconfig.gpu_enabled:
+            dij_full = block_diag(*[dij_atom.get() for _ in range(numatoms)])
+            dij_full = np.asarray(dij_full, like=self.gwfn.g_cryst)
+        else:
+            dij_full = block_diag(*[dij_atom for _ in range(numatoms)])
+
+        # dij_full = gkspc.allocate_array((self.numvkb * numatoms, self.numvkb * numatoms))
+        # dij_full*=0
+        # for iat in range(numatoms):
+        #     sl = (slice(iat * self.numvkb, (iat + 1) * self.numvkb))
+        #     dij_full[sl, sl] = dij_atom
+
+        # for vkb in l_vkb_full:
+        #     if np.any(np.isnan(vkb)):
+        #         print("Naans in vkb")
 
         return l_vkb_full, dij_full, vkb_diag
