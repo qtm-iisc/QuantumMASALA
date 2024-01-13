@@ -62,11 +62,11 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
 
     @qtmlogger.time('davidson:apply_g_psi')
     def apply_g_psi(l_wfn: WavefunGType, l_evl: NDArray):
-        scala = 2
+        scala = 2.0
         for wfn_, evl_ in zip(l_wfn, l_evl):
             x = scala * (ham_diag - evl_)
             denom = 0.5 * (1 + x + np.sqrt(1 + (x - 1) ** 2)) / scala
-            wfn_ /= denom
+            wfn_ /= denom*2
 
     evc = kswfn.evc_gk
     evl = gkspc.allocate_array(numeig)
