@@ -13,6 +13,21 @@ from .utils import check_rho, fieldg_grad, fieldg_div
 
 from qtm.config import CUPY_INSTALLED
 
+# Thresholds
+lda_rho_thr = 1E-10
+gga_rho_thr = 1E-6
+gga_sigma_thr = 1E-10
+
+
+def set_threshold(l_xc_func):
+    for xc_func in l_xc_func:
+        if xc_func.get_family() == xc_flags.XC_FAMILY_LDA:
+            xc_func.set_dens_threshold(lda_rho_thr)
+        elif xc_func.get_family() == xc_flags.XC_FAMILY_GGA:
+            xc_func.set_dens_threshold(gga_rho_thr)
+            xc_func.set_sigma_threshold(gga_sigma_thr)
+    return l_xc_func
+
 
 def get_libxc_func(crystal: Crystal) -> tuple[str, str]:
     libxc_func = None
@@ -115,7 +130,10 @@ def compute(rho: FieldGType, rhocore: FieldGType,
 
     exch_func = LibXCFunctional(exch_name, numspin)
     corr_func = LibXCFunctional(corr_name, numspin)
-
+    
+    # Set thresholds
+    exch_func, corr_func = tuple(set_threshold([exch_func, corr_func]))
+    
     need_grad = sum(
         True if xcfunc.get_family() in
         [xc_flags.XC_FAMILY_GGA, xc_flags.XC_FAMILY_MGGA]
