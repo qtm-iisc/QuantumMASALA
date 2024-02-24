@@ -17,19 +17,28 @@ from qtm.logger import qtmlogger
 EPS6 = 1E-6
 
 
-def _simpson(f_r: NDArray, r_ab: NDArray):
-    f_times_dr = f_r * r_ab
-    if len(r_ab) % 2 == 0:  # If even # of points <-> odd # of interval
-        f_times_dr = f_times_dr[:-1]  # Discard last point for now
-    f_times_dr[:] *= 1. / 3
-    f_times_dr[..., 1:-1:2] *= 4
-    f_times_dr[..., 2:-1:2] *= 2
-    integral = np.sum(f_times_dr, axis=-1)
-    # Dealing with last interval when odd # of intervals
-    if len(r_ab) % 2 == 0:
-        integral += (-0.5 * f_times_dr[-2] + 4 * f_times_dr[-1])
-        integral += 2.5 * (f_r[-1] * r_ab[-1] / 3.)
-    return integral
+# def _simpson(f_r: NDArray, r_ab: NDArray):
+#     f_times_dr = f_r * r_ab
+#     if len(r_ab) % 2 == 0:  # If even # of points <-> odd # of interval
+#         f_times_dr = f_times_dr[:-1]  # Discard last point for now
+#     f_times_dr[:] *= 1. / 3
+#     f_times_dr[..., 1:-1:2] *= 4
+#     f_times_dr[..., 2:-1:2] *= 2
+#     integral = np.sum(f_times_dr, axis=-1)
+#     # Dealing with last interval when odd # of intervals
+#     if len(r_ab) % 2 == 0:
+#         integral += (-0.5 * f_times_dr[-2] + 4 * f_times_dr[-1])
+#         integral += 2.5 * (f_r[-1] * r_ab[-1] / 3.)
+#     return integral
+
+
+def _simpson_old(f, rab):
+    r12 = 1/3
+    f_r = f * rab
+    start, stop, step = 0, rab.shape[0] - 2, 2
+    return r12 * np.sum(f_r[start:stop:step]
+                        + 4*f_r[start+1:stop+1:step]
+                        + f_r[start+2:stop+2:step])
 
 
 def _sph2pw(r: NDArray, r_ab: NDArray, f_times_r2: NDArray, g: NDArray):
@@ -103,7 +112,7 @@ def loc_generate_rhoatomic(sp: BasisAtoms, grho: GSpace) -> FieldGType:
 
     rho.data[:] = _sph2pw(r, r_ab, f_times_r2, g_norm[:])
     if grho.has_g0:
-        rho.data[0] = _simpson(rhoatom, r_ab)
+        rho.data[0] = _simpson_old(rhoatom, r_ab)
 
     rho *= struct_fac / grho.reallat_dv
     return rho
@@ -173,12 +182,12 @@ def loc_generate_pot_rhocore(sp: BasisAtoms,
     with np.errstate(divide='ignore'):
         v_ion.data[:] = f_g[0] - valence * np.exp(-g_norm2 / 4) / g_norm2
     if grho.has_g0:
-        v_ion.data[0] = _simpson(r * (r * vloc + valence), r_ab)
+        v_ion.data[0] = _simpson_old(r * (r * vloc + valence), r_ab)
 
     if upfdata.core_correction:
         rho_core.data[:] = f_g[1]
         if grho.has_g0:
-            rho_core.data[0] = _simpson(rho_atc * r**2, r_ab)
+            rho_core.data[0] = _simpson_old(rho_atc * r**2, r_ab)
     else:
         rho_core.data[:] = 0
 
