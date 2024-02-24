@@ -1,5 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
+from qtm.logger import qtmlogger
 if TYPE_CHECKING:
     from typing import Literal
     from numbers import Number
@@ -13,7 +15,7 @@ import numpy as np
 from qtm.crystal import Crystal
 from qtm.kpts import KList
 from qtm.gspace import GSpace, GkSpace
-from qtm.containers import FieldGType, FieldRType, get_FieldG, get_FieldR
+from qtm.containers import FieldGType, FieldRType, get_FieldG
 
 from qtm.pot import hartree, xc, ewald
 from qtm.pseudo import (
@@ -64,7 +66,7 @@ else:
     IterPrinter = 'IterPrinter'
     WfnInit = 'WfnInit'
 
-
+@qtmlogger.time('scf:scf')
 def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         grho: GSpace, gwfn: GSpace, numbnd: int,
         is_spin: bool, is_noncolin: bool,
@@ -140,6 +142,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         else:
             rho_start = sum(loc_generate_rhoatomic(sp, grho)
                             for sp in crystal.l_atoms).reshape(1)
+            print("rho_start: loc_generate_rhoatomic")
+            
 
         libxc_func = comm.bcast(libxc_func)
 
@@ -147,7 +151,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         assert occ_typ in ['fixed', 'smear']
 
         smear_typ = comm.bcast(smear_typ)
-        assert smear_typ in ['gauss', 'fd', 'mv']
+        if occ_typ=='smear':
+            assert smear_typ in ['gauss', 'fd', 'mv']
 
         e_temp = comm.bcast(e_temp)
         assert isinstance(e_temp, float)
@@ -182,6 +187,39 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
     image_comm = dftcomm.image_comm
     pwgrp_inter_kgrp = dftcomm.pwgrp_inter_kgrp
     kroot_intra = dftcomm.kroot_intra
+    
+    if dftcomm.image_comm.rank == 0:
+        print("=========================================")
+        print("SCF Parameters:")
+        print(f"dftcomm: {dftcomm}")
+        print(f"crystal: {crystal}")
+        print(f"grho: {grho}")
+        print(f"    cutoff: {grho.ecut}")
+        print(f"    grid_size: {grho.grid_shape}")
+        print(f"gwfn: {gwfn}")
+        print(f"    cutoff: {gwfn.ecut}")
+        print(f"    grid_size: {gwfn.grid_shape}")
+        print(f"numbnd: {numbnd}")
+        print(f"is_spin: {is_spin}")
+        print(f"is_noncolin: {is_noncolin}")
+        print(f"symm_rho: {symm_rho}")
+        print(f"rho_start: {rho_start}")
+        print(f"wfn_init: {wfn_init}")
+        print(f"libxc_func: {libxc_func}")
+        print(f"occ_typ: {occ_typ}")
+        print(f"smear_typ: {smear_typ}")
+        print(f"e_temp: {e_temp}")
+        print(f"conv_thr: {conv_thr}")
+        print(f"maxiter: {maxiter}")
+        print(f"diago_thr_init: {diago_thr_init}")
+        print(f"iter_printer: {iter_printer}")
+        print(f"mix_beta: {mix_beta}")
+        print(f"mix_dim: {mix_dim}")
+        print(f"dftconfig: {dftconfig}")
+        print(f"ret_vxc: {ret_vxc}")
+        print(f"kpts: {kpts}")
+        print("=========================================")
+
 
     with image_comm:
         n_kgrp, i_kgrp = dftcomm.n_kgrp, dftcomm.i_kgrp
@@ -280,6 +318,11 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         elif dftconfig.eigsolve_method == 'scipy':
             solver = eigsolve.scipy_eigsh
             solver_kwargs = {}
+        elif dftconfig.eigsolve_method == 'primme':
+            solver = eigsolve.primme_eigsh
+            solver_kwargs = {'numwork': dftconfig.davidson_numwork,
+                             'maxiter': dftconfig.davidson_maxiter,
+                             'vloc_g0': None}
 
         def solve_kswfn(kswfn_k: list[KSWfn]):
             numiter = 0
@@ -355,6 +398,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         idxiter = 0
         while idxiter < maxiter:
             print(end="",flush=True)
+            if symm_rho:
+                rho_in = symm_mod.symmetrize(rho_in)
             normalize_rho(rho_in)
             compute_vloc()
             vloc_g0 = np.sum(vloc, axis=-1) / np.prod(grho.grid_shape)
@@ -386,10 +431,12 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                         e_error, diago_thr, diago_avgiter, en
                     )
                 diago_thr = 0.1 * e_error / crystal.numel
-                continue
+                # continue
             else:
                 diago_thr = min(diago_thr, 0.1 * e_error / crystal.numel)
-                diago_thr = max(diago_thr, 1E-13)
+                # FIXME: The following line was not commented out earlier. 
+                #        It has been commented out for compatibility with the modified `if` condition above.
+                # diago_thr = max(diago_thr, 1E-13) 
                 rho_in = mixmod.mix(rho_in, rho_out)
                 if symm_rho:
                     rho_in = symm_mod.symmetrize(rho_in)
@@ -403,6 +450,9 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                     e_error, diago_thr, diago_avgiter, en
                 )
             if scf_converged:
+                if image_comm.rank == 0:
+                    print("SCF Converged.")
+                    print(rho_out.data[0,rho_out.gspc.idxsort])
                 break
             else:
                 idxiter += 1
