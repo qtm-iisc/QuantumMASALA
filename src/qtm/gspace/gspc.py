@@ -14,7 +14,7 @@ from qtm.msg_format import value_mismatch_msg
 ROUND_PREC: int = 6
 """Rounding precision of float used when sorting.
 """
-GOOD_PRIMES: list[int] = [2, 3, 5, 7]
+GOOD_PRIMES: list[int] = [2, 3, 5]
 """List of primes used for finding optimal FFT grid lengths.
 """
 
