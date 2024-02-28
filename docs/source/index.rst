@@ -1,10 +1,10 @@
-.. QuantumMASALA documentation master file, created by
-   sphinx-quickstart on Tue Jun 27 14:44:37 2023.
+.. Quantum MASALA documentation master file, created by
+   sphinx-quickstart on Wed Feb 28 18:44:55 2024.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to QuantumMASALA's documentation!
-=========================================
+Welcome to Quantum MASALA's documentation!
+==========================================
 
 .. toctree::
    :maxdepth: 2
