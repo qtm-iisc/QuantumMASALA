@@ -98,14 +98,6 @@ if __name__=="__main__":
     conv_thr = pwin.electrons.conv_thr * RYDBERG
     diago_thr_init = pwin.electrons.diago_thr_init * RYDBERG
 
-    print('diago_thr_init :', diago_thr_init) #debug statement
-    print('e_temp :', e_temp) #debug statement
-    print('conv_thr :', conv_thr) #debug statement
-    print('smear_typ :', smear_typ) #debug statement
-    print('is_spin :', is_spin) #debug statement
-    print('is_noncolin :', is_noncolin) #debug statement
-    print('ecut_wfn :', ecut_wfn) #debug statement
-    print('ecut_rho :', ecut_rho) #debug statement
 
     out = scf(dftcomm, cryst, kpts, grho, gwfn,
             numbnd, 
@@ -117,6 +109,7 @@ if __name__=="__main__":
             e_temp=e_temp,
             conv_thr=conv_thr, 
             diago_thr_init=diago_thr_init,
+            maxiter=pwin.electrons.electron_maxstep,
             iter_printer=print_scf_status)
 
     scf_converged, rho, l_wfn_kgrp, en = out
