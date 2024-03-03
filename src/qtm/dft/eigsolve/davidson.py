@@ -169,19 +169,21 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     # The reduced hamiltonian matrix needs to be expanded with the newly added
     # basis wavefunctions. The previously computed regions of the reduced
     # hamiltonian is not computed again.
+    @qtmlogger.time('davidson:update_red')
     def update_red():
         ham_red_ = ham_red[:ndim, :ndim]
         ovl_red_ = ovl_red[:ndim, :ndim]
 
-        ham_red_[:] = psi[:ndim].vdot(hpsi[:ndim])
-        ovl_red_[:] = psi[:ndim].vdot(psi[:ndim])
+        # Non-parallelized version of the section of parallelized code after this, for testing and for reference.
+        # ham_red_[:] = psi[:ndim].vdot(hpsi[:ndim])
+        # ovl_red_[:] = psi[:ndim].vdot(psi[:ndim])
 
         sl_new = slice(ndim - n_unconv, ndim)
         with bgrp_inter as comm:
             sl_bgrp = scatter_slice(sl_new, comm.size, comm.rank)
             if sl_new.stop > sl_new.start:
                 ham_red_[sl_bgrp] = psi[sl_bgrp].vdot(hpsi[:ndim])
-                ovl_red_[sl_bgrp] = psi[sl_bgrp].vdot(psi[:ndim])
+                ovl_red_[sl_bgrp] = psi[sl_bgrp].vdot(psi[:ndim])            
             comm.barrier()
 
             bufspec = gen_bufspec(n_unconv, comm.size) * ndim_max
