@@ -1,6 +1,6 @@
-"""Davidson's diagonalization scheme method with overlap
+"""Davidson's diagonalization scheme method with overlap.
 
-Based on the implementation in QuantumESPRESSO
+Based on the implementation in QuantumESPRESSO.
 """
 from __future__ import annotations
 __all__ = ['solve']
@@ -223,29 +223,21 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
         def solve_red():
             ham_red_ = ham_red[:ndim, :ndim]
             ovl_red_ = ovl_red[:ndim, :ndim]
-            # print('solve', np.sum(np.isnan(ham_red_)), np.sum(np.isnan(ovl_red_)))
-            # print(ovl_red_)
 
             with kgrp_intra as comm:
                 if comm.rank == 0:
                     # Generalized Eigenvalue Problem Ax = eBx
                     A, B = ham_red_, ovl_red_
                     L = cp.linalg.cholesky(B)
-                    # print(np.sum(np.isnan(L)))
                     L_inv = cp.linalg.inv(L)
-                    # print(np.sum(np.isnan(L_inv)))
                     A = cp.tril(A, -1) + cp.tril(A, -1).T.conj() \
                         + cp.diag(cp.diag(A).real)
                     A_ = L_inv @ A @ L_inv.conj().T
-                    # print(np.sum(np.isnan(A_)))
                     A_evl, A_evc = cp.linalg.eigh(A_, 'L')
                     evl_red[:numeig] = A_evl[:numeig]
                     evc_red[:, :ndim] = cp.linalg.solve(L.conj().T, A_evc[:, :numeig]).T
                 comm.Bcast(evc_red)
                 comm.Bcast(evl_red)
-            # print('solve', np.sum(np.isnan(ham_red_)), np.sum(np.isnan(ovl_red_)),
-            #       np.sum(np.isnan(evl[:numeig])), np.sum(np.isnan(evc_red[:, :ndim])))
-            # print(evl_red)
     else:
         raise TypeError('not supported')
 
@@ -257,7 +249,6 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
 
     idxiter = 0
     while idxiter < maxiter:
-        # debug: print('|'*30, idxiter, '|'*30)
         idxiter += 1
         move_unconv()
         expand_psi()
@@ -272,7 +263,6 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
 
         n_unconv = np.sum(unconv_flag)
         evl[:] = evl_red[:]
-        # debug: print(ndim, n_unconv)
         # If the number of basis vectors are exceeding the maximum limit
         # (as per 'numwork'), the basis needs to be reset/restarted
         # keeping only the required wavefunctions
@@ -283,7 +273,6 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
                 comm.Allreduce(comm.IN_PLACE, evc.data)
                 if n_unconv == 0:
                     break
-                # debug: print('restart')
 
                 # WARNING: the new hpsi's are stored in psi temporarily
                 # as the matmul output must not overlap with input arguments
@@ -301,5 +290,4 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     kswfn.evc_gk[:] = evc
 
     kswfn.evl[:] = np.array(evl.real, like=kswfn.evl)
-    # print(kswfn.evl)
     return kswfn, idxiter
