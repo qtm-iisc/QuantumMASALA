@@ -97,6 +97,7 @@ if __name__=="__main__":
 
     conv_thr = pwin.electrons.conv_thr * RYDBERG
     diago_thr_init = pwin.electrons.diago_thr_init * RYDBERG
+    mix_beta = pwin.electrons.mixing_beta
 
 
     out = scf(dftcomm, cryst, kpts, grho, gwfn,
@@ -108,6 +109,7 @@ if __name__=="__main__":
             smear_typ=smear_typ, 
             e_temp=e_temp,
             conv_thr=conv_thr, 
+            mix_beta=mix_beta,
             diago_thr_init=diago_thr_init,
             maxiter=pwin.electrons.electron_maxstep,
             iter_printer=print_scf_status)
