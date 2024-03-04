@@ -142,7 +142,6 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         else:
             rho_start = sum(loc_generate_rhoatomic(sp, grho)
                             for sp in crystal.l_atoms).reshape(1)
-            print("rho_start: loc_generate_rhoatomic")
             
 
         libxc_func = comm.bcast(libxc_func)
@@ -436,7 +435,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                 diago_thr = min(diago_thr, 0.1 * e_error / crystal.numel)
                 # FIXME: The following line was not commented out earlier. 
                 #        It has been commented out for compatibility with the modified `if` condition above.
-                # diago_thr = max(diago_thr, 1E-13) 
+                diago_thr = max(diago_thr, 0.9E-13) 
                 rho_in = mixmod.mix(rho_in, rho_out)
                 if symm_rho:
                     rho_in = symm_mod.symmetrize(rho_in)
@@ -449,10 +448,18 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                     idxiter, perf_counter() - start_time, scf_converged,
                     e_error, diago_thr, diago_avgiter, en
                 )
+                if is_spin:
+                    # Total magnetization = int rho_up(r)-rho_down(r) dr
+                    # Abs. magnetization = int |rho_up(r)-rho_down(r)| dr
+                    tot_mag = rho_out[0].to_r().copy()
+                    tot_mag._data[:] = rho_out[0].to_r().data-rho_out[1].to_r().data
+                    abs_mag = rho_out[0].to_r().copy()
+                    abs_mag._data[:] = np.abs(rho_out[0].to_r().data-rho_out[1].to_r().data)
+                    print("Total magnetization:   ", tot_mag.integrate_unitcell(),"Bohr magneton / cell (Ry units)")
+                    print("Absolute magnetization:", abs_mag.integrate_unitcell(),"Bohr magneton / cell (Ry units)")
             if scf_converged:
                 if image_comm.rank == 0:
                     print("SCF Converged.")
-                    print(rho_out.data[0,rho_out.gspc.idxsort])
                 break
             else:
                 idxiter += 1
