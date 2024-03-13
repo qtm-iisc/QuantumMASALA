@@ -1,4 +1,3 @@
-name: qtm
 channels:
   - conda-forge
   - defaults

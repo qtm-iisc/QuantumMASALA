@@ -424,17 +424,15 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             if e_error < conv_thr and diago_thr < max(1e-13, 0.1*conv_thr/crystal.numel):
                 scf_converged = True
             elif idxiter == 0 and e_error < diago_thr * crystal.numel:
-                if iter_printer is not None:
+                if iter_printer is not None and image_comm.rank == 0:
                     iter_printer(
                         idxiter, perf_counter() - start_time, scf_converged,
-                        e_error, diago_thr, diago_avgiter, en
+                        e_error, diago_thr, diago_avgiter, en, is_spin, rho_out
                     )
                 diago_thr = 0.1 * e_error / crystal.numel
                 # continue
             else:
                 diago_thr = min(diago_thr, 0.1 * e_error / crystal.numel)
-                # FIXME: The following line was not commented out earlier. 
-                #        It has been commented out for compatibility with the modified `if` condition above.
                 diago_thr = max(diago_thr, 0.9E-13) 
                 rho_in = mixmod.mix(rho_in, rho_out)
                 if symm_rho:
@@ -446,17 +444,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             if iter_printer is not None and image_comm.rank == 0:
                 iter_printer(
                     idxiter, perf_counter() - start_time, scf_converged,
-                    e_error, diago_thr, diago_avgiter, en
+                    e_error, diago_thr, diago_avgiter, en, is_spin, rho_out
                 )
-                if is_spin:
-                    # Total magnetization = int rho_up(r)-rho_down(r) dr
-                    # Abs. magnetization = int |rho_up(r)-rho_down(r)| dr
-                    tot_mag = rho_out[0].to_r().copy()
-                    tot_mag._data[:] = rho_out[0].to_r().data-rho_out[1].to_r().data
-                    abs_mag = rho_out[0].to_r().copy()
-                    abs_mag._data[:] = np.abs(rho_out[0].to_r().data-rho_out[1].to_r().data)
-                    print("Total magnetization:   ", tot_mag.integrate_unitcell(),"Bohr magneton / cell (Ry units)")
-                    print("Absolute magnetization:", abs_mag.integrate_unitcell(),"Bohr magneton / cell (Ry units)")
             if scf_converged:
                 if image_comm.rank == 0:
                     print("SCF Converged.")
@@ -464,6 +453,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             else:
                 idxiter += 1
 
+        # TODO: Make it a separate function.
         if ret_vxc:
             def calculate_vxc_data():
                 vxc_arr = np.zeros((len(l_kswfn_kgrp), numbnd))

@@ -85,6 +85,6 @@ out = scf(dftcomm, crystal, kpts, grho, gwfn,
 
 scf_converged, rho, l_wfn_kgrp, en = out
 
-
-print("SCF Routine has exited")
-print(qtmlogger)
+if comm_world.rank == 0:
+    print("SCF Routine has exited")
+    print(qtmlogger)
