@@ -35,7 +35,7 @@ def compute_occ(dftcomm: DFTCommMod, l_kswfn: list[list[KSWfn]], numel: int):
                 min_empty = comm.allreduce(min(
                     np.amin(wfn_k[0].evl[numfill:]) for wfn_k in l_kswfn
                 ), comm.MIN)
-        max_filled = comm.bcast(max_filled)
-        min_empty = comm.bcast(min_empty)
+            max_filled = comm.bcast(max_filled)
+            min_empty = comm.bcast(min_empty)
 
     return max_filled, min_empty

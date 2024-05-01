@@ -8,7 +8,7 @@ class Control(NamedTuple):
     restart_mode: str = "from_scratch"
     iprint: int = 100000
     outdir: str = "./"
-    prefix: str = "pypwscf"  # TODO: Update when package name is finalized
+    prefix: str = "QuantumMASALA"
     max_seconds: float = 1e7
     disk_io: str = "low"
     pseudo_dir: str = "./"

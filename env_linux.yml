@@ -3,11 +3,9 @@ channels:
   - defaults
 dependencies:
   - python=3.11
-  - mkl_fft
   - pylibxc
   - mpi4py
   - pyfftw
-  - ipykernel
   - h5py
   - numpy
   - scipy

@@ -1,16 +1,14 @@
 from __future__ import annotations
 __all__ = ['print_scf_status']
-import numpy as np
 from qtm.dft.scf import EnergyData
-
 from qtm.constants import RYDBERG, ELECTRONVOLT
 
 
 def print_scf_status(idxiter: int, scf_runtime: float,
                      scf_converged: bool, e_error: float,
                      diago_thr: float, diago_avgiter: float,
-                     en: EnergyData, is_spin:bool, rho_out, **kwargs):
-    print()
+                     en: EnergyData, **kwargs):
+
     print(f"Iteration # {idxiter + 1}, Run Time: {scf_runtime:5.1f} sec")
     print(f"Convergence Status   : "
           f"{'NOT' if not scf_converged else ''} Converged")
@@ -19,6 +17,7 @@ def print_scf_status(idxiter: int, scf_runtime: float,
     print(f"Diago Threshold     : {diago_thr / RYDBERG:.2e} Ry")
     print()
     print(f"Total Energy:     {en.total / RYDBERG:17.8f} Ry")
+    # print(f"Harris-Foulkes Energy:{en.hwf / RYDBERG:17.8f} Ry")
     if en.internal is not None:
         print(f"    Internal:     {en.internal / RYDBERG:17.8f} Ry")
     print()
@@ -35,15 +34,43 @@ def print_scf_status(idxiter: int, scf_runtime: float,
         print(f"    HO Level:     {en.HO_level / ELECTRONVOLT:17.8f} eV")
         if en.LU_level != None:
             print(f"    LU Level:     {en.LU_level / ELECTRONVOLT:17.8f} eV")
-    print()
-
-    if is_spin:
-        # Total magnetization = int rho_up(r)-rho_down(r) dr
-        # Abs. magnetization = int |rho_up(r)-rho_down(r)| dr
-        tot_mag = rho_out[0].to_r().copy()
-        tot_mag._data[:] = rho_out[0].to_r().data-rho_out[1].to_r().data
-        abs_mag = rho_out[0].to_r().copy()
-        abs_mag._data[:] = np.abs(rho_out[0].to_r().data-rho_out[1].to_r().data)
-        print(f"Total magnetization:    {np.real(tot_mag.integrate_unitcell()):>.3} Bohr magneton / cell (Ry units)")
-        print(f"Absolute magnetization: {np.real(abs_mag.integrate_unitcell()):>.3} Bohr magneton / cell (Ry units)")
     print('-'*40)
+    print()
+    
+def print_scf_parameters(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_noncolin, symm_rho, rho_start, wfn_init, libxc_func, occ_typ, smear_typ, e_temp, conv_thr, maxiter, diago_thr_init, iter_printer, mix_beta, mix_dim, dftconfig, ret_vxc, kpts):
+    print("=========================================")
+    print("SCF Parameters:")
+    print()
+    print(f"\tdftcomm: {dftcomm}")
+    print(f"\tcrystal: {crystal}")
+    print(f"\tgrho:")
+    print(f"\t\tcutoff: {grho.ecut}")
+    print(f"\t\tgrid_size: {grho.grid_shape}")
+    print(f"\t\tnum_g: {grho.size_g}")
+    print(f"\tgwfn:")
+    print(f"\t\tcutoff: {gwfn.ecut}")
+    print(f"\t\tgrid_size: {gwfn.grid_shape}")
+    print(f"\t\tnum_g: {gwfn.size_g}")
+    print(f"\tnumbnd: {numbnd}")
+    print(f"\tis_spin: {is_spin}")
+    print(f"\tis_noncolin: {is_noncolin}")
+    print(f"\tsymm_rho: {symm_rho}")
+    print(f"\trho_start: {rho_start}")
+    print(f"\twfn_init: {wfn_init}")
+    print(f"\tlibxc_func: {libxc_func}")
+    print(f"\tocc_typ: {occ_typ}")
+    print(f"\tsmear_typ: {smear_typ}")
+    print(f"\te_temp: {e_temp}")
+    print(f"\tconv_thr: {conv_thr}")
+    print(f"\tmaxiter: {maxiter}")
+    print(f"\tdiago_thr_init: {diago_thr_init}")
+    print(f"\titer_printer: {iter_printer}")
+    print(f"\tmix_beta: {mix_beta}")
+    print(f"\tmix_dim: {mix_dim}")
+    print(f"\tdftconfig: {dftconfig}")
+    print(f"\tret_vxc: {ret_vxc}")
+    print(f"\tkpts:")
+    print("\t\tkpt[0]  kpt[1]  kpt[2];  weight")
+    for row in kpts:
+        print(f"\t\t{row[0][0]:7.4f} {row[0][1]:7.4f} {row[0][2]:7.4f}; {row[1]:8.6f}")
+    print("\n=========================================")

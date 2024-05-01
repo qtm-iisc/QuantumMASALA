@@ -8,12 +8,6 @@ from qtm.crystal.crystal import Crystal
 from .read_inp import PWscfIn
 from .ibrav2latvec import *
 
-# from pypwscf.cryst import RealSpace, AtomicSpecies, UnitCell
-# from pypwscf.ppfile import UPFData
-# from pypwscf.kpts import KPoints
-# from pypwscf.kpts.utils import gen_mpgrids
-
-# from pypwscf.config import LIBXC_MAP
 
 from qtm.crystal import BasisAtoms
 from qtm.lattice import RealLattice
@@ -285,10 +279,10 @@ def parse_inp(pwin: PWscfIn):
             elif pwin.system.starting_magnetization[isp + 1] > 1.0:
                 pwin.system.starting_magnetization[isp + 1] = 1.0
 
-    elif pwin.electrons.startingpot == "atomic":
-        warnings.warn(
-            "'starting_magnetization' not required for nspin=1 and is ignored"
-        )
+    # elif pwin.electrons.startingpot == "atomic":
+    #     warnings.warn(
+    #         "'starting_magnetization' not required for nspin=1 and is ignored"
+    #     )
 
     # Validating Namelist 'ELECTRONS'
     if electrons.electron_maxstep <= 0:

@@ -83,7 +83,7 @@ class KList:
 
     @property
     def k_cart(self) -> NDArray:
-        return self.recilat.cryst2cart(self.k_cryst, axis=1)
+        return self.recilat.cryst2cart(self.k_cryst, axis=0)
 
     @property
     def k_tpiba(self) -> NDArray:
@@ -112,6 +112,9 @@ class KList:
 
         sl_kgrp = scatter_slice(self.numkpts, n_kgrp, i_kgrp)
         return self[sl_kgrp]
+    
+    def __repr__(self) -> str:
+        return f"KList(\n\tnumkpts={self.numkpts},\n\trecilat={self.recilat}, \n\tk_cryst={self.k_cryst.T}, \n\tk_weights={self.k_weights})"
 
 
 def gen_monkhorst_pack_grid(

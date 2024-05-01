@@ -8,15 +8,11 @@
 &system
     ibrav=  2, celldm(1) =10.200, nat=  2, ntyp= 1,
     ecutwfc = 25.0, nbnd = 30
-    nosym=.true.,
-    ! nosym_evc=.true.,
-    ! noinv=.true.,
-    ! no_t_rev=.true.,
     occupations='fixed',
 /
 &electrons
  conv_thr=1D-8,
- startingwfc="random"
+ startingwfc='random'
 /
 ATOMIC_SPECIES
   Si  28.086  Si_ONCV_PBE-1.2.upf

@@ -1,80 +1,86 @@
-from qtm.constants import RYDBERG_HART
-
-
 if __name__=="__main__":
 
     from pprint import pprint
     from qtm.qe.inp.read_inp import PWscfIn
     import sys
 
-
-    filename = "./P-test.scf.in"
-    npools = None
-    nband = None
-    if len(sys.argv)>1:
-        filename = sys.argv[1]
-    pwscfin = PWscfIn.from_file(filename)
-    pprint(pwscfin)
-
-
-    def fetch_arg(argstr):
-        arg = None
-        if argstr in sys.argv:
-            index_argstr = sys.argv.index(argstr)
-            if len(sys.argv)>index_argstr+1:
-                if sys.argv[index_argstr+1].isnumeric():
-                    arg=sys.argv[index_argstr+1]
-        return arg
-    
-    if fetch_arg("-nk") != None:
-        npools = int(fetch_arg("-nk"))
-    elif fetch_arg("-npools") != None:
-        npools = int(fetch_arg("-npools"))
-
-    # Deactivated for now
-    # if fetch_arg("-nb") != None:
-    #     nband = int(fetch_arg("-nb"))
-    # elif fetch_arg("-nband") != None:
-    #     nband = int(fetch_arg("-nband"))
-    # else:
-    #     nband = 1
-
-
-    from qtm.qe.inp.parse_inp import parse_inp
-    pwin, cryst, kpts = parse_inp(pwscfin)
-
-
-    # ### Run QuantumMASALA with the input
-
     import numpy as np
 
-    from qtm.constants import RYDBERG, ELECTRONVOLT
-    from qtm.lattice import RealLattice
-    from qtm.crystal import BasisAtoms, Crystal
-    from qtm.pseudo import UPFv2Data
-    from qtm.kpts import gen_monkhorst_pack_grid
+    from qtm.constants import RYDBERG, ELECTRONVOLT, RYDBERG_HART
     from qtm.gspace import GSpace
     from qtm.mpi import QTMComm
     from qtm.dft import DFTCommMod, scf
 
     from qtm.io_utils.dft_printers import print_scf_status
 
-    from qtm import qtmconfig
     from qtm.logger import qtmlogger
     # qtmconfig.fft_backend = 'mkl_fft'
 
     from mpi4py.MPI import COMM_WORLD
     comm_world = QTMComm(COMM_WORLD)
-    if npools==None:
-        npools = comm_world.size#//nband
+    
+    
+    
+
+    filename = None
+    
+    if len(sys.argv)>1:
+        filename = sys.argv[1]
+
+
+    # FIXME: only he root process should fetch the arguments and broadcast them to other processes. 
+
+    def fetch_arg(argstr):
+        arg = None
+        if argstr in sys.argv:
+            index_argstr = sys.argv.index(argstr)
+            if len(sys.argv)>index_argstr+1:
+                # if sys.argv[index_argstr+1].isnumeric():
+                arg=sys.argv[index_argstr+1]
+        return arg
+    
+    def fetch_arg_long_short_default(longname, shortname, default_value, typecasting_func=int):
+        if fetch_arg("-"+shortname) != None:
+            argval = typecasting_func(fetch_arg("-"+shortname))
+        elif fetch_arg("-"+longname) != None:
+            argval = typecasting_func(fetch_arg("-"+longname))
+        else:
+            if comm_world.rank==0:
+                print("arg not found:", longname, "; using default value:", default_value)
+            argval = default_value
+            
+        if comm_world.rank==0:
+            print(f"{longname}: {argval}")
+        return argval
+            
+
+    filename = fetch_arg_long_short_default("in", "in", filename, typecasting_func=str)
+
+    npools = fetch_arg_long_short_default("npools", "nk", 1)
+    
+    ntaskgroups = fetch_arg_long_short_default("ntg", "nt", 1)
+    
+    nbandgroups = fetch_arg_long_short_default("nband", "nb", 1)
+
+    # print(filename)
+    pwscfin = PWscfIn.from_file(filename)
+    if comm_world.rank==0:
+        pprint(pwscfin)
+
+    from qtm.qe.inp.parse_inp import parse_inp
+    pwin, cryst, kpts = parse_inp(pwscfin)
+    
+
+
         
     # n_pw = comm_world.size
-    dftcomm = DFTCommMod(comm_world, npools)#, n_pw)
+    pwgrp_size = comm_world.size//npools//nbandgroups//ntaskgroups
+    dftcomm = DFTCommMod(comm_world, npools, pwgrp_size)
 
 
     # -----Setting up G-Space of calculation-----
-    ecut_wfn = pwin.system.ecutwfc*RYDBERG
-    ecut_rho = pwin.system.ecutrho *RYDBERG
+    ecut_wfn = pwin.system.ecutwfc * RYDBERG
+    ecut_rho = pwin.system.ecutrho * RYDBERG
     # parse_inp() handles ecutrho=None case appropriately.
 
     grho = GSpace(cryst.recilat, ecut_rho)
@@ -87,6 +93,7 @@ if __name__=="__main__":
     mag_start = pwin.system.starting_magnetization
     mag_start = list(mag_start.values())
     numbnd = pwin.system.nbnd  # Ensure adequate # of bands if system is not an insulator
+    mix_beta = pwin.electrons.mixing_beta
 
     occ = pwin.system.occupations
     if occ == "smearing":
@@ -97,34 +104,52 @@ if __name__=="__main__":
 
     conv_thr = pwin.electrons.conv_thr * RYDBERG
     diago_thr_init = pwin.electrons.diago_thr_init * RYDBERG
-    mix_beta = pwin.electrons.mixing_beta
+
+    # print(f"proc {comm_world.rank} ready.", flush=True)
+    comm_world.barrier()
+    if comm_world.rank==0:
+        qtmlogger.info(f'diago_thr_init :{diago_thr_init}') #debug statement
+        qtmlogger.info(f'e_temp : {e_temp}') #debug statement
+        qtmlogger.info(f'conv_thr : {conv_thr}') #debug statement
+        qtmlogger.info(f'smear_typ : {smear_typ}') #debug statement
+        qtmlogger.info(f'is_spin : {is_spin}') #debug statement
+        qtmlogger.info(f'is_noncolin : {is_noncolin}') #debug statement
+        qtmlogger.info(f'ecut_wfn : {ecut_wfn}') #debug statement
+        qtmlogger.info(f'ecut_rho : {ecut_rho}') #debug statement
+        print("starting scf calculation...", flush=True)
 
 
     out = scf(dftcomm, cryst, kpts, grho, gwfn,
             numbnd, 
             is_spin, 
             is_noncolin,
-            rho_start=mag_start, 
+            rho_start= mag_start,
             occ_typ=occ, 
             smear_typ=smear_typ, 
+            mix_beta=mix_beta,
             e_temp=e_temp,
             conv_thr=conv_thr, 
-            mix_beta=mix_beta,
             diago_thr_init=diago_thr_init,
-            maxiter=pwin.electrons.electron_maxstep,
-            iter_printer=print_scf_status)
+            iter_printer=print_scf_status,
+            symm_rho=True)
 
     scf_converged, rho, l_wfn_kgrp, en = out
+
 
     # Print Data for delta benchmark
     if comm_world.rank==0:
         print("     number of atoms/cell      =", sum([atom_type.numatoms for atom_type in cryst.l_atoms]))
         print("     unit-cell volume          =", cryst.reallat.cellvol)
         print("!    total energy              =", en.total/RYDBERG_HART)
+        print("!    hwf energy                =", en.hwf/RYDBERG_HART)
 
+        print("SCF Routine has exited")
+        if scf_converged:
+            print("SCF has converged")
+        else:
+            print("SCF has NOT converged")
 
-    print("SCF Routine has exited")
-    print(qtmlogger)
+        print(qtmlogger)
 
 
 

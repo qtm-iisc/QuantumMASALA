@@ -33,6 +33,7 @@ from qtm.msg_format import *
 from qtm.constants import RYDBERG
 
 
+
 @dataclass
 class EnergyData:
     total: float = 0.0
@@ -49,6 +50,8 @@ class EnergyData:
     HO_level: float | None = None
     LU_level: float | None = None
 
+
+from qtm.io_utils.dft_printers import print_scf_parameters
 
 if version_info[1] >= 8:
     from typing import Protocol
@@ -77,8 +80,9 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         occ_typ: Literal['fixed', 'smear'] = 'smear',
         smear_typ: Literal['gauss', 'fd', 'mv'] = 'gauss',
         e_temp: float = 1E-3,
-        conv_thr: float = 1E-6*RYDBERG, maxiter: int = 100,
-        diago_thr_init: float = 1E-2*RYDBERG,
+        conv_thr: float = 1E-6*RYDBERG, 
+        maxiter: int = 100,
+        diago_thr_init: float = 1E-5*RYDBERG,
         iter_printer: IterPrinter | None = None,
         mix_beta: float = 0.7, mix_dim: int = 8,
         dftconfig: DFTConfig | None = None,
@@ -137,8 +141,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             for sp, mag in zip(crystal.l_atoms, starting_mag):
                 rho_atomic_sp = loc_generate_rhoatomic(sp, grho)
                 mag = max(min(mag, 1), -1)
-                rho_start[0] = ((1 + mag) / 2) * rho_atomic_sp
-                rho_start[1] = ((1 - mag) / 2) * rho_atomic_sp
+                rho_start[0] += ((1 + mag) / 2) * rho_atomic_sp
+                rho_start[1] += ((1 - mag) / 2) * rho_atomic_sp
         else:
             rho_start = sum(loc_generate_rhoatomic(sp, grho)
                             for sp in crystal.l_atoms).reshape(1)
@@ -188,36 +192,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
     kroot_intra = dftcomm.kroot_intra
     
     if dftcomm.image_comm.rank == 0:
-        print("=========================================")
-        print("SCF Parameters:")
-        print(f"dftcomm: {dftcomm}")
-        print(f"crystal: {crystal}")
-        print(f"grho: {grho}")
-        print(f"    cutoff: {grho.ecut}")
-        print(f"    grid_size: {grho.grid_shape}")
-        print(f"gwfn: {gwfn}")
-        print(f"    cutoff: {gwfn.ecut}")
-        print(f"    grid_size: {gwfn.grid_shape}")
-        print(f"numbnd: {numbnd}")
-        print(f"is_spin: {is_spin}")
-        print(f"is_noncolin: {is_noncolin}")
-        print(f"symm_rho: {symm_rho}")
-        print(f"rho_start: {rho_start}")
-        print(f"wfn_init: {wfn_init}")
-        print(f"libxc_func: {libxc_func}")
-        print(f"occ_typ: {occ_typ}")
-        print(f"smear_typ: {smear_typ}")
-        print(f"e_temp: {e_temp}")
-        print(f"conv_thr: {conv_thr}")
-        print(f"maxiter: {maxiter}")
-        print(f"diago_thr_init: {diago_thr_init}")
-        print(f"iter_printer: {iter_printer}")
-        print(f"mix_beta: {mix_beta}")
-        print(f"mix_dim: {mix_dim}")
-        print(f"dftconfig: {dftconfig}")
-        print(f"ret_vxc: {ret_vxc}")
-        print(f"kpts: {kpts}")
-        print("=========================================")
+        print_scf_parameters(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_noncolin, symm_rho, rho_start, wfn_init, libxc_func, occ_typ, smear_typ, e_temp, conv_thr, maxiter, diago_thr_init, iter_printer, mix_beta, mix_dim, dftconfig, ret_vxc, kpts)
 
 
     with image_comm:
@@ -232,11 +207,12 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         symm_mod = SymmFieldMod(crystal, grho)
 
         if wfn_init is None:
-            def wfn_init(_, kswfn_k):
+            def wfn_init(ik, kswfn_k):
+                np.random.seed(ik)  # For reproducible speed measurements
                 kswfn_k[0].init_random()
                 if is_spin and not is_noncolin:
                     kswfn_k[1].init_random()
-
+ 
         l_kswfn_kgrp = []
 
         for ik in i_kpts_kgrp:
@@ -345,11 +321,11 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                 for kswfn_k in l_kswfn_kgrp:
                     for ispin, kswfn in enumerate(kswfn_k):
                         k_weight = kswfn.k_weight
-                        rho_k_spin = kswfn.compute_rho(sl_bnd)
+                        rho_k_spin = kswfn.compute_rho(sl_bnd).to_g()
                         if is_noncolin:
-                            rho_wfn[:] += k_weight * rho_k_spin.to_g()
+                            rho_wfn[:] += k_weight * rho_k_spin
                         else:
-                            rho_wfn[ispin] += k_weight * rho_k_spin.to_g()
+                            rho_wfn[ispin] += k_weight * rho_k_spin
                 with dftcomm.pwgrp_inter_image as comm:
                     comm.Allreduce(comm.IN_PLACE, rho_wfn.data)
 
@@ -379,7 +355,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             e_vhxc = sum((v_hxc * rho_out.to_r())).integrate_unitcell()
             en.one_el = (e_eigen - e_vhxc).real
             en.total = en.one_el + en.ewald + en.hartree + en.xc
-            en.hwf = e_eigen - sum((v_hxc * rho_in.to_r())).integrate_unitcell()
+            en.hwf = np.real(e_eigen - sum((v_hxc * rho_in.to_r())).integrate_unitcell() + en.ewald + en.hartree + en.xc) # Harris-Weinert-Foulkes energy estimate
             if occ_typ == 'smear':
                 en.total += en.smear
                 en.hwf += en.smear
@@ -407,6 +383,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             for kswfn_ in l_kswfn_kgrp:
                 diago_avgiter += solve_kswfn(kswfn_)
             diago_avgiter /= len(i_kpts_kgrp)
+            
             if occ_typ == 'fixed':
                 en.HO_level, en.LU_level = occup.fixed.compute_occ(
                     dftcomm, l_kswfn_kgrp, crystal.numel
@@ -421,19 +398,16 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             e_error = float(mixmod.compute_error(rho_in, rho_out))
             e_error = image_comm.bcast(e_error)
 
-            if e_error < conv_thr and diago_thr < max(1e-13, 0.1*conv_thr/crystal.numel):
+            if e_error < conv_thr:# and diago_thr < max(1e-13, 0.1*conv_thr/crystal.numel):
                 scf_converged = True
+                rho_out = rho_in.copy()
+                compute_en()
             elif idxiter == 0 and e_error < diago_thr * crystal.numel:
-                if iter_printer is not None and image_comm.rank == 0:
-                    iter_printer(
-                        idxiter, perf_counter() - start_time, scf_converged,
-                        e_error, diago_thr, diago_avgiter, en, is_spin, rho_out
-                    )
                 diago_thr = 0.1 * e_error / crystal.numel
                 # continue
             else:
                 diago_thr = min(diago_thr, 0.1 * e_error / crystal.numel)
-                diago_thr = max(diago_thr, 0.9E-13) 
+                diago_thr = max(diago_thr, 0.5E-13) 
                 rho_in = mixmod.mix(rho_in, rho_out)
                 if symm_rho:
                     rho_in = symm_mod.symmetrize(rho_in)
@@ -444,11 +418,19 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             if iter_printer is not None and image_comm.rank == 0:
                 iter_printer(
                     idxiter, perf_counter() - start_time, scf_converged,
-                    e_error, diago_thr, diago_avgiter, en, is_spin, rho_out
+                    e_error, diago_thr, diago_avgiter, en
                 )
             if scf_converged:
                 if image_comm.rank == 0:
                     print("SCF Converged.")
+                    if is_spin:
+                        # Total magnetization = int rho_up(r)-rho_down(r) dr
+                        tot_mag = rho_out[0].to_r()-rho_out[1].to_r()
+                        # Abs. magnetization = int |rho_up(r)-rho_down(r)| dr
+                        abs_mag = tot_mag.copy()
+                        abs_mag._data[:] = np.abs(tot_mag.data)
+                        print("Total magnetization:   ", tot_mag.integrate_unitcell(),"Bohr magneton / cell (Ry units)")
+                        print("Absolute magnetization:", abs_mag.integrate_unitcell(),"Bohr magneton / cell (Ry units)")
                 break
             else:
                 idxiter += 1
