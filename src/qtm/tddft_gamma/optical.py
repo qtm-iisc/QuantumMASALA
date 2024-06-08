@@ -33,8 +33,8 @@ def dipole_response(comm_world: QTMComm, crystal: Crystal, rho_start: FieldGType
                        f"got {kick_strength}.")
 
     # Alias the useful variables
-    gspc_rho = rho_start.gspc
-    gspc_wfn = wfn_gamma[0][0].gkspc
+    #gspc_rho = rho_start.gspc
+    gspc_wfn = wfn_gamma[0][0].gkspc.gwfn
     gkwfn = wfn_gamma[0][0].gkspc
 
     reallat = crystal.reallat
@@ -52,13 +52,12 @@ def dipole_response(comm_world: QTMComm, crystal: Crystal, rho_start: FieldGType
     rmesh_cart = reallat.get_mesh_coords(*gspc_wfn.grid_shape,
                                          'cart', tuple(rcenter_cart))
 
+
     evc_r = wfn_gamma[0][0].evc_gk.to_r()
-    # print("evc_r.shape", evc_r.shape)
-    # print("rmesh_cart.shape", rmesh_cart.shape)
-    # print(rmesh_cart[['x', 'y', 'z'].index(kick_direction)].shape)
     efield_kick = np.exp(-1j * kick_strength
                     * rmesh_cart[['x', 'y', 'z'].index(kick_direction)])
 
+    # Print certain elements of the kick field, for debugging
     evc_r *= efield_kick.reshape(-1)
     gkwfn.r2g(evc_r._data, wfn_gamma[0][0].evc_gk._data)
 
@@ -68,7 +67,7 @@ def dipole_response(comm_world: QTMComm, crystal: Crystal, rho_start: FieldGType
         r"""Compute the dipole at time step 'istep' and store it in 'dip_t'.
         $ dip = \int r \rho(r) dr $
         """
-        rho_r = (rho - rho_start).to_r()
+        rho_r = (rho - rho_start).to_r()/np.prod(rho.gspc.grid_shape)
         dip = rho_r.integrate_unitcell(np.expand_dims(rmesh_cart, axis=-4).reshape(3,1,-1), axis=1)
         dip_t[istep + 1] = dip / kick_strength
 

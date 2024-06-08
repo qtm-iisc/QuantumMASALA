@@ -41,10 +41,10 @@ def propagate(comm_world: QTMComm, crystal: Crystal, rho_start: FieldGType,
 
     # v_ion, rho_core = FieldGType.zeros(gspc_rho.grid_shape), FieldGType.zeros(gspc_rho.grid_shape)
     # FIXME: Temporary fix:
-    v_ion = deepcopy(rho_start)
-    v_ion._data *= 0
-    rho_core = deepcopy(rho_start)
-    rho_core._data *= 0
+    v_ion = rho_start.zeros()
+    # v_ion._data *= 0
+    rho_core = rho_start.zeros()
+    # rho_core._data *= 0
 
     l_nloc = []
     for sp in crystal.l_atoms:
