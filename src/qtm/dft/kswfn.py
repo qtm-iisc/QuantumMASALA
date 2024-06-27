@@ -104,7 +104,8 @@ class KSWfn:
                     out=data)
         self.evc_gk /= 1 + self.gkspc.gk_norm2
 
-    def compute_rho(self, ibnd: slice | Sequence[int] = slice(None)) -> FieldRType:
+
+    def compute_rho(self, ibnd: slice | Sequence[int] = slice(None), ret_raw=False) -> FieldRType:
         """Constructs a density from the eigenkets `evc_gk` and occupation
         `occ`"""
         self.evc_gk[ibnd].normalize()
@@ -113,7 +114,10 @@ class KSWfn:
             for wfn, occ in zip(self.evc_gk[ibnd], self.occ[ibnd])
         )
         rho /= rho.gspc.reallat_cellvol
+        if ret_raw:
+            return rho
         return rho if self.is_noncolin else rho[0]
+
 
     def overlap(
         bra,

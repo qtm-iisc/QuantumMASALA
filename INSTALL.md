@@ -59,16 +59,24 @@ mpirun -np 10 python fe_scf.py
 ### Quick Installation
 
 Inside the `QuantumMASALA` root directory, execute the following:
-```conda env create -f env_linux.yml -n qtm```
+```
+conda env create -f env_linux.yml -n qtm
+```
 This will create a new conda environment with the necessary packages installed.
 If you are working on an Intel system, we recommend using `mkl_fft` for optimal performance.
-```conda install -c conda-forge mkl_fft```
+```
+conda install -c conda-forge mkl_fft
+```
 
 Activate the environment:
-```conda activate qtm```
+```
+conda activate qtm
+```
 
 Install QuantumMASALA:
-```python -m pip install -e .```
+```
+python -m pip install -e .
+```
 
 
 ### Manual Installation

@@ -17,7 +17,7 @@ class FFT3DFull(FFT3D):
                  backend: str | None = None, **kwargs):
         super().__init__(shape, idxgrid, normalise_idft, backend, **kwargs)
         self.worker = self.FFTBackend(self.shape, (0, 1, 2),)
-        self.worker.inp_bwd[:] = 0
+        # self.worker.inp_bwd[:] = 0    # Redundant, because we are doing `self.worker.inp_bwd.fill(0.0)` in the `g2r` function anyway.
 
     def r2g(self, arr_inp: NDArray, arr_out: NDArray) -> None:
         self.worker.inp_fwd[:] = arr_inp

@@ -97,7 +97,7 @@ class WavefunGType(BufferType):
         """Normalizes the wavefunction so that its norm is 1."""
         self.data[:] /= self.norm()[:, np.newaxis]
 
-    def vdot(self, ket: get_WavefunG) -> NDArray:
+    def vdot(self, ket: get_WavefunG, slice_partial_basis:slice=None) -> NDArray:
         """Evaluates the vector dot product between the wavefunctions in two
         `WavefunG` instances. The values of the instance are conjugated, not
         the ones in the method input.
@@ -122,21 +122,34 @@ class WavefunGType(BufferType):
             raise ValueError(obj_mismatch_msg(
                 'self.gkspc', self.gkspc, 'ket.gkspc', ket.gkspc
             ))
+        if slice_partial_basis is None:
+            bra_ = self.data.reshape((-1, self.basis_size))
+            ket_ = ket.data.reshape((-1, self.basis_size))
+            braket = self.zgemm(
+                alpha=1.0, a=bra_.T, trans_a=2,
+                b=ket_.T, trans_b=0,
+            )
+            # braket = bra_.conj() @ ket_.T
 
-        bra_ = self.data.reshape((-1, self.basis_size))
-        ket_ = ket.data.reshape((-1, self.basis_size))
-        braket = self.zgemm(
-            alpha=1.0, a=bra_.T, trans_a=2,
-            b=ket_.T, trans_b=0,
-        )
-        # braket = bra_.conj() @ ket_.T
-
-        if self.shape == ():
-            return braket.reshape(ket.shape)
-        elif ket.shape == ():
-            return braket.reshape(self.shape)
+            if self.shape == ():
+                return braket.reshape(ket.shape)
+            elif ket.shape == ():
+                return braket.reshape(self.shape)
+            else:
+                return braket.reshape((*self.shape, *ket.shape))
         else:
-            return braket.reshape((*self.shape, *ket.shape))
+            bra_ = self.data.reshape((-1, self.basis_size))[:,slice_partial_basis]
+            ket_ = ket.data.reshape((-1, ket.basis_size))[:,slice_partial_basis]
+            braket = self.zgemm(
+                alpha=1.0, a=bra_.T, trans_a=2,
+                b=ket_.T, trans_b=0,
+            )
+            if self.shape == ():
+                return braket.reshape(ket.shape)
+            elif ket.shape == ():
+                return braket.reshape(self.shape)
+            else:
+                return braket.reshape((*self.shape, *ket.shape))
 
 
 class WavefunRType(BufferType):

@@ -214,6 +214,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                     kswfn_k[1].init_random()
  
         l_kswfn_kgrp = []
+        l_ksham_kgrp = []
 
         for ik in i_kpts_kgrp:
             k_cryst, k_weight = kpts[ik]
@@ -223,18 +224,22 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                     KSWfn(gkspc, k_weight, 2 * numbnd, is_noncolin),
                 ]
                 wfn_init(ik, kswfn)
+                ksham = [None]
             elif is_spin:
                 kswfn = [
                     KSWfn(gkspc, k_weight, numbnd, is_noncolin),
                     KSWfn(gkspc, k_weight, numbnd, is_noncolin)
                 ]
                 wfn_init(ik, kswfn)
+                ksham = [None, None]
             else:
                 kswfn = [
                     KSWfn(gkspc, 2 * k_weight, numbnd, is_noncolin),
                 ]
                 wfn_init(ik, kswfn)
+                ksham = [None]
             l_kswfn_kgrp.append(kswfn)
+            l_ksham_kgrp.append(ksham)
 
         FieldG_rho: FieldGType = get_FieldG(grho)
         v_ion, rho_core = FieldG_rho.zeros(()), FieldG_rho.zeros(1)
@@ -299,14 +304,20 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                              'maxiter': dftconfig.davidson_maxiter,
                              'vloc_g0': None}
 
-        def solve_kswfn(kswfn_k: list[KSWfn]):
+        def solve_kswfn(kswfn_k: list[KSWfn], ksham_k: list[KSHam]):
             numiter = 0
             for ispin in range(2 if is_spin and not is_noncolin else 1):
                 kswfn_ = kswfn_k[ispin]
-                ksham = KSHam(kswfn_.gkspc, is_noncolin,
-                              vloc if is_noncolin else vloc[ispin], l_nloc)
+                if ksham_k[ispin] is None:
+                    ksham_k[ispin] = KSHam(kswfn_.gkspc, is_noncolin,
+                                          vloc if is_noncolin else vloc[ispin], l_nloc)
+                ksham_ = ksham_k[ispin]
+                ksham_.vloc = vloc if is_noncolin else vloc[ispin]
+                ksham_.vloc_g0 = vloc_g0
+                # ksham = KSHam(kswfn_.gkspc, is_noncolin,
+                #               vloc if is_noncolin else vloc[ispin], l_nloc)
                 solver_kwargs['vloc_g0'] = vloc_g0
-                _, niter = solver.solve(dftcomm, ksham, kswfn_, diago_thr,
+                _, niter = solver.solve(dftcomm, ksham_, kswfn_, diago_thr,
                                         **solver_kwargs)
                 numiter += niter
             numiter /= 2 if is_spin and not is_noncolin else 1
@@ -380,8 +391,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             vloc_g0 = np.sum(vloc, axis=-1) / np.prod(grho.grid_shape)
 
             diago_avgiter = 0
-            for kswfn_ in l_kswfn_kgrp:
-                diago_avgiter += solve_kswfn(kswfn_)
+            for kswfn_, ksham_ in zip(l_kswfn_kgrp, l_ksham_kgrp):
+                diago_avgiter += solve_kswfn(kswfn_, ksham_)
             diago_avgiter /= len(i_kpts_kgrp)
             
             if occ_typ == 'fixed':
