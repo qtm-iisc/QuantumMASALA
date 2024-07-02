@@ -13,12 +13,18 @@ from qtm.io_utils.dft_printers import print_scf_status
 from qtm import qtmconfig
 from qtm.logger import qtmlogger
 
-qtmconfig.fft_backend = "mkl_fft"
+# qtmconfig.fft_backend = "mkl_fft"
 
 from mpi4py.MPI import COMM_WORLD
 
 comm_world = QTMComm(COMM_WORLD)
-dftcomm = DFTCommMod(comm_world, comm_world.size)
+
+# Only k-pt parallelization:
+dftcomm = DFTCommMod(comm_world, comm_world.size, 1)
+# Only band parallelization:
+# dftcomm = DFTCommMod(comm_world, 1, 1)
+# Only G-space parallelization:
+# dftcomm = DFTCommMod(comm_world, 1, comm_world.size)
 
 # Lattice
 reallat = RealLattice.from_alat(

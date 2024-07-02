@@ -11,7 +11,7 @@ def prop_step(wfn_gamma: list[list[KSWfn]], rho: FieldGType, numel: float,
               compute_pot_local: Callable[[FieldGType], FieldRType],
               prop_gamma: TDExpOper):
     evc_gk_0 = wfn_gamma[0][0].evc_gk.copy()
-    wfn_gamma_0 = deepcopy(wfn_gamma[0])
+    wfn_gamma_0 = wfn_gamma[0].copy()
 
     v_loc = compute_pot_local(rho)
     prop_gamma.update_vloc(v_loc)

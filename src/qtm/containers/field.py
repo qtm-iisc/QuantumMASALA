@@ -96,7 +96,7 @@ class FieldRType(BufferType):
     def to_r(self) -> FieldRType:
         return self
 
-    def integrate_unitcell(self) -> NDArray | Number:
+    def integrate_unitcell(self, other=None, axis=-1) -> NDArray | Number:
         # TODO: Update docstrings
         """Evaluates the integral of the field across the unit cell.
 
@@ -109,7 +109,11 @@ class FieldRType(BufferType):
         NDArray | Number
             `data` summed across the last axis.
         """
-        return np.sum(self, axis=-1) * self.gspc.reallat_dv
+        if other is not None:
+            return np.sum(np.sum(self._data*other, axis=-1), axis=axis) * self.gspc.reallat_dv
+        else:
+            return np.sum(self, axis=axis) * self.gspc.reallat_dv
+
 
 
 FieldType = Union[FieldGType, FieldRType]

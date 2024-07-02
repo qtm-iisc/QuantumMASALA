@@ -27,8 +27,8 @@ class SplitOper(TDExpOperBase):
         #                               - np.identity(dij.shape[0]))
         #     )
 
-        self.vkb_all = np.concatenate([vkb for vkb, _ in self.l_vkb_dij], axis=0)
-        self.dij_all = block_diag(*[dij for _, dij in self.l_vkb_dij])
+        self.vkb_all = np.concatenate([vkb for vkb, _ in self.l_vkb_dij_sl], axis=0)
+        self.dij_all = block_diag(*[dij for _, dij in self.l_vkb_dij_sl])
         ovl = self.vkb_all.conj() @ self.vkb_all.T
         self.exp_dij_all = np.linalg.inv(ovl) @ (
             expm(-0.5j * self.time_step * (ovl @ self.dij_all))
