@@ -1,4 +1,10 @@
 # README for Generating Documentation for Quantum MASALA
 
-- To assemble the source docs, use `sphinx-apidoc -e --ext-mathjax -o ./source -d 4 ../src/qtm/`
-- To build the docs using autodoc, use `sphinx-build -b html ./source ./build`
+- To assemble the source docs, use 
+    ```sphinx-apidoc -e -E --ext-autodoc --ext-mathjax  -o ./source/rst_files -d 2 ../src/qtm/```
+- To build the docs using autodoc, use 
+    ```cp source/*.rst source/rst_files; cp source/conf.py source/rst_files; sphinx-build -b html ./source/rst_files ./build```
+
+## Required libraries
+
+```python -m pip install sphinx sphinx-rtd-theme sphinx-math-dollar```
