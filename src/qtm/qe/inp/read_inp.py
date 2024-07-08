@@ -55,7 +55,7 @@ class Electrons(NamedTuple):
     mixing_beta: float = 0.7
     mixing_ndim: int = 8
     diagonalization: str = "david"
-    diago_thr_init: float = 1e-2
+    diago_thr_init: float = 1e-5
     diago_david_ndim: int = 4
     diago_full_acc: bool = False
     startingpot: str = "atomic"

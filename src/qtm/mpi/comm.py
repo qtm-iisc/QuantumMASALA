@@ -322,6 +322,15 @@ class QTMComm:
 
 
 def split_comm_pwgrp(comm: QTMComm, pwgrp_size: int = 1):
+    """Split comm into different pwgrp communicator, each with size of at least `pwgrp_size`. 
+    
+    Returns
+    -------
+    pwgrp_comm: QTMComm
+        Communicator for the corresponding pwgrp.
+    intercomm: QTMComm
+        Communicator with processes from other pwgrps, with the same key.
+    """
     if not isinstance(comm, QTMComm):
         raise TypeError(f"'comm' must be a '{QTMComm}' instance. "
                         f"got type {type(comm)}")

@@ -5,6 +5,7 @@ if TYPE_CHECKING:
 __all__ = ['KSWfn']
 
 import numpy as np
+import h5py
 
 from qtm.gspace import GkSpace
 from qtm.containers import WavefunGType, get_WavefunG, FieldRType
@@ -25,6 +26,13 @@ def get_rng_module(arr: NDArray):
             return cp.random
     else:
         raise NotImplementedError(f"'{type(arr)}' not recognized/supported.")
+
+
+def f8_to_c16_interleaved(data):
+    """Converts an array of float64 values to complex128 values interleaved."""
+    real = data[..., ::2]
+    imag = data[..., 1::2]
+    return real + 1j * imag
 
 
 class KSWfn:
@@ -167,3 +175,34 @@ class KSWfn:
         cryst = np.mod(cryst.T, gkspc.grid_shape).T
         hash = cryst[0,:] + cryst[1,:]*gkspc.grid_shape[0] + cryst[2,:]*gkspc.grid_shape[0]*gkspc.grid_shape[1]
         return hash
+
+    def init_from_hdf5(self, h5file: str):
+        """Initializes the wavefunctions from an HDF5 file written in QuantumEspresso format."""
+
+        with h5py.File(h5file, 'r') as f:
+            # Read MillerIndices
+            miller_indices = np.array(f['MillerIndices'][:])
+            # Read wavefunctions
+            evc = np.array(f['evc'][:])
+            if 'evl' in f.attrs:
+                evl = np.array(f.attrs['evl'][:])
+            else:
+                evl= None
+
+        if evl is not None:
+            self.evl[:] = evl[0,:]
+            
+        # Convert wavefunctions to complex format
+        evc = f8_to_c16_interleaved(evc) * np.prod(self.gkspc.grid_shape)
+
+        if self.gkspc.size_g != len(miller_indices):
+            raise ValueError(f"Number of Miller indices in HDF5 file ({len(miller_indices)}) does not match the size of gkspc.g_cryst ({self.gkspc.size_g})")
+        
+        for i in range(len(miller_indices)):
+            idx = np.where(np.all(self.gkspc.g_cryst.T == miller_indices[i], axis=1))
+            if len(idx) > 0:
+                self.evc_gk.data[:, idx[0][0]] = evc[:,i]
+            else:
+                raise ValueError("Miller index {i}:{miller_indices[i]} not found in gkspc.g_cryst")
+
+        self.evc_gk.normalize()

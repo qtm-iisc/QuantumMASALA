@@ -1,4 +1,6 @@
 from __future__ import annotations
+from datetime import datetime
+import subprocess
 __all__ = ['print_scf_status']
 from qtm.dft.scf import EnergyData
 from qtm.constants import RYDBERG, ELECTRONVOLT
@@ -37,8 +39,25 @@ def print_scf_status(idxiter: int, scf_runtime: float,
     print('-'*40)
     print()
     
+
+def print_project_git_info():
+    try:
+        # Command to get the last commit hash, day, date (Date Month, Year), and time (hh:mm:ss) for the project
+        command = ['git', 'log', '-1', '--format=%H %ad', '--date=format:%A, %d %B, %Y %H:%M:%S']
+        commit_info = subprocess.check_output(command).strip().decode('utf-8')
+        commit_hash, commit_datetime = commit_info.split(' ', 1)
+        
+        print(" - Project Git Info:")
+        print(f"    - Commit hash:          {commit_hash}")
+        print(f"    - Commit date and time: {commit_datetime}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error retrieving project git info: {e}")
+
+
 def print_scf_parameters(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_noncolin, symm_rho, rho_start, wfn_init, libxc_func, occ_typ, smear_typ, e_temp, conv_thr, maxiter, diago_thr_init, iter_printer, mix_beta, mix_dim, dftconfig, ret_vxc, kpts):
-    print("=========================================")
+    print(f"Quantum MASALA SCF calculation started on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.")
+    print_project_git_info()
+    print("=====================================================================")
     print("SCF Parameters:")
     print()
     print(f"\tdftcomm: {dftcomm}")
@@ -73,4 +92,4 @@ def print_scf_parameters(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_nonco
     print("\t\tkpt[0]  kpt[1]  kpt[2];  weight")
     for row in kpts:
         print(f"\t\t{row[0][0]:7.4f} {row[0][1]:7.4f} {row[0][2]:7.4f}; {row[1]:8.6f}")
-    print("\n=========================================")
+    print("=====================================================================")

@@ -5,7 +5,7 @@ if TYPE_CHECKING:
 __all__ = ['DFTCommMod', 'DFTConfig']
 
 from qtm.mpi.comm import QTMComm, split_comm_pwgrp
-
+from qtm.logger import qtmlogger
 from qtm.msg_format import *
 
 
@@ -13,12 +13,30 @@ class DFTCommMod:
 
     def __init__(self, image_comm: QTMComm, n_kgrp: int | None = None,
                  pwgrp_size: int = 1):
+        """The DFT Communicator Module
+
+        This image communicaor will be split as follows:
+        - n_kgrp nmber of kpoint-pools
+        - Each of these will have n_bgrp number of "band groups",
+        - Each of these will have "plane-wave-basis groups", of size pwgrp_size
+        
+        Parameters
+        ----------
+        image_comm: QTMComm
+            Image communicator
+        n_kgrp: int
+            Number of k-groups/pools to split this image calculation into.
+        pwgrp_size: int
+            Minimum size of each plane-wave-group.
+
+        """
+                
         self.image_comm = image_comm
 
         pwgrp_intra, pwgrp_inter = split_comm_pwgrp(self.image_comm, pwgrp_size)
-        self.n_pwgrp = pwgrp_inter.size
-        self.pwgrp_intra = pwgrp_intra
-        self.pwgrp_inter_image = pwgrp_inter
+        self.n_pwgrp = pwgrp_inter.size     # number of pw-groups
+        self.pwgrp_intra = pwgrp_intra      # the pw-group communcator
+        self.pwgrp_inter_image = pwgrp_inter  
 
         if n_kgrp is None:
             n_kgrp = self.n_pwgrp
@@ -43,6 +61,12 @@ class DFTCommMod:
         self.pwgrp_inter_kroot = self.pwgrp_inter_image.Incl(
             tuple(ikgrp * self.n_bgrp for ikgrp in range(self.n_kgrp))
         )
+
+        qtmlogger.info(f"This image communicator of size {image_comm} has been split as follows:"
+                       f"Number of k-pools: {self.n_kgrp}"
+                       f"Number of band groups in each k-pool: {self.n_bgrp}"
+                       f"Size of each band-group: {pwgrp_size}")
+
 
 
 class DFTConfig:

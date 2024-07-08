@@ -19,14 +19,11 @@ if __name__=="__main__":
     from mpi4py.MPI import COMM_WORLD
     comm_world = QTMComm(COMM_WORLD)
     
-    
-    
 
     filename = None
     
     if len(sys.argv)>1:
         filename = sys.argv[1]
-
 
     # FIXME: only he root process should fetch the arguments and broadcast them to other processes. 
 
@@ -64,17 +61,21 @@ if __name__=="__main__":
 
     # print(filename)
     pwscfin = PWscfIn.from_file(filename)
-    if comm_world.rank==0:
-        pprint(pwscfin)
+    # if comm_world.rank==0:
+    #     pprint(pwscfin)
 
     from qtm.qe.inp.parse_inp import parse_inp
     pwin, cryst, kpts = parse_inp(pwscfin)
     
-
-
         
     # n_pw = comm_world.size
     pwgrp_size = comm_world.size//npools//nbandgroups//ntaskgroups
+    if comm_world.rank==0:
+        print("Parallelization info:")
+        print(f"npools: {npools}")
+        print(f"ntaskgroups: {ntaskgroups}")
+        print(f"nbandgroups: {nbandgroups}")
+        print(f"pwgrp_size: {pwgrp_size}")
     dftcomm = DFTCommMod(comm_world, npools, pwgrp_size)
 
 
