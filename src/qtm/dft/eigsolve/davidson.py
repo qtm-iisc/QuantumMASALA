@@ -99,8 +99,11 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
             + (grprank < len_ % grpsize)
         return slice(sca_start, sca_stop)
 
-    def gen_bufspec(len_, grpsize):
-        grprank = np.arange(grpsize, dtype='i8', like=evl)
+    def gen_bufspec(len_:int, grpsize:int) -> np.ndarray:
+        grprank = np.arange(grpsize, dtype='i8') #, like=evl)   
+        # WARNING: Looks like `cupy.ndarray` is not supported 
+        #          as a valid `Sequence[Count]` argument in `mpi4py.typing.BufSpecV` .
+        #          To be more precise, cupy.ndarray does not implement all the ABC `Sequence` methods.
         return (len_ // grpsize) + (grprank < len_ % grpsize)
 
     @qtmlogger.time('davidson:compute_hpsi')
@@ -293,7 +296,7 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
             unconv_flag[:] = np.abs(evl_red - evl) > diago_thr
             comm.Bcast(unconv_flag)
 
-        n_unconv = np.sum(unconv_flag)
+        n_unconv = int(np.sum(unconv_flag))
         evl[:] = evl_red[:]
         # If the number of basis vectors are exceeding the maximum limit
         # (as per 'numwork'), the basis needs to be reset/restarted
