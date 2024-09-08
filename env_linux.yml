@@ -5,7 +5,7 @@ dependencies:
   - python=3.11
   - pylibxc
   - mpi4py
-  - pyfftw
+  - pyfftw=0.12
   - h5py
   - numpy
   - scipy

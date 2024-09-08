@@ -2,6 +2,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from qtm.logger import qtmlogger
+from qtm.mpi.containers import get_DistFieldG
+from qtm.mpi.gspace import DistGSpace, DistGkSpace
 if TYPE_CHECKING:
     from typing import Literal
     from numbers import Number
@@ -113,6 +115,10 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             )
         if is_noncolin:
             is_spin = True
+        if isinstance(gwfn, DistGSpace):
+            is_gwfn_dist = True
+        else:
+            is_gwfn_dist = False
 
         symm_rho = comm.bcast(symm_rho)
         assert isinstance(symm_rho, bool)
@@ -191,6 +197,9 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
     pwgrp_inter_kgrp = dftcomm.pwgrp_inter_kgrp
     kroot_intra = dftcomm.kroot_intra
     
+    assert kpts.numkpts >= dftcomm.n_kgrp, "Number of k-points must be greater than or equal to the number of k-groups"
+
+
     if dftcomm.image_comm.rank == 0:
         print_scf_parameters(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_noncolin, symm_rho, rho_start, wfn_init, libxc_func, occ_typ, smear_typ, e_temp, conv_thr, maxiter, diago_thr_init, iter_printer, mix_beta, mix_dim, dftconfig, ret_vxc, kpts)
 
@@ -218,7 +227,13 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
 
         for ik in i_kpts_kgrp:
             k_cryst, k_weight = kpts[ik]
-            gkspc = GkSpace(gwfn, k_cryst)
+            
+            if is_gwfn_dist:
+                gkspc = GkSpace(gwfn.gspc_glob, k_cryst)
+                gkspc = DistGkSpace(gwfn.pwgrp_comm, gkspc, gwfn)
+            else:
+                gkspc = GkSpace(gwfn, k_cryst)
+
             if is_noncolin:
                 kswfn = [
                     KSWfn(gkspc, k_weight, 2 * numbnd, is_noncolin),
@@ -241,7 +256,10 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
             l_kswfn_kgrp.append(kswfn)
             l_ksham_kgrp.append(ksham)
 
-        FieldG_rho: FieldGType = get_FieldG(grho)
+        if is_gwfn_dist:
+            FieldG_rho: FieldGType = get_DistFieldG(grho)
+        else:
+            FieldG_rho: FieldGType = get_FieldG(grho)
         v_ion, rho_core = FieldG_rho.zeros(()), FieldG_rho.zeros(1)
         l_nloc = []
         for sp in crystal.l_atoms:
@@ -347,7 +365,10 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                 rho_out = symm_mod.symmetrize(rho_out)
 
         # Defining energy calculation routine
-        en.ewald = image_comm.bcast(ewald.compute(crystal, grho))
+        if is_gwfn_dist:
+            en.ewald = image_comm.bcast(ewald.compute(crystal, grho.gspc_glob))
+        else:
+            en.ewald = image_comm.bcast(ewald.compute(crystal, grho))
 
         def compute_en():
             nonlocal rho_in, rho_out
@@ -377,6 +398,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         if symm_rho:
             rho_start = symm_mod.symmetrize(rho_start)
         mixmod = mixing.ModBroyden(dftcomm, rho_start, mix_beta, mix_dim)
+        comm.barrier()
 
         diago_thr = diago_thr_init
         scf_converged = False

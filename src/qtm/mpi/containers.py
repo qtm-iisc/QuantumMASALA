@@ -71,7 +71,7 @@ class DistBufferType(BufferType, ABC):
 
         buftype = self.BufferType
         if issubclass(buftype, WavefunType):
-            data = self.data.reshape((self.shape, self.numspin, -1))
+            data = self.data.reshape((*self.shape, self.numspin, -1))
         else:
             data = self.data
 
@@ -82,7 +82,7 @@ class DistBufferType(BufferType, ABC):
 
         gspc_glob = self.gspc.gspc_glob
         if allgather or self.gspc.pwgrp_rank == 0:
-            return buftype(gspc_glob, data_glob.reshape((self.shape, -1)))
+            return buftype(data_glob.reshape((*self.shape, -1)))
 
     def allgather(self) -> BufferType:
         return self.gather(allgather=True)
@@ -124,8 +124,9 @@ def get_DistFieldG(dist_gspc: DistGSpace) -> type[FieldGType]:
         @property
         def data_g0(self) -> NDArray:
             with self.gspc.pwgrp_comm as comm:
-                return self.gspc.pwgrp_comm.bcast(
-                    self.data_g0[..., 0] if comm.rank == 0 else None
+                return comm.bcast(
+                    self.data[..., 0],
+                    root=0
                 )
 
     return DistFieldG

@@ -1,7 +1,34 @@
+
 import numpy as np
+"""
+This example file demonstrates the usage of G-space parallelization in QuantumMASALA.
+
+The code performs a self-consistent field (SCF) calculation for a silicon supercell.
+
+The main steps of the code are as follows:
+1. Import necessary modules and libraries.
+2. Set up the communication world for parallelization.
+3. Define the lattice and atom basis for the crystal.
+4. Generate the supercell based on the specified size.
+5. Generate k-points using a Monkhorst Pack grid.
+6. Set up the G-Space for the calculation.
+7. Perform the SCF calculation using the specified parameters.
+8. Print the SCF convergence status and results.
+
+Example usage:
+python si_scf_supercell.py <supercell_size>
+
+Parameters:
+- supercell_size: The size of the supercell in each dimension.
+
+Output:
+- SCF convergence status and results.
+
+"""
 from qtm.constants import RYDBERG
 from qtm.lattice import RealLattice
 from qtm.crystal import BasisAtoms, Crystal
+from qtm.mpi.gspace import DistGSpace
 from qtm.pseudo import UPFv2Data
 from qtm.kpts import gen_monkhorst_pack_grid
 from qtm.gspace import GSpace
@@ -10,19 +37,22 @@ from qtm.dft import DFTCommMod, scf
 
 from qtm.io_utils.dft_printers import print_scf_status
 
+import argparse
+
+
+
 from qtm import qtmconfig
 from qtm.logger import qtmlogger
 
-# qtmconfig.fft_backend = "mkl_fft"
+qtmconfig.fft_backend = "pyfftw"
 
 from mpi4py.MPI import COMM_WORLD
 
 comm_world = QTMComm(COMM_WORLD)
 
-# Only k-pt parallelization:
-dftcomm = DFTCommMod(comm_world, comm_world.size, 1)
-# Only band parallelization:
-# dftcomm = DFTCommMod(comm_world, 1, 1)
+# Only G-space parallelization
+# K-point and/or band parallelization along with G-space parallelization is currently broken.
+dftcomm = DFTCommMod(comm_world, 1, comm_world.size)
 
 # Lattice
 reallat = RealLattice.from_alat(
@@ -41,16 +71,29 @@ si_atoms = BasisAtoms(
 
 crystal = Crystal(reallat, [si_atoms])  # Represents the crystal
 
+parser = argparse.ArgumentParser()
+parser.add_argument("supercell_size", help="Side length of the supercell", type=int)
+args = parser.parse_args()
+supercell_size = args.supercell_size
+
+crystal = crystal.gen_supercell([supercell_size] * 3)
+
 
 # Generating k-points from a Monkhorst Pack grid (reduced to the crystal's IBZ)
-mpgrid_shape = (4, 4, 4)
-mpgrid_shift = (True, True, True)
+mpgrid_shape = (1, 1, 1)
+mpgrid_shift = (False, False, False)
 kpts = gen_monkhorst_pack_grid(crystal, mpgrid_shape, mpgrid_shift)
 
 # -----Setting up G-Space of calculation-----
 ecut_wfn = 25 * RYDBERG
 ecut_rho = 4 * ecut_wfn
-grho = GSpace(crystal.recilat, ecut_rho)
+grho_serial = GSpace(crystal.recilat, ecut_rho)
+
+# If G-space parallelization is not required, use the serial G-space object
+if dftcomm.n_pwgrp == dftcomm.image_comm.size:  
+    grho = grho_serial
+else:
+    grho = DistGSpace(comm_world, grho_serial)
 gwfn = grho
 
 numbnd = crystal.numel // 2  # Ensure adequate # of bands if system is not an insulator

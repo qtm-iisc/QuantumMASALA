@@ -7,7 +7,7 @@ dependencies:
   - mkl_fft
   - pylibxc
   - mpi4py
-  - pyfftw
+  - pyfftw=0.12
   - ipykernel
   - h5py
   - numpy

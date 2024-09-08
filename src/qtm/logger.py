@@ -417,8 +417,8 @@ class QTMLogger(QTMTimer, QTMCounter):
         self.logger.exception(msg)
 
     def __str__(self):
-        return QTMTimer.__str__(self) + '\n' \
-               + QTMCounter.__str__(self)
+        return QTMTimer.__str__(self) + '\n' #+ QTMCounter.__str__(self)
+        # See docstring of QTMCounter for why it is commented out.
 
 
 # Setting file handle to save log into
