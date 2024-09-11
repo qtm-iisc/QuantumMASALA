@@ -18,12 +18,13 @@ class TDExpOperBase(KSHam, ABC):
                  time_step: float):
         super().__init__(gkspc, is_noncolin, vloc, l_nloc)
         self.time_step = time_step
+        """Time step, in Hartree atomic units."""
         self.is_spin = is_spin
 
     def update_vloc(self, vloc: FieldRType):
         # FIXME: Uncomment later.
         # self._check_vloc(vloc)
-        self.vloc_r = vloc
+        self.vloc = vloc.copy()
 
     def set_idxspin(self, idxspin: int):
         raise Exception("'set_idxspin' is not valid for 'TDExpOper'.")

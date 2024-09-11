@@ -25,28 +25,55 @@ class TaylorExp(TDExpOperBase):
                              f"got '{order}' (type {type(order)})")
         self.order = order
 
-    def prop_psi(self, l_psi: list[KSWfn], l_prop_psi: list[KSWfn]):
-        # l_prop_psi[:] = l_psi
+    def prop_psi(self, l_psi_in: list[KSWfn], l_psi_out: list[KSWfn]):
+        """
+        Propagates the wavefunction using the Taylor expansion method.
+
+        Args:
+            l_psi_in (list[KSWfn]): List of input wavefunctions.
+            l_psi_out (list[KSWfn]): List of wavefunctions to store the output, i.e. the propagated wavefunctions.
+
+        Returns:
+            None
+
+        Raises:
+            None
+
+        Note:
+            Ensure that vloc is updated before calling this method.
+
+        """
         if self.is_noncolin:
             qtmlogger.warning("TaylorExp.prop_psi(): is_noncolin not implemented yet.")
-            # l_psi = l_psi.reshape(
-            #     (1, -1, self.gkspc.numgk * (1 + self.is_noncolin))
-            # )
-            # l_prop_psi = l_prop_psi.reshape(
-            #     (1, -1, self.gkspc.numgk * (1 + self.is_noncolin))
-            # )
+            return
 
         for idxspin in range(1 + self.is_spin * (not self.is_noncolin)):
             if self.is_spin:
                 self.set_idxspin(idxspin)
-            psi, prop_psi = deepcopy(l_psi[idxspin].evc_gk), l_prop_psi[idxspin].evc_gk
-            hpsi = psi.copy()
-            hpsi*=0.0
+
+            psi = l_psi_in[idxspin].evc_gk.copy()
+            """Stores H^{n-1} * psi."""
+
+            h_psi = psi.zeros(psi.shape)
+            """Stores H^{n} * psi."""
+            
+            prop_psi = l_psi_in[idxspin].evc_gk.copy()
+            prop_psi._data[:] = psi._data[:]
+            """Stores the final result of the propagation."""
+
 
             fac = 1
             for iorder in range(self.order):
-                self.h_psi(psi, hpsi)
+                self.h_psi(psi, h_psi)
                 fac *= -1j * self.time_step / (iorder + 1)
-                # prop_psi += fac * hpsi
-                zaxpy(x=hpsi._data.reshape(-1), y=prop_psi._data.reshape(-1), a=fac)
-                psi, hpsi = hpsi, psi
+                
+                # prop_psi._data += fac * h_psi._data
+                # FIXME: This is a temporary fix. The private attribute _data should not be accessed directly.
+                zaxpy(x=h_psi._data.reshape(-1), y=prop_psi._data.reshape(-1), a=fac)
+
+                # psi = H^{n-1} * psi
+                # Swap the pointers instead of copying the data.
+                psi, h_psi = h_psi, psi
+
+            l_psi_out[idxspin].evc_gk._data = prop_psi._data.copy()
+            # l_psi_out[idxspin].evc_gk.normalize()

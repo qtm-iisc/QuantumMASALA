@@ -1,0 +1,40 @@
+&control
+    prefix = 'ch4'
+    calculation = 'scf'
+    restart_mode = 'from_scratch'
+    pseudo_dir = './'
+    outdir = './scratch/'
+    tstress = .false.
+    tprnfor = .true.
+/
+
+&system
+    ibrav = 1
+    celldm(1) = 30 
+    nspin     = 1
+    ntyp      = 2
+    nat       = 5
+    ecutwfc = 25
+    nosym = .true.
+/
+
+&electrons
+    diagonalization = 'david'
+    conv_thr = 1.d-10
+/
+
+ATOMIC_SPECIES
+C    12.011  C_ONCV_PBE-1.2.upf
+H     1.000  H_ONCV_PBE-1.2.upf
+
+K_POINTS
+1
+0. 0. 0. 1.
+
+ATOMIC_POSITIONS angstrom
+C   7.937655 7.937655 7.937655
+H   8.58046909 8.58046909 8.58046909
+H   7.29484091 7.29484091 8.58046909
+H   8.58046909 7.29484091 7.29484091
+H   7.29484091 8.58046909 7.29484091
+

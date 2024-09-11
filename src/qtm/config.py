@@ -44,6 +44,10 @@ class QTMConfig:
     _RNG_DEFAULT_SEED = 489
     _LOGFILE_DEFAULT_DIR = './qtmpy.log'
 
+    # TDDFT
+    tddft_prop_method: str = 'etrs'
+    tddft_exp_method: str = 'taylor'
+    taylor_order: int = 4
 
 
     _logging_enabled: bool = False
