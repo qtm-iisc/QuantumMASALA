@@ -113,16 +113,16 @@ class KSWfn:
         self.evc_gk /= 1 + self.gkspc.gk_norm2
 
 
-    def compute_rho(self, ibnd: slice | Sequence[int] = slice(None), ret_raw=False) -> FieldRType:
+    def compute_rho(self, ibnd: slice | Sequence[int] = slice(None), ret_raw=False, normalize=False) -> FieldRType:
         """Constructs a density from the eigenkets `evc_gk` and occupation
         `occ`"""
         self.evc_gk[ibnd].normalize()
         rho: FieldRType = sum(
-            occ * wfn.to_r().get_density(normalize=False)
+            occ * wfn.to_r().get_density(normalize=normalize)
             for wfn, occ in zip(self.evc_gk[ibnd], self.occ[ibnd])
         )
         rho /= rho.gspc.reallat_cellvol
-        if ret_raw:
+        if ret_raw: # Return both spin components
             return rho
         return rho if self.is_noncolin else rho[0]
 
@@ -176,8 +176,9 @@ class KSWfn:
         hash = cryst[0,:] + cryst[1,:]*gkspc.grid_shape[0] + cryst[2,:]*gkspc.grid_shape[0]*gkspc.grid_shape[1]
         return hash
 
+    
     def init_from_hdf5(self, h5file: str):
-        """Initializes the wavefunctions from an HDF5 file written in QuantumEspresso format."""
+        """Initializes the wavefunctions from an HDF5 file written in Quantum ESPRESSO format."""
 
         with h5py.File(h5file, 'r') as f:
             # Read MillerIndices

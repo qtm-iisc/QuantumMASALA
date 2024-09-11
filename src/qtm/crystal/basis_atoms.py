@@ -208,3 +208,11 @@ class BasisAtoms:
                   reallat: RealLattice, *r_cart) -> BasisAtoms:
         """Alias of `from_cart` classmethod"""
         return cls.from_cart(label, ppdata, mass, reallat, *r_cart)
+
+
+    def __repr__(self, indent="") -> str:
+        r_cryst_str = ""
+        for i in range(self.numatoms):
+            r_cryst_str += f"\n{indent}    {np.array2string(self.r_cryst[:, i], separator=', ')},"
+        res = f"{indent}BasisAtoms(\n{indent}  label='{self.label}', \n{indent}  ppdata.md5_checksum={self.ppdata.md5_checksum}, \n{indent}  mass={self.mass}, \n{indent}  r_cryst={r_cryst_str}\n{indent}  )"
+        return res

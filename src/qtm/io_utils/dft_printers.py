@@ -1,5 +1,4 @@
 from __future__ import annotations
-from datetime import datetime
 import subprocess
 __all__ = ['print_scf_status']
 from qtm.dft.scf import EnergyData
@@ -39,7 +38,6 @@ def print_scf_status(idxiter: int, scf_runtime: float,
     print('-'*40)
     print()
     
-
 def print_project_git_info():
     try:
         # Command to get the last commit hash, day, date (Date Month, Year), and time (hh:mm:ss) for the project
@@ -53,43 +51,42 @@ def print_project_git_info():
     except subprocess.CalledProcessError as e:
         print(f"Error retrieving project git info: {e}")
 
-
 def print_scf_parameters(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_noncolin, symm_rho, rho_start, wfn_init, libxc_func, occ_typ, smear_typ, e_temp, conv_thr, maxiter, diago_thr_init, iter_printer, mix_beta, mix_dim, dftconfig, ret_vxc, kpts):
-    print(f"Quantum MASALA SCF calculation started on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.")
+    print("Quantum MASALA")
     print_project_git_info()
-    print("=====================================================================")
+    print("=========================================")
     print("SCF Parameters:")
     print()
-    print(f"\tdftcomm: {dftcomm}")
-    print(f"\tcrystal: {crystal}")
-    print(f"\tgrho:")
-    print(f"\t\tcutoff: {grho.ecut}")
-    print(f"\t\tgrid_size: {grho.grid_shape}")
-    print(f"\t\tnum_g: {grho.size_g}")
-    print(f"\tgwfn:")
-    print(f"\t\tcutoff: {gwfn.ecut}")
-    print(f"\t\tgrid_size: {gwfn.grid_shape}")
-    print(f"\t\tnum_g: {gwfn.size_g}")
-    print(f"\tnumbnd: {numbnd}")
-    print(f"\tis_spin: {is_spin}")
-    print(f"\tis_noncolin: {is_noncolin}")
-    print(f"\tsymm_rho: {symm_rho}")
-    print(f"\trho_start: {rho_start}")
-    print(f"\twfn_init: {wfn_init}")
-    print(f"\tlibxc_func: {libxc_func}")
-    print(f"\tocc_typ: {occ_typ}")
-    print(f"\tsmear_typ: {smear_typ}")
-    print(f"\te_temp: {e_temp}")
-    print(f"\tconv_thr: {conv_thr}")
-    print(f"\tmaxiter: {maxiter}")
-    print(f"\tdiago_thr_init: {diago_thr_init}")
-    print(f"\titer_printer: {iter_printer}")
-    print(f"\tmix_beta: {mix_beta}")
-    print(f"\tmix_dim: {mix_dim}")
-    print(f"\tdftconfig: {dftconfig}")
-    print(f"\tret_vxc: {ret_vxc}")
-    print(f"\tkpts:")
-    print("\t\tkpt[0]  kpt[1]  kpt[2];  weight")
+    print(f"- dftcomm:           {dftcomm}")
+    print(f"- crystal:           {crystal}")
+    print(f"- grho:")
+    print(f"    cutoff:          {grho.ecut} Ha")
+    print(f"    grid_size:       {grho.grid_shape}")
+    print(f"    num_g:           {grho.size_g}")
+    print(f"- gwfn:")
+    print(f"    cutoff:          {gwfn.ecut} Ha")
+    print(f"    grid_size:       {gwfn.grid_shape}")
+    print(f"    num_g:           {gwfn.size_g}")
+    print(f"- numbnd:            {numbnd}")
+    print(f"- is_spin:           {is_spin}")
+    print(f"- is_noncolin:       {is_noncolin}")
+    print(f"- symm_rho:          {symm_rho}")
+    print(f"- rho_start:         {rho_start}")
+    print(f"- wfn_init:          {wfn_init}")
+    print(f"- libxc_func:        {libxc_func}")
+    print(f"- occ_typ:           {occ_typ}")
+    print(f"- smear_typ:         {smear_typ}")
+    print(f"- e_temp:            {e_temp} Ha")
+    print(f"- conv_thr:          {conv_thr} Ha")
+    print(f"- maxiter:           {maxiter}")
+    print(f"- diago_thr_init:    {diago_thr_init}")
+    print(f"- iter_printer:      {iter_printer}")
+    print(f"- mix_beta:          {mix_beta}")
+    print(f"- mix_dim:           {mix_dim}")
+    print(f"- dftconfig:         {dftconfig}")
+    print(f"- ret_vxc:           {ret_vxc}")
+    print(f"- kpts:")
+    print("    kpt[0]  kpt[1]  kpt[2];  weight")
     for row in kpts:
-        print(f"\t\t{row[0][0]:7.4f} {row[0][1]:7.4f} {row[0][2]:7.4f}; {row[1]:8.6f}")
-    print("=====================================================================")
+        print(f"    {row[0][0]:7.4f} {row[0][1]:7.4f} {row[0][2]:7.4f}; {row[1]:8.6f}")
+    print("\n=========================================")

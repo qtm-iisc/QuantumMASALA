@@ -76,9 +76,10 @@ class KList:
         return self.k_cryst.shape[1]
 
     @classmethod
-    def gamma(cls, recilat: ReciLattice):
+    def gamma(cls, recilat: ReciLattice, k_weight=1) -> KList:
         k_cryst = np.zeros((3, 1), dtype='f8')
         k_weights = np.ones(1, dtype='f8')
+        # k_weights *= k_weight
         return cls(recilat, k_cryst, k_weights)
 
     @property

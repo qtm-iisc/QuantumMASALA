@@ -1,8 +1,9 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Literal
-__all__ = ['Lattice', 'RealLattice', 'ReciLattice']
+__all__ = ["Lattice", "RealLattice", "ReciLattice"]
 
 import numpy as np
 
@@ -28,20 +29,21 @@ class Lattice:
         Raised if `primvec` is singular, i.e the basis vectors are
         not linearly independent.
     """
+
     def __init__(self, primvec: NDArray):
-        if primvec.shape != (3, 3) or primvec.dtype != 'f8':
+        if primvec.shape != (3, 3) or primvec.dtype != "f8":
             raise ValueError(
                 "'primvec' must be a 2D array with shape (3, 3) and dtype 'f8'. got: "
                 f"shape={primvec.shape if hasattr(primvec, 'shape') else 'NA'}, "
                 f"dtype={primvec.dtype if hasattr(primvec, 'dtype') else 'NA'}"
             )
 
-        
         if qtmconfig.gpu_enabled:
             import cupy
+
             primvec = cupy.asarray(primvec)
 
-        self.primvec: NDArray = primvec.copy('C').astype('f8')
+        self.primvec: NDArray = primvec.copy("C").astype("f8")
         r"""(``(3, 3)``, ``'f8'``, ``'C'``) Matrix containing
         lattice translation vectors. 
         :math:`\vec{a}_i` is given by `primvec[:, i]`.
@@ -66,8 +68,7 @@ class Lattice:
 
     @property
     def axes_cart(self) -> list[tuple[float, float, float]]:
-        """tuple of the three primitive vectors in atomic units
-        """
+        """tuple of the three primitive vectors in atomic units"""
         return list(tuple(vec.tolist()) for vec in self.primvec.T)
 
     def cart2cryst(self, arr: NDArray, axis: int = 0) -> NDArray:
@@ -110,12 +111,21 @@ class Lattice:
             Array with the same shape as ``arr`` containing
             the vectors in cartesian coords.
         """
+        assert arr.shape[axis] == 3, f"Expected arr.shape[{axis}] == 3, got {arr.shape}"
         vec_ = np.expand_dims(arr, axis)
+        # FIXME: Double check the following line. In the old code, it was (3, 3) + (1,) * (arr.ndim - axis - 1)
+        #        old code:
+        #           mat_ = self.primvec.reshape((3, 3) + (1,) * (arr.ndim - axis - 1))
+        #           return np.sum(mat_ * vec_, axis=axis + 1)
         mat_ = self.primvec.reshape((3, 3) + (1,) * (vec_.ndim - axis - 2))
         return np.sum(mat_ * vec_, axis=axis + 1)
 
-    def dot(self, l_vec1: NDArray, l_vec2: NDArray,
-            coords: Literal['cryst', 'cart'] = 'cryst') -> NDArray:
+    def dot(
+        self,
+        l_vec1: NDArray,
+        l_vec2: NDArray,
+        coords: Literal["cryst", "cart"] = "cryst",
+    ) -> NDArray:
         """Computes the dot product between two sets of vectors
 
         Parameters
@@ -140,21 +150,24 @@ class Lattice:
             Raised if value of ``coords`` is invalid.
         """
         if l_vec1.shape[0] != 3 or l_vec2.shape[0] != 3:
-            raise ValueError("Leading dimension of input arrays must be 3. "
-                             f"Got {l_vec1.shape}, {l_vec2.shape}")
+            raise ValueError(
+                "Leading dimension of input arrays must be 3. "
+                f"Got {l_vec1.shape}, {l_vec2.shape}"
+            )
 
         shape_ = (*l_vec1.shape[1:], *l_vec2.shape[1:])
         l_vec1 = l_vec1.reshape(3, -1)
         l_vec2 = l_vec2.reshape(3, -1)
-        if coords == 'cryst':
+        if coords == "cryst":
             return (l_vec1.T @ self.metric @ l_vec2).reshape(shape_)
-        elif coords == 'cart':
+        elif coords == "cart":
             return (l_vec1.T @ l_vec2).reshape(shape_)
         else:
             raise ValueError(f"'coords' must be either 'cryst' or 'cart'. Got {coords}")
 
-    def norm2(self, l_vec: NDArray,
-              coords: Literal['cryst', 'cart'] = 'cryst') -> NDArray:
+    def norm2(
+        self, l_vec: NDArray, coords: Literal["cryst", "cart"] = "cryst"
+    ) -> NDArray:
         """Computes the norm squared of input vectors.
 
         Parameters
@@ -178,19 +191,21 @@ class Lattice:
             Raised if value of ``coords`` is invalid.
         """
         if l_vec.shape[0] != 3:
-            raise ValueError("Leading dimension of input array must be 3. "
-                             f"Got {l_vec.shape}")
+            raise ValueError(
+                "Leading dimension of input array must be 3. " f"Got {l_vec.shape}"
+            )
         l_vec = l_vec.reshape(3, -1)
         shape_ = l_vec.shape[1:]
-        if coords == 'cryst':
+        if coords == "cryst":
             return np.sum(l_vec * (self.metric @ l_vec), axis=0).reshape(shape_)
-        elif coords == 'cart':
+        elif coords == "cart":
             return np.sum(l_vec * l_vec, axis=0).reshape(shape_)
         else:
             raise ValueError(f"'coords' must be either 'cryst' or 'cart'. Got {coords}")
 
-    def norm(self, l_vec: NDArray,
-             coords: Literal['cryst', 'cart'] = 'cryst') -> NDArray:
+    def norm(
+        self, l_vec: NDArray, coords: Literal["cryst", "cart"] = "cryst"
+    ) -> NDArray:
         """Computes the norm of given vectors.
 
         Parameters
@@ -218,10 +233,13 @@ class Lattice:
     def __eq__(self, other: Lattice):
         if type(self) is not type(other):
             return False
-        return np.linalg.norm(
-            self.primvec
-            - np.asarray(other.primvec, like=self.primvec)
-        ) <= 1E-5
+        return (
+            np.linalg.norm(self.primvec - np.asarray(other.primvec, like=self.primvec))
+            <= 1e-5
+        )
+    
+    def __repr__(self) -> str:
+        return f"Lattice(primvec={self.primvec})"
 
 
 class RealLattice(Lattice):
@@ -249,8 +267,9 @@ class RealLattice(Lattice):
         """
         if qtmconfig.gpu_enabled:
             import cupy
+
             self.latvec = cupy.asarray(self.latvec)
-            print('type(self.latvec) :',type(self.latvec)) #debug statement
+            print("type(self.latvec) :", type(self.latvec))  # debug statement
         self.latvec_inv: NDArray = self.primvec_inv
         """(``(3, 3)``, ```'f8'``) Alias of ``primvec_inv``
         """
@@ -324,7 +343,7 @@ class RealLattice(Lattice):
         return cls(alat, latvec)
 
     @classmethod
-    def from_recilat(cls, recilat: 'ReciLattice') -> RealLattice:
+    def from_recilat(cls, recilat: "ReciLattice") -> RealLattice:
         """Constructs the real lattice dual to the reciprocal lattice
 
         Parameters
@@ -343,8 +362,7 @@ class RealLattice(Lattice):
 
     @property
     def axes_alat(self) -> list[tuple[float, float, float]]:
-        """List of the three primitive vectors in 'alat' units
-        """
+        """List of the three primitive vectors in 'alat' units"""
         return list(tuple(vec) for vec in self.latvec.T / self.alat)
 
     def cart2alat(self, arr: NDArray, axis: int = 0) -> NDArray:
@@ -427,8 +445,12 @@ class RealLattice(Lattice):
         """
         return self.cart2cryst(arr, axis) * self.alat
 
-    def dot(self, l_vec1: NDArray, l_vec2: NDArray,
-            coords: Literal['cryst', 'cart', 'alat'] = 'cryst') -> NDArray:
+    def dot(
+        self,
+        l_vec1: NDArray,
+        l_vec2: NDArray,
+        coords: Literal["cryst", "cart", "alat"] = "cryst",
+    ) -> NDArray:
         """Same as ``Lattice.dot()`` method, but exdending it for
         ``coords='alat'``.
 
@@ -453,15 +475,18 @@ class RealLattice(Lattice):
         ValueError
             Raised if value of ``coords`` is invalid.
         """
-        if coords in ['cryst', 'cart']:
+        if coords in ["cryst", "cart"]:
             return super().dot(l_vec1, l_vec2, coords)
-        if coords == 'alat':
-            return super().dot(l_vec1, l_vec2, 'cart') * self.alat**2
+        if coords == "alat":
+            return super().dot(l_vec1, l_vec2, "cart") * self.alat**2
         else:
-            raise ValueError(f"'coords' must be one of 'cryst', 'cart' or 'alat'. Got {coords}")
+            raise ValueError(
+                f"'coords' must be one of 'cryst', 'cart' or 'alat'. Got {coords}"
+            )
 
-    def norm2(self, l_vec: NDArray,
-              coords: Literal['cryst', 'cart', 'alat'] = 'cryst') -> NDArray:
+    def norm2(
+        self, l_vec: NDArray, coords: Literal["cryst", "cart", "alat"] = "cryst"
+    ) -> NDArray:
         """Same as ``Lattice.norm2()`` method, but exdending it for
         ``coords='alat'``.
 
@@ -486,16 +511,18 @@ class RealLattice(Lattice):
         ValueError
             Raised if value of ``coords`` is invalid.
         """
-        if coords in ['cryst', 'cart']:
+        if coords in ["cryst", "cart"]:
             return super().norm2(l_vec, coords)
-        if coords == 'alat':
-            return super().norm2(l_vec, 'cart') * self.alat ** 2
+        if coords == "alat":
+            return super().norm2(l_vec, "cart") * self.alat**2
         else:
-            raise ValueError("'coords' must be one of 'cryst', 'cart' or 'alat'. "
-                             f"Got {coords}")
+            raise ValueError(
+                "'coords' must be one of 'cryst', 'cart' or 'alat'. " f"Got {coords}"
+            )
 
-    def norm(self, l_vec: NDArray,
-             coords: Literal['cryst', 'cart', 'alat'] = 'cryst') -> NDArray:
+    def norm(
+        self, l_vec: NDArray, coords: Literal["cryst", "cart", "alat"] = "cryst"
+    ) -> NDArray:
         """Computes the norm of given vectors.
 
         Parameters
@@ -518,13 +545,75 @@ class RealLattice(Lattice):
         ValueError
             Raised if value of ``coords`` is invalid.
         """
-        if coords in ['cryst', 'cart']:
+        if coords in ["cryst", "cart"]:
             return super().norm(l_vec, coords)
-        if coords == 'alat':
-            return super().norm(l_vec, 'cart') * self.alat
+        if coords == "alat":
+            return super().norm(l_vec, "cart") * self.alat
         else:
-            raise ValueError("'coords' must be one of 'cryst', 'cart' or 'alat'. "
-                             f"Got {coords}")
+            raise ValueError(
+                "'coords' must be one of 'cryst', 'cart' or 'alat'. " f"Got {coords}"
+            )
+
+    def get_mesh_coords(
+        self,
+        n1: int,
+        n2: int,
+        n3: int,
+        coords: str = "cryst",
+        origin: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    ):
+        """ Generates a mesh of coordinates in the unit cell.
+
+            Parameters
+            ----------
+            n1 : int
+                The number of points along the first lattice vector.
+            n2 : int
+                The number of points along the second lattice vector.
+            n3 : int
+                The number of points along the third lattice vector.
+            coords : str, optional
+                The coordinate system to generate the mesh in. Possible values are "cryst" (default), "cart", and "alat".
+            origin : tuple[float, float, float], optional
+                The origin of the mesh in the specified coordinate system. Defaults to (0.0, 0.0, 0.0).
+
+            Returns
+            -------
+            numpy.ndarray
+                The mesh of coordinates in the specified coordinate system.
+
+            Raises
+            ------
+            ValueError
+                If any of the n1, n2, n3 values are not positive integers.
+        """
+        xi = []
+        for i, n in enumerate([n1, n2, n3]):
+            if not isinstance(n, int) or n < 1:
+                raise ValueError(
+                    f"'n{i+1}' must be a positive integer. " f"got {n} (type {type(n)})"
+                )
+            xi.append(np.arange(n) / n)
+        r_cryst = np.array(np.meshgrid(*xi, indexing="ij"))
+
+        if coords == "cart":
+            origin = self.cart2cryst(origin)
+        elif coords == "alat":
+            origin = self.alat2cryst(origin)
+        r_cryst -= origin.reshape((3, 1, 1, 1))
+        r_cryst -= np.rint(r_cryst)
+
+        if coords == "cryst":
+            return r_cryst
+        elif coords == "cart":
+            return self.cryst2cart(r_cryst)
+        elif coords == "alat":
+            return self.cryst2alat(r_cryst)
+        
+    def __repr__(self, indent="        ") -> str:
+        # latvec = "\n".join(f"{indent}  {vec}" for vec in self.latvec)
+        latvec = f"{indent}    "+str(self.latvec).replace("\n", f"\n{indent}    ")
+        return f"RealLattice(\n{indent}  alat={self.alat}, \n{indent}  latvec=\n{latvec},\n{indent})"
 
 
 class ReciLattice(Lattice):
@@ -642,8 +731,12 @@ class ReciLattice(Lattice):
         ('tpiba' units) to crystal coords"""
         return self.cart2cryst(arr, axis) * self.tpiba
 
-    def dot(self, l_vec1: NDArray, l_vec2: NDArray,
-            coords: Literal['cryst', 'cart', 'alat'] = 'cryst') -> NDArray:
+    def dot(
+        self,
+        l_vec1: NDArray,
+        l_vec2: NDArray,
+        coords: Literal["cryst", "cart", "alat"] = "cryst",
+    ) -> NDArray:
         """Same as ``Lattice.dot()`` method, but exdending it for ``'tpiba'``.
 
         Parameters
@@ -659,15 +752,18 @@ class ReciLattice(Lattice):
             Array containing dot product between vectors in `l_vec1` and `l_vec2`
             of shape `(l_vec1.shape[1:], l_vec2.shape[1:])`.
         """
-        if coords in ['cryst', 'cart']:
+        if coords in ["cryst", "cart"]:
             return super().dot(l_vec1, l_vec2, coords)
-        if coords == 'tpiba':
-            return super().dot(l_vec1, l_vec2, 'cart') * self.tpiba**2
+        if coords == "tpiba":
+            return super().dot(l_vec1, l_vec2, "cart") * self.tpiba**2
         else:
-            raise ValueError(f"'coords' must be one of 'cryst', 'cart' or 'tpiba'. Got {coords}")
+            raise ValueError(
+                f"'coords' must be one of 'cryst', 'cart' or 'tpiba'. Got {coords}"
+            )
 
-    def norm2(self, l_vec: NDArray,
-              coords: Literal['cryst', 'cart', 'alat'] = 'cryst') -> NDArray:
+    def norm2(
+        self, l_vec: NDArray, coords: Literal["cryst", "cart", "alat"] = "cryst"
+    ) -> NDArray:
         """Same as `Lattice.dot()` method, but exdending it for ``'tpiba'``.
 
         Parameters
@@ -682,9 +778,14 @@ class ReciLattice(Lattice):
         NDArray
             Array containing norm squared of vectors given in `l_vec`.
         """
-        if coords in ['cryst', 'cart']:
+        if coords in ["cryst", "cart"]:
             return super().norm2(l_vec, coords)
-        if coords == 'tpiba':
-            return super().norm2(l_vec, 'cart') * self.tpiba ** 2
+        if coords == "tpiba":
+            return super().norm2(l_vec, "cart") * self.tpiba**2
         else:
-            raise ValueError(f"'coords' must be one of 'cryst', 'cart' or 'tpiba'. Got {coords}")
+            raise ValueError(
+                f"'coords' must be one of 'cryst', 'cart' or 'tpiba'. Got {coords}"
+            )
+
+    def __repr__(self) -> str:
+        return f"ReciLattice(tpiba={self.tpiba}, recvec={self.recvec})"

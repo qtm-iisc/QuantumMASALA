@@ -1,5 +1,7 @@
 # TODO: Refactor for spin-orbit calculatioons
 from __future__ import annotations
+
+from qtm.msg_format import shape_mismatch_msg
 __all__ = ['KSHam']
 from collections.abc import Sequence
 import numpy as np
@@ -53,10 +55,11 @@ class KSHam:
             self.l_vkb_dij.append((vkb, dij))
             self.vnl_diag += vkb_diag
 
+
     @qtmlogger.time('KSHam:h_psi')
     def h_psi(self, l_psi: get_WavefunG, l_hpsi: get_WavefunG):
         # l_hpsi[:] = self.ke_gk * l_psi
-        assert l_psi.shape == l_hpsi.shape
+        assert l_psi.shape == l_hpsi.shape, shape_mismatch_msg('l_psi', 'l_hpsi', l_psi, l_hpsi)
         l_psi = l_psi.reshape(-1)
         l_hpsi = l_hpsi.reshape(-1)
 
@@ -72,6 +75,5 @@ class KSHam:
 
             proj = vkb.vdot(l_psi)
             proj = dij @ proj
-
             l_hpsi.zgemm(vkb.data.T, proj.T,
                          0, 1, 1.0, l_hpsi.data.T, 1.0)

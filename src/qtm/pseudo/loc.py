@@ -41,12 +41,13 @@ def _simpson_old(f, rab):
                         + f_r[start+2:stop+2:step])
 
 
-def _sph2pw(r: NDArray, r_ab: NDArray, f_times_r2: NDArray, g: NDArray):
+def _sph2pw(r: NDArray, r_ab: NDArray, f_times_r2: NDArray, g: NDArray): # type: ignore
     numg = g.shape[0]
     f_g = np.empty((*f_times_r2.shape[:-1], numg), dtype='c16', like=f_times_r2)
     numr = r.shape[0]
 
     r_ab = r_ab.copy()
+    # Simpson's integration
     r_ab *= 1./3
     r_ab[1:-1:2] *= 4
     r_ab[2:-1:2] *= 2

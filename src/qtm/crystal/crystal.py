@@ -84,6 +84,15 @@ class Crystal:
             )
 
         return Crystal(reallat_sup, l_atoms_sup)
+    
+        
+    def __repr__(self) -> str:
+        res = f"Crystal(\n    reallat={self.reallat}, \n    l_atoms=["
+        for sp in self.l_atoms:
+            res += "\n" + sp.__repr__(indent="    \t")
+            
+        res += "\n    \t])"
+        return res
 
 
 class CrystalSymm:

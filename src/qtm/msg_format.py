@@ -71,3 +71,7 @@ def obj_mismatch_msg(obj1_name: str, obj1: Any,
     assert isinstance(obj2_name, str)
     return f"'{obj1_name}' and '{obj2_name}' must refer to the same object. " \
            f"got '{repr(obj1)}' and '{repr(obj2)}'."
+
+
+def shape_mismatch_msg(arg1_name, arg2_name, arg1_value, arg2_value):
+    return f"Shape mismatch: {arg1_name} shape {arg1_value.shape} does not match {arg2_name} shape {arg2_value.shape}"

@@ -107,12 +107,14 @@ class FieldRType(BufferType):
         Returns
         -------
         NDArray | Number
-            `data` summed across the last axis.
+            `self.data` summed across the last axis.
         """
         if other is not None:
             return np.sum(np.sum(self._data*other, axis=-1), axis=axis) * self.gspc.reallat_dv
         else:
             return np.sum(self, axis=axis) * self.gspc.reallat_dv
+
+
 
 
 

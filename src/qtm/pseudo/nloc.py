@@ -161,27 +161,14 @@ class NonlocGenerator:
                 self.beta_q[ibeta, iq] = simpson(rbeta * r * sph_jl_qr)
 
         # Generating mappings between KB projectors and quantum numbers
-        # self.vkb_idxbeta = np.concatenate(
-        #     [[ibeta for _ in range(-l, l + 1)] for ibeta, l in enumerate(self.beta_l)],
-        #     like=self.gwfn.g_cryst
-        # )
         self.vkb_idxbeta = np.asarray([
             ibeta for ibeta, l in enumerate(self.beta_l) for _ in range(-l, l + 1)
         ], like=self.gwfn.g_cryst)
-        # self.vkb_l = np.concatenate(
-        #     [[l for _ in range(-l, l + 1)] for l in self.beta_l],
-        #     like=self.gwfn.g_cryst
-        # )
+
         self.vkb_l = np.asarray([
             l for ibeta, l in enumerate(self.beta_l) for _ in range(-l, l + 1)
         ], like=self.gwfn.g_cryst)
-        # self.vkb_m = np.concatenate(
-        #     [
-        #         [((i + 1) // 2) * (-1) ** (i % 2) for i in range(2 * l + 1)]
-        #         for l in self.beta_l
-        #     ],
-        #     like=self.gwfn.g_cryst
-        # )
+
         self.vkb_m = np.asarray([
             ((i + 1) // 2) * (-1) ** (i % 2)
             for l in self.beta_l for i in range(2 * l + 1)
@@ -192,8 +179,7 @@ class NonlocGenerator:
 
     @qtmlogger.time('nloc:gen_vkb_dij')
     def gen_vkb_dij(self, gkspc: GkSpace) -> tuple[WavefunGType, NDArray, WavefunGType]:
-        r"""Computes the Nonlocal Operator as a set of Beta Projectors and a
-        transformation matrix
+        r"""Generates the KB projectors and the dij matrix for the given atomic species.
 
         Parameters
         ----------
@@ -202,11 +188,11 @@ class NonlocGenerator:
             the basis of Wavefunctions
         Returns
         -------
-        l_vkb_full : np.ndarray
+        l_vkb_full : WavefunGType
             list of all beta projectors spanning across all atoms of the species
-        dij_full : np.ndarray
+        dij_full : NDArray
             dij matrix. Expanded for all atoms of the species
-        vkb_diag : np.ndarray
+        vkb_diag : WavefunGType
             list of diagonal elements of the non-local operator
         """
         # Setting Up: Computing spherical coordinates for all :math:`\mathbf{G}+\mathbf{k}`
@@ -218,10 +204,6 @@ class NonlocGenerator:
         gk_norm = gkspc.gk_norm
         beta_fac = FPI / np.sqrt(gkspc.reallat_cellvol)
 
-        # theta = np.arccos(
-        #     np.divide(gk_z, gk_norm, out=np.zeros_like(gk_z), where=gk_norm > 1e-7)
-        # )
-        # print('np.where(gk_norm <= 1e-5) :',np.where(gk_norm <= 1e-5)) #debug statement
         where_gk_norm_nonzero = np.where(gk_norm > 1e-7)
         theta = np.zeros_like(gk_z)
         theta[where_gk_norm_nonzero] = np.arccos(gk_z[where_gk_norm_nonzero] / gk_norm[where_gk_norm_nonzero])

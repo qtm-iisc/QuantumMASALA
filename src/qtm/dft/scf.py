@@ -89,7 +89,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
         mix_beta: float = 0.7, mix_dim: int = 8,
         dftconfig: DFTConfig | None = None,
         ret_vxc:bool=False
-        ):
+        ) -> tuple[bool, FieldGType, list[list[KSWfn]], EnergyData, np.ndarray] | tuple[bool, FieldGType, list[list[KSWfn]], EnergyData]:
     if not isinstance(dftcomm, DFTCommMod):
         raise TypeError(
             type_mismatch_msg('dftcomm', dftcomm, DFTCommMod)

@@ -1,13 +1,11 @@
 import os
 import numpy as np
 import h5py
+from qtm.containers.field import FieldGType
+from qtm.dft.kswfn import KSWfn
 
-from pypwscf.gspc import GSpace
-from pypwscf.ele import ElectronDen, ElectronWfcBgrp
-
-
-def read_chargeden(rho: ElectronDen, chden_dir: str):
-    grho = rho.grho
+def read_chargeden(rho: FieldGType, chden_dir: str):
+    grho = rho.gspc
     f = h5py.File(chden_dir, "r")
 
     for i in range(3):
@@ -18,10 +16,10 @@ def read_chargeden(rho: ElectronDen, chden_dir: str):
                 f"'charge-density.hdf5' incompatibe. Reciprocal Axis 'bg{i+1}' mismatch"
             )
 
-    if f.attrs["ngm"] != grho.numg:
+    if f.attrs["ngm"] != grho.size_g:
         raise ValueError(
             f"'charge-densitt.hdf5' incompatible. Size of G-Space does not match. "
-            f"Expected {grho.numg}, got{f['ngm']}"
+            f"Expected {grho.size_g}, got{f['ngm']}"
         )
 
     miller_indices = np.array(f["MillerIndices"])
@@ -36,7 +34,7 @@ def read_chargeden(rho: ElectronDen, chden_dir: str):
 
     numspin = f.attrs["nspin"]
 
-    rho_g = np.empty((numspin, grho.numg), dtype="c16")
+    rho_g = np.empty((numspin, grho.size_g), dtype="c16")
 
     rho_g[0] = np.array(f["rhotot_g"]).view("c16")[idxsort]
 
@@ -51,13 +49,13 @@ def read_chargeden(rho: ElectronDen, chden_dir: str):
     return rho
 
 
-def write_chargeden(rho: ElectronDen, chden_dir: str):
+def write_chargeden(rho: FieldGType, chden_dir: str):
     grho = rho.grho
     f = h5py.File(chden_dir, "w")
 
     numspin = rho.g.shape[0]
     f.attrs.create("gamma_only", np.array(b".FALSE.", dtype=np.bytes_))
-    f.attrs.create("ngm_g", grho.numg, dtype="i4")
+    f.attrs.create("ngm_g", grho.size_g, dtype="i4")
     f.attrs.create("nspin", numspin, dtype="i4")
 
     idxsort = np.lexsort(
@@ -88,7 +86,7 @@ def write_chargeden(rho: ElectronDen, chden_dir: str):
     f.close()
 
 
-def read_wfc(wfc: ElectronWfcBgrp, wfc_dir: str):
+def read_wfc(wfc: KSWfn, wfc_dir: str):
     gspc, gwfc = wfc.gspc, wfc.gwfc
     kpts = wfc.kpts
     numspin = wfc.numspin
