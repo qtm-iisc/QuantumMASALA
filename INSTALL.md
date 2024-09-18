@@ -11,14 +11,27 @@ conda create -n qtm python=3.12 numpy "libblas=*=*accelerate" pyfftw pylibxc mpi
 ```
 > [!NOTE]
 > For older versions of python one may need to install numpy separately with Apple's accelerate framework. With newer versions of numpy > 2.0 the wheels are automatically built with Apple's Accelerate framework (Veclib).
->
-> Activate the environment
+
+Activate the environment
 ```
 conda activate qtm
 ```
 If you want to test the numpy and scipy installation (a very good idea), install the following packages
 ```
 conda install -c conda-forge pytest hypothesis meson scipy-tests pooch pyyaml
+```
+> [!NOTE]
+> Please verify that that the `python` command points to the environment's python installation by running `which python`. If it does not point to the right python installation, we recommend specifying the full `python` path (i.e. `$CONDA_PREFIX/bin/python`) for the following commands.
+
+To test numpy and scipy, you can check with the following commands.
+```
+python
+import numpy
+numpy.show_config()
+numpy.test()
+import scipy
+scipy.show_config()
+scipy.test()
 ```
 For optimal performance, we recommend the setting the relevant `..._NUM_THREADS` environment variables to 1:
 ```
@@ -32,27 +45,15 @@ conda deactivate
 conda activate qtm
 ```
 Inside the `QuantumMASALA` root directory, execute the following to complete the installation. 
-> [!NOTE]
-> Please verify that that the `python` command points to the environment's python installation by running `which python`. If it does not point to the right python installation, we recommend specifying the full `python` path (i.e. `$CONDA_PREFIX/bin/python`) for the following commands.
+
 ```
 python -m pip install -e .
 ```
-> [!NOTE]
-> For older versions of python one may need to install numpy separately and the 'conda create -n qtm2 python=3.11 numpy "libblas=*=*accelerate"' may not work. As the numpy that comes with conda is often slow, you can overwrite this numpy with the one that uses Apple's Accelerate framework (Veclib). To install that use the following commands.
-```
-python -m pip install --no-binary :all: --no-use-pep517 --force numpy
-```
-To test whether it is using the correct backend libraries, you can check with the following commands.
-```
-python
-import numpy
-numpy.show_config()
-```
 
-Test the installation by running the following example: (Replace `10` with the number of cores)
+Test the installation by running the following example: (Replace `2` with the number of cores)
 ```
-cd examples/dft-fe
-mpirun -np 10 python fe_scf.py
+cd examples/dft-si
+mpirun -np 2 python si_scf.py
 ```
 
 ## Installing on Linux
