@@ -7,17 +7,18 @@ https://docs.conda.io/projects/miniconda/en/latest/#quick-command-line-install
 ## Installing on Mac
 
 ```
-conda create -n qtm python=3.11 numpy "libblas=*=*accelerate"
+conda create -n qtm python=3.12 numpy "libblas=*=*accelerate" pyfftw pylibxc mpi4py scipy cython
 ```
 > [!NOTE]
-> For older versions of python one may need to install numpy separately and the 'conda create -n qtm2 python=3.11 numpy "libblas=*=*accelerate"' may not work. As the numpy that comes with conda is often slow, you can overwrite this numpy with the one that uses Apple's Accelerate framework (Veclib) later (see below). For these older versions, first create the qtm environment.
-```
-conda create -n qtm python=3.11
-```
-We then activate the environment and install packages in it.
+> For older versions of python one may need to install numpy separately with Apple's accelerate framework. With newer versions of numpy > 2.0 the wheels are automatically built with Apple's Accelerate framework (Veclib).
+>
+> Activate the environment
 ```
 conda activate qtm
-conda install -c conda-forge pyfftw pylibxc mpi4py scipy cython pybind11
+```
+If you want to test the numpy and scipy installation (a very good idea), install the following packages
+```
+conda install -c conda-forge pytest hypothesis meson scipy-tests pooch pyyaml
 ```
 For optimal performance, we recommend the setting the relevant `..._NUM_THREADS` environment variables to 1:
 ```
