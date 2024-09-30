@@ -64,8 +64,8 @@ class DFTCommMod:
         )
 
     def __repr__(self) -> str:
-        return (f"DFTCommMod(image_comm={self.image_comm}, image_comm.size={self.image_comm.size}, n_kgrp={self.n_kgrp}, "
-                f"n_bgrp={self.n_bgrp}, pwgrp_size={self.pwgrp_intra.size if self.pwgrp_intra is not None else None}, ")
+        return (f"DFTCommMod(image_comm.size={self.image_comm.size}, n_kgrp={self.n_kgrp}, "
+                f"n_bgrp={self.n_bgrp}, pwgrp_size={self.pwgrp_intra.size if self.pwgrp_intra is not None else None})")
 
 class DFTConfig:
 
