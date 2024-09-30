@@ -1,9 +1,21 @@
 from __future__ import annotations
 import subprocess
 __all__ = ['print_scf_status']
+from qtm.dft.kswfn import KSWfn
 from qtm.dft.scf import EnergyData
 from qtm.constants import RYDBERG, ELECTRONVOLT
 
+def print_eigenvalues(l_kswfn_kgrp: list[list[KSWfn]]):
+    print("Printing eigenvalues:")
+    for kgrp in l_kswfn_kgrp:
+        for kswfn in kgrp:
+            print()
+            print(f"k-point:    {kswfn.k_cryst}")
+            print(f"weight:     {kswfn.k_weight}")
+            print(f"Basis size: {kswfn.gkspc.size_g}")
+            print(f"  Band  Eigenvalue (eV)  Occupation")
+            for i in range(kswfn.numbnd):
+                print(f"  {i+1:4d}  {kswfn.evl[i] / ELECTRONVOLT:14.8f}  {kswfn.occ[i]:10.6f}")
 
 def print_scf_status(idxiter: int, scf_runtime: float,
                      scf_converged: bool, e_error: float,
@@ -51,7 +63,8 @@ def print_project_git_info():
     except subprocess.CalledProcessError as e:
         print(f"Error retrieving project git info: {e}")
 
-def print_scf_parameters(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_noncolin, symm_rho, rho_start, wfn_init, libxc_func, occ_typ, smear_typ, e_temp, conv_thr, maxiter, diago_thr_init, iter_printer, mix_beta, mix_dim, dftconfig, ret_vxc, kpts):
+
+def print_scf_parameters_old(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_noncolin, symm_rho, rho_start, wfn_init, libxc_func, occ_typ, smear_typ, e_temp, conv_thr, maxiter, diago_thr_init, iter_printer, mix_beta, mix_dim, dftconfig, ret_vxc, kpts):
     print("Quantum MASALA")
     print_project_git_info()
     print("=========================================")
@@ -86,6 +99,42 @@ def print_scf_parameters(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_nonco
     print(f"- dftconfig:         {dftconfig}")
     print(f"- ret_vxc:           {ret_vxc}")
     print(f"- kpts:")
+    print("    kpt[0]  kpt[1]  kpt[2];  weight")
+    for row in kpts:
+        print(f"    {row[0][0]:7.4f} {row[0][1]:7.4f} {row[0][2]:7.4f}; {row[1]:8.6f}")
+    print("\n=========================================")
+
+def print_scf_parameters(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_noncolin, symm_rho, rho_start, wfn_init, libxc_func, occ_typ, smear_typ, e_temp, conv_thr, maxiter, diago_thr_init, iter_printer, mix_beta, mix_dim, dftconfig, ret_vxc, kpts):
+    print("Quantum MASALA")
+    print_project_git_info()
+    print("=========================================")
+    print("SCF Parameters:")
+    print()
+    print(f"dftcomm         = {dftcomm}")
+    print(f"crystal         = {crystal}")
+    print(f"grho            = GSpace(crystal.recilat, ecut_rho={grho.ecut}, grid_shape={grho.grid_shape})")
+    print(f"grho.num_g      = {grho.size_g}")
+    print(f"gwfn            = GSpace(crystal.recilat, ecut_wfn={gwfn.ecut}, grid_shape={gwfn.grid_shape})")
+    print(f"gwfn.num_g      = {gwfn.size_g}")
+    print(f"numbnd          = {numbnd}")
+    print(f"is_spin         = {is_spin}")
+    print(f"is_noncolin     = {is_noncolin}")
+    print(f"symm_rho        = {symm_rho}")
+    print(f"rho_start       = {rho_start}")
+    print(f"wfn_init        = {wfn_init}")
+    print(f"libxc_func      = {libxc_func}")
+    print(f"occ_typ         = {occ_typ}")
+    print(f"smear_typ       = {smear_typ}")
+    print(f"e_temp          = {e_temp} # Ha")
+    print(f"conv_thr        = {conv_thr} # Ha")
+    print(f"maxiter         = {maxiter}")
+    print(f"diago_thr_init  = {diago_thr_init}")
+    print(f"mix_beta        = {mix_beta}")
+    print(f"mix_dim         = {mix_dim}")
+    print(f"ret_vxc         = {ret_vxc}")
+    print(f"dftconfig       = {dftconfig}")
+    print(f"iter_printer    = {iter_printer}")
+    print(f"kpts            =")
     print("    kpt[0]  kpt[1]  kpt[2];  weight")
     for row in kpts:
         print(f"    {row[0][0]:7.4f} {row[0][1]:7.4f} {row[0][2]:7.4f}; {row[1]:8.6f}")

@@ -57,7 +57,12 @@ class PseudoPotFile(ABC):
             for chunk in iter(lambda: f.read(4096), b""):
                 hash_md5.update(chunk)
         self.md5_checksum = hash_md5.hexdigest()
+    
+    def __str__(self, indent="") -> str:
+        return f"PseudoPotFile(\n{indent}  dirname='{self.dirname}', \n{indent}  valence={self.valence}, \n{indent}  md5_checksum='{self.md5_checksum}')"
 
+    def __repr__(self, indent="") -> str:
+        return self.__str__()
 
 class BasisAtoms:
     """Represents group of atoms of the same species in the unit cell of a
@@ -214,5 +219,5 @@ class BasisAtoms:
         r_cryst_str = ""
         for i in range(self.numatoms):
             r_cryst_str += f"\n{indent}    {np.array2string(self.r_cryst[:, i], separator=', ')},"
-        res = f"{indent}BasisAtoms(\n{indent}  label='{self.label}', \n{indent}  ppdata.md5_checksum={self.ppdata.md5_checksum}, \n{indent}  mass={self.mass}, \n{indent}  r_cryst={r_cryst_str}\n{indent}  )"
+        res = f"{indent}BasisAtoms(\n{indent}  label='{self.label}', \n{indent}  ppdata={self.ppdata.__str__(indent+'  ')}, \n{indent}  mass={self.mass}, \n{indent}  r_cryst=({r_cryst_str}))"
         return res

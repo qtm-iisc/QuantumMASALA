@@ -406,12 +406,13 @@ class Sigma:
         l_k_indices=None,
     ):
         """
-        Parameters
-        ----------
-        i_q : index of q-point
-        bra_all_bands : If True, calculate mtxel for all bands for bra. Otherwise, only occupied bands
-        ket_all_bands : If True, calculate mtxel for all bands for ket. Otherwise, only unoccupied bands
-        ret_E : If True, return energy eigenvalues. Thisoption is useful for GPP Sigma, where energy eigenvalues corresponding to matrix elements are required.
+        Args:
+            i_q : index of q-point
+            bra_all_bands : If True, calculate mtxel for all bands for bra. Otherwise, only occupied bands
+            ket_all_bands : If True, calculate mtxel for all bands for ket. Otherwise, only unoccupied bands
+            ret_E : If True, return energy eigenvalues. Thisoption is useful for GPP Sigma, where energy eigenvalues corresponding to matrix elements are required.
+
+        Notes:
 
         To Calculate the M - matrix for calculation of polarizability.
 
@@ -723,8 +724,9 @@ class Sigma:
     def sigma_x(self, yielding=True, parallel=True):
         """
         Fock exchange energy term
-        =========================
-        Returns Sigma_x[i_k, i_band] for diag = True
+        
+        Returns:
+          Sigma_x[i_k, i_band]
 
         - Sum _(n" over occupied, q, G, G')   M^*_n"n'(k,-q,-G)  M_n"n'(k,-q,-G')  delta_GG'  v(q+G')
         - Sum _(n" over occupied, q, G=G')    M^*_n"n'(k,-q,-G)  M_n"n'(k,-q,-G)  v(q+G)
@@ -935,7 +937,6 @@ class Sigma:
     def sigma_ch_static(self, yielding=True):
         """
         Static Coulomb Hole (partial sum)
-        =================================
         """
 
         # Setting einstein summation string for M* M epsinv v
@@ -1229,7 +1230,6 @@ class Sigma:
     def sigma_sx_gpp(self, dE=0, yielding=True):
         """
         (H.L.) Plasmon Pole Screened Exchange
-        ======================================
 
                                             Omega^2(G,G`)
         SX(E) = M(n,G)*conj(M(m,G`)) * ------------------------ * Vcoul(G`)
@@ -1446,7 +1446,6 @@ class Sigma:
     def sigma_ch_gpp(self, dE=0, yielding=True):
         """
         Plasmon Pole Coulomb Hole (partial sum)
-        =======================================
 
                                             Omega^2(G,G`)
         CH(E) = M(n,G)*conj(M(m,G`)) * ----------------------------- * Vcoul(G`)

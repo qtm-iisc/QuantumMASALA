@@ -1,3 +1,7 @@
+**/benchmarks/
+# QuantumMASALA/benchmarks/
+**/*.save/
+
  # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
