@@ -366,7 +366,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
 
         # Defining energy calculation routine
         if is_gwfn_dist:
-            en.ewald = image_comm.bcast(ewald.compute(crystal, grho.gspc_glob))
+            # For memory efficiency, compute ewald energy on the rank 0 process, then broadcast
+            en.ewald = image_comm.bcast(ewald.compute(crystal, grho.gspc_glob) if image_comm.rank == 0 else None)
         else:
             en.ewald = image_comm.bcast(ewald.compute(crystal, grho))
 

@@ -70,9 +70,11 @@ class DistBufferType(BufferType, ABC):
             raise TypeError(type_mismatch_msg('allgather', allgather, bool))
 
         buftype = self.BufferType
-        if issubclass(buftype, WavefunType):
+        # FIXME: change the try-except block to if-else block
+        # if issubclass(buftype, WavefunType):
+        try:
             data = self.data.reshape((*self.shape, self.numspin, -1))
-        else:
+        except:
             data = self.data
 
         if self.basis_type == 'r':
@@ -100,10 +102,13 @@ class DistBufferType(BufferType, ABC):
             shape = comm.bcast(buf_glob.shape if is_root else None)
             basis_type = comm.bcast(buf_glob.basis_type if is_root else None)
             data_glob = buf_glob.data if is_root else None
-            if is_root and issubclass(cls.BufferType, WavefunType):
-                data_glob = data_glob.reshape(
-                    (*buf_glob.shape, buf_glob.numspin, -1)
-                )
+            try:
+                if is_root:# and issubclass(cls.BufferType, WavefunType):
+                    data_glob = data_glob.reshape(
+                        (*buf_glob.shape, buf_glob.numspin, -1)
+                    )
+            except:
+                pass
 
             if basis_type == 'g':
                 data_loc = cls.gspc.scatter_g(data_glob)

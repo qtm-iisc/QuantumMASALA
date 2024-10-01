@@ -345,7 +345,7 @@ def parse_inp(pwin: PWscfIn):
             )
         try:
             grid_shape = tuple(int(n) for n in mpmesh_params[:3])
-            shifts = tuple(bool(n) for n in mpmesh_params[3:])
+            shifts = tuple(bool(int(n)) for n in mpmesh_params[3:])
         except ValueError as e:
             raise ValueError(
                 f"invalid parameter list for generating k-points in 'automatic. Got {mpmesh_params}"

@@ -1,3 +1,6 @@
+from qtm.mpi.gspace import DistGSpace
+
+
 if __name__=="__main__":
 
     from pprint import pprint
@@ -14,7 +17,10 @@ if __name__=="__main__":
     from qtm.io_utils.dft_printers import print_scf_status
 
     from qtm.logger import qtmlogger
+
+    # from qtm import qtmconfig
     # qtmconfig.fft_backend = 'mkl_fft'
+    # qtmconfig.fft_backend = "pyfftw"
 
     from mpi4py.MPI import COMM_WORLD
     comm_world = QTMComm(COMM_WORLD)
@@ -65,11 +71,11 @@ if __name__=="__main__":
     #     pprint(pwscfin)
 
     from qtm.qe.inp.parse_inp import parse_inp
-    pwin, cryst, kpts = parse_inp(pwscfin)
+    pwin, crystal, kpts = parse_inp(pwscfin)
     
         
     # n_pw = comm_world.size
-    pwgrp_size = comm_world.size//npools//nbandgroups//ntaskgroups
+    pwgrp_size = comm_world.size//npools//nbandgroups
     if comm_world.rank==0:
         print("Parallelization info:")
         print(f"npools: {npools}")
@@ -77,6 +83,8 @@ if __name__=="__main__":
         print(f"nbandgroups: {nbandgroups}")
         print(f"pwgrp_size: {pwgrp_size}")
     dftcomm = DFTCommMod(comm_world, npools, pwgrp_size)
+    print(dftcomm)
+    print()
 
 
     # -----Setting up G-Space of calculation-----
@@ -84,7 +92,12 @@ if __name__=="__main__":
     ecut_rho = pwin.system.ecutrho * RYDBERG
     # parse_inp() handles ecutrho=None case appropriately.
 
-    grho = GSpace(cryst.recilat, ecut_rho)
+    grho_serial = GSpace(crystal.recilat, ecut_rho)
+    # print(dftcomm.image_comm.size, dftcomm.n_pwgrp)
+    if dftcomm.n_pwgrp == dftcomm.image_comm.size:  
+        grho = grho_serial
+    else:
+        grho = DistGSpace(comm_world, grho_serial)
     gwfn = grho
 
     # -----Spin-polarized (collinear) calculation-----
@@ -106,21 +119,9 @@ if __name__=="__main__":
     conv_thr = pwin.electrons.conv_thr * RYDBERG
     diago_thr_init = pwin.electrons.diago_thr_init * RYDBERG
 
-    # print(f"proc {comm_world.rank} ready.", flush=True)
     comm_world.barrier()
-    if comm_world.rank==0:
-        qtmlogger.info(f'diago_thr_init :{diago_thr_init}') #debug statement
-        qtmlogger.info(f'e_temp : {e_temp}') #debug statement
-        qtmlogger.info(f'conv_thr : {conv_thr}') #debug statement
-        qtmlogger.info(f'smear_typ : {smear_typ}') #debug statement
-        qtmlogger.info(f'is_spin : {is_spin}') #debug statement
-        qtmlogger.info(f'is_noncolin : {is_noncolin}') #debug statement
-        qtmlogger.info(f'ecut_wfn : {ecut_wfn}') #debug statement
-        qtmlogger.info(f'ecut_rho : {ecut_rho}') #debug statement
-        print("starting scf calculation...", flush=True)
 
-
-    out = scf(dftcomm, cryst, kpts, grho, gwfn,
+    out = scf(dftcomm, crystal, kpts, grho, gwfn,
             numbnd, 
             is_spin, 
             is_noncolin,
@@ -139,8 +140,8 @@ if __name__=="__main__":
 
     # Print Data for delta benchmark
     if comm_world.rank==0:
-        print("     number of atoms/cell      =", sum([atom_type.numatoms for atom_type in cryst.l_atoms]))
-        print("     unit-cell volume          =", cryst.reallat.cellvol)
+        print("     number of atoms/cell      =", sum([atom_type.numatoms for atom_type in crystal.l_atoms]))
+        print("     unit-cell volume          =", crystal.reallat.cellvol)
         print("!    total energy              =", en.total/RYDBERG_HART)
         print("!    hwf energy                =", en.hwf/RYDBERG_HART)
 
