@@ -50,6 +50,7 @@ autodoc_default_flags = ['members', 'undoc-members', 'private-members', 'special
 autodoc_member_order = 'bysource'
 autodoc_typehints = "description"
 autosummary_generate = True
+autoclass_content = 'both'
 
 
 mathjax_path = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-cq.js'

@@ -480,7 +480,7 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                     for iband in range(wfn.numbnd):
                         psi_r = psi_r_allbands[iband]
                         hpsi_r = sum((v_xc * psi_r.get_density())).integrate_unitcell()
-                        vxc_arr[ik,iband] = hpsi_r
+                        vxc_arr[ik,iband] = hpsi_r.real
                 return np.array(vxc_arr)
             
             vxc_arr = calculate_vxc_data()

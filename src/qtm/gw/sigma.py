@@ -385,12 +385,24 @@ class Sigma:
 
     def pprint_sigma_mat(self, mat):
         _mat = deepcopy(mat).real.T
-        print("  n  ",end="")
-        print(("    ik={:<5}" * _mat.shape[-1]).format(*self.l_k_indices))
         
-        for i,row in enumerate(_mat.reshape(-1, _mat.shape[-1])):
-            print(f"{i+self.sigmainp.band_index_min:>3} ",end="")
-            print(("{:12.6f}" * _mat.shape[-1]).format(*np.around(row, 6)))
+        if mat.shape[1] <= 4:
+            # Create table header
+            header = "k-pt index   k-point (crystal coords)     " + (" "*10).join([f"n={i+1:<3}" for i in range(mat.shape[1])])
+            print(header)
+            print("-" * len(header))
+            
+            # Create table rows
+            for i, k_index in enumerate(self.l_k_indices):
+                k_point = self.kpts.cryst[k_index]
+                row = f"{k_index:<11}   {k_point[0]:>5.3f}  {k_point[1]:>5.3f}  {k_point[2]:>5.3f}   " + "   ".join([f"{mat[i, j].real:12.6f}" for j in range(mat.shape[1])])
+                print(row)
+        else:
+            # Too many bands to print in one line
+            for i, k_index in enumerate(self.l_k_indices):
+                k_point = self.kpts.cryst[k_index]
+                print(f"k-point index: {k_index}\nk-point (crystal coords.): {k_point}")
+                print("Sigma matrix elements:", mat[i].real)
 
     # ==================================================================
     # Plane wave matrix elements calculation methods
@@ -823,7 +835,6 @@ class Sigma:
     def sigma_sx_static(self, yielding=True):
         """
         Static Screened Exchange
-        ========================
         """
 
         # Setting einstein summation string for M* M epsinv v
@@ -1032,10 +1043,10 @@ class Sigma:
 
     # @pw_logger.time("sigma:sigma_ch_static_exact")
     def sigma_ch_static_exact(self):
-        """
+        r"""
         Static Coulomb Hole (Exact)
-        ========================
-        0.5 * \Sum_{q,G,G'} = M_{n,n'}(k, q=0, G'-G) * [\eps^{-1}_{G,G'}(q;0) - \delta_{G,G'}] * v(q+G')
+        
+        $$0.5 * \sum_{q,G,G'} = M_{n,n'}(k, q=0, G'-G) * [\varepsilon^{-1}_{G,G'}(q;0) - \delta_{G,G'}] * v(q+G')$$
 
         1e-3 disagreement: Doubt goes to limits on G'-G: is it all G and G' within cutoff or G-G' within cutoff
         """
@@ -1228,12 +1239,10 @@ class Sigma:
 
     # @pw_logger.time("sigma:sigma_sx_gpp")
     def sigma_sx_gpp(self, dE=0, yielding=True):
-        """
-        (H.L.) Plasmon Pole Screened Exchange
+        r"""
+        (Hybertsen-Louie) Plasmon Pole Screened Exchange
 
-                                            Omega^2(G,G`)
-        SX(E) = M(n,G)*conj(M(m,G`)) * ------------------------ * Vcoul(G`)
-                                       (E-E_n1(k-q))^2-wtilde^2
+        $$\Sigma_{\text{SX}}(E) = M(n,G) \cdot M^*(m,G') \cdot \frac{\Omega^2(G,G')}{(E - E_{n1}(k-q))^2 - \tilde{\omega}^2} \cdot V_{\text{coul}}(G')$$
         """
 
         # Setting einstein summation string for M* M epsinv v
@@ -1444,12 +1453,10 @@ class Sigma:
 
     # @pw_logger.time("sigma:sigma_ch_gpp")
     def sigma_ch_gpp(self, dE=0, yielding=True):
-        """
+        r"""
         Plasmon Pole Coulomb Hole (partial sum)
 
-                                            Omega^2(G,G`)
-        CH(E) = M(n,G)*conj(M(m,G`)) * ----------------------------- * Vcoul(G`)
-                                    2*wtilde*[E-E_n1(k-q)-wtilde]
+        $$\Sigma_{\text{CH}}(E) = M(n,G) \cdot M^*(m,G') \cdot \frac{\Omega^2(G,G')}{2 \cdot \tilde{\omega} \cdot [E - E_{n1}(k-q) - \tilde{\omega}]} \cdot V_{\text{coul}}(G')$$
 
         """
 

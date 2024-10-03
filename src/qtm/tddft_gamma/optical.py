@@ -26,6 +26,7 @@ def dipole_response(
     kick_strength: float = 1e-4,
     kick_direction: str = "z",
     libxc_func: Optional[tuple[str, str]] = None,
+    write_freq: int = 10,
 ):
     """Compute the dipole response of a system to a time-dependent kick.
 
@@ -38,6 +39,7 @@ def dipole_response(
         kick_strength (float, optional): Strength of the kick. Defaults to 1e-4.
         kick_direction (str, optional): Direction of the kick. Defaults to "z".
         libxc_func (Optional[tuple[str, str]], optional): Tuple of libxc functional and exchange-correlation functional. Defaults to None.
+        write_freq (int, optional): Frequency at which to write the dipole to disk (in dipz_temp.npy file). Defaults to 10. 0 means no writing.
 
     Returns:
         np.ndarray: Time-dependent dipole response, i.e. dipole moment, divided by the kick strength. Units: Hartree.

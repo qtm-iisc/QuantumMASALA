@@ -19,7 +19,7 @@ if MPI4PY_INSTALLED:
 
 
 class Vcoul:
-    """Vcoul Generator Class
+    r"""Vcoul Generator Class
 
     Provides cell-averaging technique whereby the value of the interaction
     for the given q-point (for a q → 0 in particular) can be replaced by the average
@@ -78,7 +78,7 @@ class Vcoul:
         bare_init=True,  # To save time, by default
         parallel=True,
     ) -> None:
-        """Init Vcoul object
+        r"""Init Vcoul object
 
         Parameters
         ----------
@@ -154,7 +154,7 @@ class Vcoul:
         vcoul: float,
         random_sample: bool,
     ):
-        """Modify epsmat to make it compatible with W averaging
+        r"""Modify epsmat to make it compatible with W averaging
 
         Parameters
 
@@ -279,7 +279,7 @@ class Vcoul:
     # CORE FUNCTIONS :
 
     def v_bare(self, i_q, averaging_func=None):
-        """Calculate Coulomb potential (Reciprocal space), given index of q-point, i.e. 8*pi/\|q+G\|^2"""
+        r"""Calculate Coulomb potential (Reciprocal space), given index of q-point, i.e. 8*pi/\|q+G\|^2"""
 
         # Get sorted \|q+G\|^2
         gqq = self.l_gspace_q[i_q].gk_norm2
@@ -303,7 +303,7 @@ class Vcoul:
         return 3 * 8 * np.pi / q_cutoff**2
 
     def v_minibz_sphere_shifted(self, centre_cryst, q_cutoff=None):
-        """Averaged coulomb potential within a shifted sphere, with same volume as mini-bz
+        r"""Averaged coulomb potential within a shifted sphere, with same volume as mini-bz
 
         Constraint: \|centre_cryst\| > R_minibz_sphere
         Can be used to calculate vcoul averaged over minibz ball for qpt != (0,0,0)
@@ -647,9 +647,15 @@ class Vcoul:
                 shift_vec_cryst = qvec + self.l_gspace_q[i_q].g_cryst.T[i_g]
 
                 if random_avg:
-                    vqg[i_g], _ = self.v_minibz_montecarlo_hybrid(
+                    res = self.v_minibz_montecarlo_hybrid(
                         shift_vec_cryst=shift_vec_cryst
                     )
+                    if res[0].ndim == 1:
+                        vqg[i_g] = res[0][0]
+                    else:
+                        vqg[i_g] = res[0]
+                    
+                    
                 else:
                     vqg[i_g] = self.v_minibz_sphere_shifted(qvec + gvec)
 
