@@ -125,3 +125,21 @@ class DFTConfig:
                 'DFTConfig.mixing_method', val, l_mixers
             ))
 
+    def __repr__(self) -> str:
+        return (f"DFTConfig(symm_check_supercell={self.symm_check_supercell}, "
+                f"symm_use_all_frac={self.symm_use_all_frac}, "
+                f"spglib_symprec={self.spglib_symprec}, "
+                f"eigsolve_method={self.eigsolve_method}, "
+                f"davidson_maxiter={self.davidson_maxiter}, "
+                f"davidson_numwork={self.davidson_numwork}, "
+                f"mixing_method={self.mixing_method})")
+    
+    def __str__(self, indent=" "*22) -> str:
+        return (f"DFTConfig(\n"
+                f"{indent}symm_check_supercell = {self.symm_check_supercell},\n"
+                f"{indent}symm_use_all_frac = {self.symm_use_all_frac},\n"
+                f"{indent}spglib_symprec = {self.spglib_symprec},\n"
+                f"{indent}eigsolve_method = '{self.eigsolve_method}',\n"
+                f"{indent}davidson_maxiter = {self.davidson_maxiter},\n"
+                f"{indent}davidson_numwork = {self.davidson_numwork},\n"
+                f"{indent}mixing_method = '{self.mixing_method}')")

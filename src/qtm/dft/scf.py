@@ -463,8 +463,8 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                         # Abs. magnetization = int |rho_up(r)-rho_down(r)| dr
                         abs_mag = tot_mag.copy()
                         abs_mag._data[:] = np.abs(tot_mag.data)
-                        print("Total magnetization:   ", tot_mag.integrate_unitcell(),"Bohr magneton / cell (Ry units)")
-                        print("Absolute magnetization:", abs_mag.integrate_unitcell(),"Bohr magneton / cell (Ry units)")
+                        print(f"Total magnetization:    {tot_mag.integrate_unitcell().real:>5.2f} Bohr magneton / cell (Ry units)")
+                        print(f"Absolute magnetization: {abs_mag.integrate_unitcell().real:>5.2f} Bohr magneton / cell (Ry units)")
                 break
             else:
                 idxiter += 1
