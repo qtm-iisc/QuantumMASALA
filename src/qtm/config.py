@@ -200,7 +200,7 @@ class QTMConfig:
             self.gpu_enabled = False
 
 
-qtmconfig: QTMConfig = QTMConfig(gpu_enabled=False)
+qtmconfig: QTMConfig = QTMConfig(gpu_enabled=True)
 
 if qtmconfig.gpu_enabled:
     import cupy as cp

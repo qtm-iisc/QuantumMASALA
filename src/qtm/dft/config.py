@@ -112,14 +112,14 @@ class DFTConfig:
                 "DFTConfig.davidson_numwork", val, 'a positive integer'
             ))
 
-    _mixing_method: Literal['modbroyden'] = 'modbroyden'
+    _mixing_method: Literal['modbroyden','genbroyden'] = 'modbroyden'
     @property  # noqa : E301
     def mixing_method(self):
         return self._mixing_method
 
     @mixing_method.setter
-    def mixing_method(self, val: Literal['modbroyden']):
-        l_mixers = ['modbroyden', ]
+    def mixing_method(self, val: Literal['modbroyden','genbroyden']):
+        l_mixers = ['modbroyden','genbroyden']
         if val not in l_mixers:
             raise ValueError(value_not_in_list_msg(
                 'DFTConfig.mixing_method', val, l_mixers

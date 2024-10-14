@@ -395,10 +395,12 @@ def scf(dftcomm: DFTCommMod, crystal: Crystal, kpts: KList,
                 en.internal = en.total - en.smear
 
         # Defining charge mixing routine
-        # if dftconfig.mixing_method == 'modbroyden':
+        if dftconfig.mixing_method == 'modbroyden':
+            mixmod = mixing.ModBroyden(dftcomm, rho_start, mix_beta, mix_dim)
+        elif dftconfig.mixing_method == 'genbroyden':
+            mixmod = mixing.GenBroyden(dftcomm, rho_start, mix_beta, mix_dim)
         if symm_rho:
             rho_start = symm_mod.symmetrize(rho_start)
-        mixmod = mixing.ModBroyden(dftcomm, rho_start, mix_beta, mix_dim)
         comm.barrier()
 
         diago_thr = diago_thr_init

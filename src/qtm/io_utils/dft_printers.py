@@ -133,7 +133,7 @@ def print_scf_parameters(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_nonco
     print(f"mix_dim         = {mix_dim}")
     print(f"ret_vxc         = {ret_vxc}")
     print(f"dftconfig       = {dftconfig}")
-    print(f"iter_printer    = {iter_printer}")
+    print(f"iter_printer    = {iter_printer.__name__}")
     print(f"kpts            =")
     print("    kpt[0]  kpt[1]  kpt[2];  weight")
     for row in kpts:
