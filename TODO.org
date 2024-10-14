@@ -1,6 +1,0 @@
-* Overall goals
-** Implement the Core containers
-*** Fields
-*** Wavefun
-*** Symmetry Operations
-** Implement pote
