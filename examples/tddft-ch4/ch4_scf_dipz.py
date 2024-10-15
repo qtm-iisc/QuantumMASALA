@@ -7,6 +7,7 @@ from qtm.containers.wavefun import get_WavefunG
 from qtm.crystal import BasisAtoms, Crystal
 from qtm.dft import DFTCommMod, scf
 from qtm.gspace import GSpace
+from qtm.mpi.gspace import DistGSpace
 from qtm.io_utils.dft_printers import print_scf_status
 from qtm.kpts import KList
 from qtm.lattice import RealLattice
@@ -26,7 +27,7 @@ if qtmconfig.gpu_enabled:
 from mpi4py.MPI import COMM_WORLD
 
 comm_world = QTMComm(COMM_WORLD)
-dftcomm = DFTCommMod(comm_world, comm_world.size, 1)
+dftcomm = DFTCommMod(comm_world, 1, comm_world.size)
 
 # Lattice
 reallat = RealLattice.from_alat(alat=30.0, # Bohr
@@ -65,11 +66,13 @@ ecut_wfn = 25 * RYDBERG
 # NOTE: In future version, hard grid (charge/pot) and smooth-grid (wavefun)
 # can be set independently
 ecut_rho = 4 * ecut_wfn
-gspc_rho = GSpace(crystal.recilat, ecut_rho)
-gspc_wfn = gspc_rho
-
-print("gspc_rho.reallat_dv", gspc_rho.reallat_dv)
-
+grho_serial = GSpace(crystal.recilat, ecut_rho)
+# If G-space parallelization is not required, use the serial G-space object
+if dftcomm.n_pwgrp == dftcomm.image_comm.size:  
+    grho = grho_serial
+else:
+    grho = DistGSpace(comm_world, grho_serial)
+gwfn = grho
 
 
 is_spin, is_noncolin = False, False
@@ -79,7 +82,8 @@ conv_thr = 1E-10 * RYDBERG
 diago_thr_init = 1E-5 * RYDBERG
 
 
-out = scf(dftcomm, crystal, kpts, gspc_rho, gspc_wfn,
+
+out = scf(dftcomm, crystal, kpts, grho, gwfn,
         numbnd, is_spin, is_noncolin,
         occ_typ=occ,
         conv_thr=conv_thr, diago_thr_init=diago_thr_init,
@@ -111,7 +115,7 @@ for fname in ['rho.npy', 'wfn.npz']:
 gamma_efield_kick = 1e-4 # Electric field kick (in z-direction) in Hartree atomic units, 0.0018709241 Ry/e_Ry/Bohr = 0.01 Ha/e_Ha/Angstrom
 time_step = 0.1    # Time in Hartree atomic units 1 Hartree a.u. = 2.4188843265864(26)×10−17 s. 
                     # Reference calculation (ce-tddft) had 2.4 attosecond time step.
-numsteps = 10_002
+numsteps = 1_002
 
 qtmconfig.tddft_prop_method = 'etrs'
 qtmconfig.tddft_exp_method = 'taylor'

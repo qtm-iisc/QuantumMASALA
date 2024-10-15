@@ -98,23 +98,29 @@ def dipole_response(
         # rho is normalized to the number of electrons in the unit cell, and has units of 1 / a_0^3
         # So dip is in atomic units: a_0 * e
         # E_kick is in atomic units: Hartree / a_0 / e
-        dip = rho_r.integrate_unitcell(
-            np.expand_dims(rmesh_cart, axis=-4).reshape(3, 1, -1), axis=1
-        )
+        if hasattr(rho_r.gspc, "is_dist"):
+            dip = rho_r.allgather().integrate_unitcell(
+                np.expand_dims(rmesh_cart, axis=-4).reshape(3, 1, -1), axis=1
+            )
+        else:
+            dip = rho_r.integrate_unitcell(
+                np.expand_dims(rmesh_cart, axis=-4).reshape(3, 1, -1), axis=1
+            )
         dip_t[istep + 1] = dip
         # Units: dipole is in atomic units: a_0^4 * e
         if write_freq > 0 and istep % write_freq == 0:
             qtmlogger.info(f"Step {istep}: Saving partial dipole to 'dipz.npy'.")
             
-            if os.path.exists(fname) and os.path.isfile(fname):
-                os.remove(fname)
-            np.save(fname, dip_t[: istep + 1] / kick_strength)
+            if comm_world.rank==0:
+                if os.path.exists(fname) and os.path.isfile(fname):
+                    os.remove(fname)
+                np.save(fname, dip_t[: istep + 1] / kick_strength)
 
     # Store the initial dipole, i.e. the dipole before the kick
     tddft_rho_start = (
         wfn_gamma[0][0].k_weight * wfn_gamma[0][0].compute_rho(ret_raw=True).to_g()
     )
-    compute_dipole(-1, tddft_rho_start)
+    compute_dipole(-1, tddft_rho_start, write_freq=write_freq)
 
     # 2. Compute the phase change due to impulsive kick field
     #    (kick sttrength is in atomic units, so no conversion is needed)
@@ -125,10 +131,19 @@ def dipole_response(
     )
 
     # 3. Compute the transformed wavefunction, after the kick
-    evc_r = wfn_gamma[0][0].evc_gk.to_r()
-    evc_r *= efield_kick.reshape(-1)
-    gkwfn.r2g(evc_r._data, wfn_gamma[0][0].evc_gk._data)
-
+    # evc_r = wfn_gamma[0][0].evc_gk.to_r()
+    # evc_r *= efield_kick.reshape(-1)
+    # gkwfn.r2g(evc_r._data, wfn_gamma[0][0].evc_gk._data)
+    
+    if hasattr(wfn_gamma[0][0].evc_gk.gspc, "is_dist"):
+        evc_r = wfn_gamma[0][0].evc_gk.to_r().allgather()
+        evc_r *= efield_kick.reshape(-1)
+        gkwfn.r2g(gkwfn.scatter_r(evc_r._data), wfn_gamma[0][0].evc_gk._data)
+    else:
+        evc_r = wfn_gamma[0][0].evc_gk.to_r()
+        evc_r *= efield_kick.reshape(-1)
+        gkwfn.r2g(evc_r._data, wfn_gamma[0][0].evc_gk._data)
+        
     tddft_rho_start = (
         wfn_gamma[0][0].k_weight * wfn_gamma[0][0].compute_rho(ret_raw=True).to_g()
     )
