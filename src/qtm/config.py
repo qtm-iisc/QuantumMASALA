@@ -191,20 +191,26 @@ class QTMConfig:
 
     
     def __init__(self, gpu_enabled=True):
+        self.NDArray = np.ndarray
         self.set_gpu(gpu_enabled=gpu_enabled)
 
-    def set_gpu(self, gpu_enabled):
+    def set_gpu(self, gpu_enabled):        
+        global NDArray
         if self.check_cupy() and gpu_enabled:
             self.gpu_enabled = True
+            self.fft_backend = 'cupy'
+            NDArray = cp.ndarray
         else:
             self.gpu_enabled = False
+            self.fft_backend = self.fft_available_backends[0]
+            NDArray = np.ndarray
+            
+            
+NDArray = np.ndarray
 
-
-qtmconfig: QTMConfig = QTMConfig(gpu_enabled=True)
-
-if qtmconfig.gpu_enabled:
+if CUPY_INSTALLED:
     import cupy as cp
-    NDArray = cp.ndarray #Union[np.ndarray, cp.ndarray]
-    qtmconfig.fft_backend = 'cupy'
-else:
-    NDArray = np.ndarray
+    qtmconfig = QTMConfig(gpu_enabled=True)
+else:    
+    qtmconfig = QTMConfig(gpu_enabled=False)
+        

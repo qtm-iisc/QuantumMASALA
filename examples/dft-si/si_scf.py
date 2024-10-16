@@ -1,3 +1,7 @@
+from qtm import qtmconfig
+qtmconfig.set_gpu(False)
+print("GPU enabled:", qtmconfig.gpu_enabled)
+
 import numpy as np
 from qtm.constants import RYDBERG
 from qtm.lattice import RealLattice
@@ -10,7 +14,6 @@ from qtm.dft import DFTCommMod, scf
 
 from qtm.io_utils.dft_printers import print_eigenvalues, print_scf_status
 
-from qtm import qtmconfig
 from qtm.logger import qtmlogger
 
 # qtmconfig.fft_backend = "mkl_fft"
@@ -78,6 +81,6 @@ scf_converged, rho, l_wfn_kgrp, en = out
 
 if comm_world.rank == 0:
     print("SCF Routine has exited")
-    print_eigenvalues(l_wfn_kgrp)
+    # print_eigenvalues(l_wfn_kgrp)     # Uncomment to print eigenvalues
     print(qtmlogger)
     
