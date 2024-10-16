@@ -5,13 +5,14 @@ This implementation is purely for demonstration.
 
 from __future__ import annotations
 import numpy as np
-from qtm.config import NDArray
+from qtm.config import PRIMME_INSTALLED, NDArray
 __all__ = ['solve']
 from scipy.sparse.linalg import LinearOperator
 
 from qtm.containers import WavefunGType
 from qtm.dft import KSWfn, KSHam, DFTCommMod
 from qtm.logger import qtmlogger
+
 
 diago_method = 'david'
 
@@ -27,8 +28,10 @@ else:
 
 def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn,
           diago_thr: float, vloc_g0: list[complex], numwork: int, maxiter: int) -> tuple[KSWfn, int]:
-    
-    import primme
+    if PRIMME_INSTALLED:
+        import primme
+    else:
+        raise ImportError("Primme is not installed")
     assert isinstance(dftcomm, DFTCommMod)
     assert dftcomm.kgrp_intra.size == 1, \
         "band and PW distribution not possible with 'scipy' routines"
@@ -65,14 +68,10 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn,
 
         
         ham_diag = ksham.ke_gk + ksham.vnl_diag
-        # print("ham_diag shape, vnl.shape", ham_diag.data.shape, vloc_g0[0].shape, flush=True)
         ham_diag.data[..., :gkspc.size_g] += vloc_g0[0]
         
-        # @qtmlogger.time('primme_eigsh:apply_g_psi')
         def preconditioner(psi:NDArray, e_psi=None):
             nonlocal ham_diag
-            # print("psi type", type(psi), "psi.shape", psi.shape, flush=True)
-            # print("1. e_psi type", type(e_psi), flush=True)
             if e_psi is None:
                 e_psi = np.array(primme.get_eigsh_param('ShiftsForPreconditioner'))
 
@@ -80,19 +79,43 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn,
             x = scala * (ham_diag._data[:,None] - e_psi[None, :])
             denom = 0.5 * (1 + x + np.sqrt(1 + (x - 1) ** 2)) / scala
             psi /= denom * 2
-    
-        # FIXME: Fix the preconditioner
+            return psi
+
+        Prec_oper = LinearOperator(shape=(kswfn.gkspc.size_g, kswfn.gkspc.size_g),
+                dtype=np.complex128, matvec=preconditioner, rmatvec=preconditioner,
+                matmat=preconditioner, rmatmat=preconditioner)
+
+
+        # Alternative: TPA preconditioner
+
+        # def tpa_prec(psi:NDArray):
+        #     psi = psi.reshape(-1)
+        #     E_k = 0.5
+        #     x = (0.5 * ksham.gkspc.g_norm2) / E_k
+
+        #     f = 27 + 18 * x + 12 * (x**2) + 8 * (x**3)
+        #     prec = f / (f + 16 * (x**4))
+        #     return psi * prec
+
+        # def tpa_prec_mat(psi_mat:NDArray):
+        #     num_psi = psi_mat.shape[1]
+        #     E_k = 0.5 * np.ones(num_psi, dtype=float)
+        #     x = (0.5 * ksham.gkspc.g_norm2.reshape(-1, 1)) / E_k
+
+        #     f = 27 + 18 * x + 12 * (x**2) + 8 * (x**3)
+        #     prec = f / (f + 16 * (x**4))
+        #     return psi_mat * prec
+
         # Prec_oper = LinearOperator(shape=(kswfn.gkspc.size_g, kswfn.gkspc.size_g),
-        #                         dtype=np.complex128, matvec=preconditioner, rmatvec=preconditioner,
-        #                         matmat=preconditioner, rmatmat=preconditioner)
+        #                         dtype=np.complex128, matvec=tpa_prec, rmatvec=tpa_prec,
+        #                         matmat=tpa_prec_mat, rmatmat=tpa_prec_mat)
         
-        
-        # evl[:], evc_gk[:] = eigsh(ksham_lo, numbnd, which='SA')
+
         evl[:], evc_gk[:], stats = primme.eigsh(   A=ksham_linoper, 
                                             k=numbnd, 
                                             v0=kswfn.evc_gk._data.T,
                                             which='SA', method=diago_method, 
-                                            # OPinv=Prec_oper,
+                                            OPinv=Prec_oper,
                                             tol=diago_thr, aNorm=1, invBNorm=1,
                                             maxOuterIterations=maxiter,
                                             raise_for_unconverged=False, return_unconverged=True,

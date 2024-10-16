@@ -84,6 +84,8 @@ class DFTConfig:
         l_solvers = ['davidson', 'scipy']
         if PRIMME_INSTALLED:
             l_solvers.append('primme')
+        elif val == 'primme':
+            raise ImportError("Primme is not installed")
         if val not in l_solvers:
             raise ValueError(value_not_in_list_msg(
                 'DFTConfig.eigsolve_method', val, l_solvers
