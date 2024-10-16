@@ -73,14 +73,14 @@ class DFTConfig:
     symm_use_all_frac: bool = False
     spglib_symprec: float = 1E-5
 
-    _eigsolve_method: Literal['davidson', 'scipy'] = 'davidson'
+    _eigsolve_method: Literal['davidson', 'scipy', 'primme'] = 'davidson'
     @property  # noqa : E301
     def eigsolve_method(self):
         return self._eigsolve_method
 
     @eigsolve_method.setter
-    def eigsolve_method(self, val: Literal['davidson', 'scipy']):
-        l_solvers = ['davidson', 'scipy']
+    def eigsolve_method(self, val: Literal['davidson', 'scipy', 'primme']):
+        l_solvers = ['davidson', 'scipy', 'primme']
         if val not in l_solvers:
             raise ValueError(value_not_in_list_msg(
                 'DFTConfig.eigsolve_method', val, l_solvers
