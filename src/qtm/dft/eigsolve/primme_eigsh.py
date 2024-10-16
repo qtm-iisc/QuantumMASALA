@@ -8,12 +8,10 @@ import numpy as np
 from qtm.config import NDArray
 __all__ = ['solve']
 from scipy.sparse.linalg import LinearOperator
-from primme import eigsh
 
 from qtm.containers import WavefunGType
 from qtm.dft import KSWfn, KSHam, DFTCommMod
 from qtm.logger import qtmlogger
-import primme
 
 diago_method = 'david'
 
@@ -29,6 +27,8 @@ else:
 
 def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn,
           diago_thr: float, vloc_g0: list[complex], numwork: int, maxiter: int) -> tuple[KSWfn, int]:
+    
+    import primme
     assert isinstance(dftcomm, DFTCommMod)
     assert dftcomm.kgrp_intra.size == 1, \
         "band and PW distribution not possible with 'scipy' routines"
@@ -88,7 +88,7 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn,
         
         
         # evl[:], evc_gk[:] = eigsh(ksham_lo, numbnd, which='SA')
-        evl[:], evc_gk[:], stats = eigsh(   A=ksham_linoper, 
+        evl[:], evc_gk[:], stats = primme.eigsh(   A=ksham_linoper, 
                                             k=numbnd, 
                                             v0=kswfn.evc_gk._data.T,
                                             which='SA', method=diago_method, 

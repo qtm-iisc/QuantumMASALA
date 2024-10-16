@@ -7,6 +7,7 @@ __all__ = ['DFTCommMod', 'DFTConfig']
 from qtm.mpi.comm import QTMComm, split_comm_pwgrp
 from qtm.logger import qtmlogger
 from qtm.msg_format import *
+from qtm.config import PRIMME_INSTALLED
 
 
 class DFTCommMod:
@@ -80,7 +81,9 @@ class DFTConfig:
 
     @eigsolve_method.setter
     def eigsolve_method(self, val: Literal['davidson', 'scipy', 'primme']):
-        l_solvers = ['davidson', 'scipy', 'primme']
+        l_solvers = ['davidson', 'scipy']
+        if PRIMME_INSTALLED:
+            l_solvers.append('primme')
         if val not in l_solvers:
             raise ValueError(value_not_in_list_msg(
                 'DFTConfig.eigsolve_method', val, l_solvers

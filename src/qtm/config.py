@@ -17,6 +17,7 @@ MPI4PY_INSTALLED = find_spec('mpi4py') is not None
 MKL_FFT_INSTALLED = find_spec('mkl_fft') is not None
 PYFFTW_INSTALLED = find_spec('pyfftw') is not None
 CUPY_INSTALLED = find_spec('cupy') is not None
+PRIMME_INSTALLED = find_spec('primme') is not None
 
 FFT_AVAILABLE_BACKENDS = ['scipy', 'numpy']
 if PYFFTW_INSTALLED:
@@ -205,12 +206,9 @@ class QTMConfig:
             self.fft_backend = self.fft_available_backends[0]
             NDArray = np.ndarray
             
-            
-NDArray = np.ndarray
+    
+NDArray = np.ndarray        
+qtmconfig = QTMConfig(gpu_enabled=False)
 
-if CUPY_INSTALLED:
-    import cupy as cp
-    qtmconfig = QTMConfig(gpu_enabled=True)
-else:    
-    qtmconfig = QTMConfig(gpu_enabled=False)
-        
+# if CUPY_INSTALLED:
+#     import cupy as cp

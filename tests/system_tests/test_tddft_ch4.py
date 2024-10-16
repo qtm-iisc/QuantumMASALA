@@ -1,3 +1,7 @@
+from qtm import qtmconfig
+qtmconfig.set_gpu(False)
+print("GPU enabled:", qtmconfig.gpu_enabled)
+
 import os
 
 import numpy as np
