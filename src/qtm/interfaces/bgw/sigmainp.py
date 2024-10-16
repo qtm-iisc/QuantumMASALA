@@ -3,7 +3,7 @@ from pprint import pformat
 from dataclasses import dataclass
 
 
-from qtm.gw.io_bgw.inp import read_sigma_inp
+from qtm.interfaces.bgw.inp import read_sigma_inp
 
 @dataclass
 class Sigmainp():

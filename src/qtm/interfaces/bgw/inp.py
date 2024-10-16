@@ -10,7 +10,7 @@ Core functions:
 import json
 import numpy as np
 from typing import Dict, NamedTuple
-from qtm.gw.io_h5.h5_to_np_dict import read_input_h5
+from qtm.interfaces.bgw.h5_to_np_dict import read_input_h5
 from collections import namedtuple
 from copy import deepcopy
 

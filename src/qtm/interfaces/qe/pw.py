@@ -4,7 +4,7 @@ from qtm.mpi.gspace import DistGSpace
 if __name__=="__main__":
 
     from pprint import pprint
-    from qtm.qe.inp.read_inp import PWscfIn
+    from qtm.interfaces.qe.read_inp import PWscfIn
     import sys
 
     import numpy as np
@@ -30,7 +30,7 @@ if __name__=="__main__":
     
     if len(sys.argv)>1:
         filename = sys.argv[1]
-
+    
     # FIXME: only he root process should fetch the arguments and broadcast them to other processes. 
 
     def fetch_arg(argstr):
@@ -70,7 +70,7 @@ if __name__=="__main__":
     # if comm_world.rank==0:
     #     pprint(pwscfin)
 
-    from qtm.qe.inp.parse_inp import parse_inp
+    from qtm.interfaces.qe.parse_inp import parse_inp
     pwin, crystal, kpts = parse_inp(pwscfin)
     
         

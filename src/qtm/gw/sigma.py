@@ -21,8 +21,8 @@ from qtm.fft.backend.utils import get_fft_driver
 from qtm.gspace import GkSpace, GSpace
 from qtm.gspace.base import cryst2idxgrid
 from qtm.gw.core import QPoints, reorder_2d_matrix_sorted_gvecs, sort_cryst_like_BGW
-from qtm.gw.io_bgw.wfn2py import WfnData
-from qtm.gw.io_h5.h5_utils import *
+from qtm.interfaces.bgw.wfn2py import WfnData
+from qtm.interfaces.bgw.h5_utils import *
 from qtm.gw.vcoul import Vcoul
 from qtm.klist import KList
 from qtm.mpi.comm import MPI4PY_INSTALLED
@@ -2003,8 +2003,8 @@ if __name__ == "__main__":
     # Load WFN data
 
     # from qtm.mpi.comm import qtmconfig.mpi4py_installed, COMM_WORLD
-    from qtm.gw.io_bgw import inp
-    from qtm.gw.io_bgw.epsmat_read_write import read_mats
+    from qtm.interfaces.bgw import inp
+    from qtm.interfaces.bgw.epsmat_read_write import read_mats
 
     if MPI4PY_INSTALLED and COMM_WORLD.Get_size() > 1:
         in_parallel = True
@@ -2036,7 +2036,7 @@ if __name__ == "__main__":
     epsinp = inp.read_epsilon_inp(filename=dirname + "epsilon.inp")
 
     # wfn2py
-    from qtm.gw.io_bgw.wfn2py import wfn2py
+    from qtm.interfaces.bgw.wfn2py import wfn2py
 
     if print_condition:
         print(f"Reading WFN.h5 from directory: {dirname}", flush=True)

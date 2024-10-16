@@ -16,7 +16,7 @@ dirname = "../../../tests/bgw/silicon/cohsex/"
 # The attributes have been supplied with docstrings from BerkeleyGW's input specification, so they will be accessible directly in most IDEs.
 
 # %%
-from qtm.gw.io_bgw.epsinp import Epsinp
+from qtm.interfaces.bgw.epsinp import Epsinp
 
 # Constructing input manually
 # epsinp = Epsinp(epsilon_cutoff=1.2,
@@ -31,7 +31,7 @@ epsinp = Epsinp.from_epsilon_inp(filename=dirname+'epsilon.inp')
 # print(epsinp)
 
 # There is an analogous system to read SigmaInp
-from qtm.gw.io_bgw.sigmainp import Sigmainp
+from qtm.interfaces.bgw.sigmainp import Sigmainp
 sigmainp = Sigmainp.from_sigma_inp(filename=dirname+'sigma.inp')
 # print(sigmainp)
 
@@ -46,8 +46,8 @@ sigmainp = Sigmainp.from_sigma_inp(filename=dirname+'sigma.inp')
 
 # %%
 # wfn2py
-from qtm.gw.io_bgw import inp
-from qtm.gw.io_bgw.wfn2py import wfn2py
+from qtm.interfaces.bgw import inp
+from qtm.interfaces.bgw.wfn2py import wfn2py
 
 wfndata = wfn2py(dirname+'WFN.h5')#, wfn_ecutrho_minus_ecutwfn=epsinp.epsilon_cutoff)
 # print(wfndata.__doc__)
@@ -231,7 +231,7 @@ sigma.print_condition=True
 cohsex_result = sigma.calculate_static_cohsex()
 
 # %%
-from qtm.gw.io_bgw.sigma_hp_reader import read_sigma_hp
+from qtm.interfaces.bgw.sigma_hp_reader import read_sigma_hp
 ref_dict = read_sigma_hp(dirname+"sigma_hp.log")
 for ik in cohsex_result:
     print("k-point index:",ik)
@@ -254,7 +254,7 @@ sigma.pprint_sigma_mat(sigma_ch_gpp)
 gpp_result = sigma.calculate_gpp()
 
 # %%
-from qtm.gw.io_bgw.sigma_hp_reader import read_sigma_hp
+from qtm.interfaces.bgw.sigma_hp_reader import read_sigma_hp
 
 ref_dict = read_sigma_hp(dirname+"../gpp/sigma_hp.log")
 for ik in gpp_result:

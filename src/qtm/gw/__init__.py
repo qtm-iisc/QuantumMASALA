@@ -1,3 +1,3 @@
 # import core
-# import io_bgw
+# import interfaces.bgw
 # import h5_io

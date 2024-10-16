@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pprint import pformat
 from typing import List
 
-from qtm.gw.io_bgw.inp import read_epsilon_inp
+from qtm.interfaces.bgw.inp import read_epsilon_inp
 
 
 @dataclass

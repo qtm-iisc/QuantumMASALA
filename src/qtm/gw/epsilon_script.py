@@ -5,9 +5,9 @@ import numpy as np
 from qtm.config import QTMConfig
 from qtm.gw.core import QPoints, sort_cryst_like_BGW
 from qtm.gw.epsilon import Epsilon
-from qtm.gw.io_bgw.wfn2py import wfn2py
+from qtm.interfaces.bgw.wfn2py import wfn2py
 import sys
-from qtm.gw.io_bgw.epsinp import Epsinp
+from qtm.interfaces.bgw.epsinp import Epsinp
 from qtm.logger import COMM_WORLD
 
 sys.path.append("..")

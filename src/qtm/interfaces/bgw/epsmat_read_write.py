@@ -88,7 +88,7 @@ template_dict = {
 import h5py
 import numpy as np
 
-from qtm.gw.io_h5.h5_utils import (cplx_to_real, create_empty_h5,
+from qtm.interfaces.bgw.h5_utils import (cplx_to_real, create_empty_h5,
                                               real_to_cplx, write_recursive_h5)
 
 TOLERANCE = 1e-5

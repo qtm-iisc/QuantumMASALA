@@ -12,9 +12,9 @@ from qtm.gspace.gkspc import GkSpace
 from qtm.gspace.gspc import minimal_grid_shape, GSpace
 from qtm.dft.kswfn import KSWfn
 from qtm.gw.core import QPoints
-from qtm.gw.io_bgw.epsinp import Epsinp
-from qtm.gw.io_bgw.epsmat_read_write import read_mats, write_mats
-from qtm.gw.io_bgw.wfn2py import WfnData
+from qtm.interfaces.bgw.epsinp import Epsinp
+from qtm.interfaces.bgw.epsmat_read_write import read_mats, write_mats
+from qtm.interfaces.bgw.wfn2py import WfnData
 from qtm.gw.vcoul import Vcoul
 from qtm.gspace.base import cryst2idxgrid
 

@@ -152,7 +152,7 @@ print("Shifted NSCF Routine has exited")
 # The attributes have been supplied with docstrings from BerkeleyGW's input specification, so they will be accessible directly in most IDEs.
 
 
-from qtm.gw.io_bgw.epsinp import Epsinp
+from qtm.interfaces.bgw.epsinp import Epsinp
 
 # Constructing input manually
 # epsinp = Epsinp(epsilon_cutoff=1.2,
@@ -167,7 +167,7 @@ epsinp = Epsinp.from_epsilon_inp(filename=dirname+'epsilon.inp')
 # print(epsinp)
 
 # There is an analogous system to read SigmaInp
-from qtm.gw.io_bgw.sigmainp import Sigmainp
+from qtm.interfaces.bgw.sigmainp import Sigmainp
 sigmainp = Sigmainp.from_sigma_inp(filename=dirname+'sigma.inp')
 # print(sigmainp)
 
