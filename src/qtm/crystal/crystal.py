@@ -68,11 +68,11 @@ class Crystal:
                              f"got {len(repeats)}")
 
         xi = [np.arange(n, dtype='i8') for n in repeats]
-        grid = np.array(np.meshgrid(*xi, indexing='ij')).reshape((3, -1, 1))
+        grid = np.array(np.meshgrid(*xi, indexing='ij'), like=self.reallat.latvec).reshape((3, -1, 1))
 
         reallat = self.reallat
         alat_sup = repeats[0] * reallat.alat
-        latvec_sup = repeats * reallat.latvec
+        latvec_sup = np.array(repeats, like=reallat.latvec) * reallat.latvec
         reallat_sup = RealLattice(alat_sup, latvec_sup)
         l_atoms_sup = []
         for sp in self.l_atoms:
@@ -93,6 +93,15 @@ class Crystal:
             
         res += "\n    \t])"
         return res
+    
+    def __str__(self) -> str:
+        reallat_str = str(self.reallat)
+        atoms_str = ""
+        for i, sp in enumerate(self.l_atoms, start=1):
+            atoms_str += f"\n\nAtom Species #{i}\n{str(sp)}"
+
+        return f"{reallat_str}\n{atoms_str}"
+
 
 
 class CrystalSymm:

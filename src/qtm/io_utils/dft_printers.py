@@ -71,7 +71,7 @@ def print_scf_parameters_old(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_n
     print("SCF Parameters:")
     print()
     print(f"- dftcomm:           {dftcomm}")
-    print(f"- crystal:           {crystal}")
+    print(f"- crystal:           {crystal.__repr__()}")
     print(f"- grho:")
     print(f"    cutoff:          {grho.ecut} Ha")
     print(f"    grid_size:       {grho.grid_shape}")
@@ -111,7 +111,7 @@ def print_scf_parameters(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_nonco
     print("SCF Parameters:")
     print()
     print(f"dftcomm         = {dftcomm}")
-    print(f"crystal         = {crystal}")
+    print(f"crystal         = {crystal.__repr__()}")
     print(f"grho            = GSpace(crystal.recilat, ecut_rho={grho.ecut}, grid_shape={grho.grid_shape})")
     print(f"grho.num_g      = {grho.size_g}")
     print(f"gwfn            = GSpace(crystal.recilat, ecut_wfn={gwfn.ecut}, grid_shape={gwfn.grid_shape})")
@@ -123,7 +123,7 @@ def print_scf_parameters(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_nonco
     print(f"rho_start       = {rho_start}")
     print(f"wfn_init        = {wfn_init}")
     print(f"libxc_func      = {libxc_func}")
-    print(f"occ_typ         = {occ_typ}")
+    print(f"occ_typ         = {occ_typ}")   
     print(f"smear_typ       = {smear_typ}")
     print(f"e_temp          = {e_temp} # Ha")
     print(f"conv_thr        = {conv_thr} # Ha")
@@ -139,3 +139,6 @@ def print_scf_parameters(dftcomm, crystal, grho, gwfn, numbnd, is_spin, is_nonco
     for row in kpts:
         print(f"    {row[0][0]:7.4f} {row[0][1]:7.4f} {row[0][2]:7.4f}; {row[1]:8.6f}")
     print("\n=========================================")
+
+def silent_printer(*args, **kwargs):
+    pass

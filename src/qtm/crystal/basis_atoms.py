@@ -57,12 +57,7 @@ class PseudoPotFile(ABC):
             for chunk in iter(lambda: f.read(4096), b""):
                 hash_md5.update(chunk)
         self.md5_checksum = hash_md5.hexdigest()
-    
-    def __str__(self, indent="") -> str:
-        return f"PseudoPotFile(\n{indent}  dirname='{self.dirname}', \n{indent}  valence={self.valence}, \n{indent}  md5_checksum='{self.md5_checksum}')"
 
-    def __repr__(self, indent="") -> str:
-        return self.__str__()
 
 class BasisAtoms:
     """Represents group of atoms of the same species in the unit cell of a
@@ -219,5 +214,18 @@ class BasisAtoms:
         r_cryst_str = ""
         for i in range(self.numatoms):
             r_cryst_str += f"\n{indent}    {np.array2string(self.r_cryst[:, i], separator=', ')},"
-        res = f"{indent}BasisAtoms(\n{indent}  label='{self.label}', \n{indent}  ppdata={self.ppdata.__str__(indent+'  ')}, \n{indent}  mass={self.mass}, \n{indent}  r_cryst=({r_cryst_str}))"
+        res = f"{indent}BasisAtoms(\n{indent}  label='{self.label}', \n{indent}  ppdata.filename={self.ppdata.filename}, \n{indent}  ppdata.md5_checksum={self.ppdata.md5_checksum}, \n{indent}  mass={self.mass}, \n{indent}  r_cryst={r_cryst_str}\n{indent}  )"
         return res
+    
+    def __str__(self) -> str:
+        label_str = f"    Label   : {self.label}"
+        mass_str = f"    Mass    : {self.mass:.2f}"
+        valence_str = f"    Valence : {self.ppdata.valence:.2f}"
+        pseudopot_str = f"    Pseudpot: {self.ppdata.filename}\n              MD5: {self.ppdata.md5_checksum}"
+        
+        coords_str = "    Coordinates (in units of alat)"
+        for i in range(self.numatoms):
+            coords = self.r_cryst[:, i]
+            coords_str += f"\n          {i + 1} - ({coords[0]:8.5f}, {coords[1]:8.5f}, {coords[2]:8.5f})"
+        
+        return f"{label_str}\n{mass_str}\n{valence_str}\n{pseudopot_str}\n{coords_str}"
