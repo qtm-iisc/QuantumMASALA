@@ -25,7 +25,11 @@ DEBUGGING = True
 if qtmconfig.gpu_enabled:
     qtmconfig.fft_backend = "cupy"
 
-from mpi4py.MPI import COMM_WORLD
+from qtm.config import MPI4PY_INSTALLED
+if MPI4PY_INSTALLED:
+    from mpi4py.MPI import COMM_WORLD
+else:
+    COMM_WORLD = None
 
 comm_world = QTMComm(COMM_WORLD)
 dftcomm = DFTCommMod(comm_world, 1, comm_world.size)

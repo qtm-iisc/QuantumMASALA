@@ -39,8 +39,12 @@ from qtm.gw.vcoul import Vcoul
 
 Vcoul.N_SAMPLES_COARSE = 1e3
 Vcoul.N_SAMPLES = 1e4
+from qtm.config import MPI4PY_INSTALLED
+if MPI4PY_INSTALLED:
+    from mpi4py.MPI import COMM_WORLD
+else:
+    COMM_WORLD = None
 
-from mpi4py.MPI import COMM_WORLD
 comm_world = QTMComm(COMM_WORLD)
 dftcomm = DFTCommMod(comm_world)
 

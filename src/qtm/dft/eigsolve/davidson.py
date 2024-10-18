@@ -2,6 +2,7 @@
 
 Based on the implementation in QuantumESPRESSO.
 """
+
 from __future__ import annotations
 
 __all__ = ["solve"]

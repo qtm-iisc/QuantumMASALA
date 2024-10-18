@@ -1,25 +1,28 @@
 import os
 import sys
-import pytest
 
 import numpy as np
-from qtm.constants import RYDBERG
-from qtm.lattice import RealLattice
-from qtm.crystal import BasisAtoms, Crystal
-from qtm.pseudo import UPFv2Data
-from qtm.kpts import gen_monkhorst_pack_grid
-from qtm.gspace import GSpace
-from qtm.mpi import QTMComm
-from qtm.dft import DFTCommMod, scf, EnergyData
-
-from qtm.io_utils.dft_printers import print_scf_status
+import pytest
 
 from qtm import qtmconfig
+from qtm.config import MPI4PY_INSTALLED
+from qtm.constants import RYDBERG
+from qtm.crystal import BasisAtoms, Crystal
+from qtm.dft import DFTCommMod, EnergyData, scf
+from qtm.gspace import GSpace
+from qtm.io_utils.dft_printers import print_scf_status
+from qtm.kpts import gen_monkhorst_pack_grid
+from qtm.lattice import RealLattice
 from qtm.logger import qtmlogger
+from qtm.mpi import QTMComm
+from qtm.pseudo import UPFv2Data
 
 # qtmconfig.fft_backend = "mkl_fft"
 
-from mpi4py.MPI import COMM_WORLD
+if MPI4PY_INSTALLED:
+    from mpi4py.MPI import COMM_WORLD
+else:
+    COMM_WORLD = None
 
 comm_world = QTMComm(COMM_WORLD)
 
@@ -33,7 +36,9 @@ reallat = RealLattice.from_alat(
 )
 
 # Atom Basis
-si_oncv = UPFv2Data.from_file(os.path.join(os.path.dirname(__file__),"Si_ONCV_PBE-1.2.upf"))
+si_oncv = UPFv2Data.from_file(
+    os.path.join(os.path.dirname(__file__), "Si_ONCV_PBE-1.2.upf")
+)
 si_atoms = BasisAtoms(
     "si",
     si_oncv,
@@ -47,7 +52,7 @@ crystal = Crystal(reallat, [si_atoms])  # Represents the crystal
 
 # Generating k-points from a Monkhorst Pack grid (reduced to the crystal's IBZ)
 mpgrid_shape = (4, 3, 1)
-mpgrid_shift = (False,True, False)
+mpgrid_shift = (False, True, False)
 kpts = gen_monkhorst_pack_grid(crystal, mpgrid_shape, mpgrid_shift)
 
 # -----Setting up G-Space of calculation-----
@@ -77,13 +82,25 @@ out = scf(
     iter_printer=print_scf_status,
 )
 
-scf_converged, rho, l_wfn_kgrp, en = out    
+scf_converged, rho, l_wfn_kgrp, en = out
 
-    
+
 def test_energy():
     global en
-    ref_en = EnergyData(total=-7.640125014954195, hwf=-7.640125014954195, one_el=2.6943002677360086, ewald=-8.449879284940081, hartree=0.5345757262790113, xc=-2.419121724029133, fermi=None, smear=None, internal=None, HO_level=0.2258873352546717, LU_level=None)
-    print(en.hartree-ref_en.hartree, flush=True)
+    ref_en = EnergyData(
+        total=-7.640125014954195,
+        hwf=-7.640125014954195,
+        one_el=2.6943002677360086,
+        ewald=-8.449879284940081,
+        hartree=0.5345757262790113,
+        xc=-2.419121724029133,
+        fermi=None,
+        smear=None,
+        internal=None,
+        HO_level=0.2258873352546717,
+        LU_level=None,
+    )
+    print(en.hartree - ref_en.hartree, flush=True)
     assert np.isclose(en.total, ref_en.total, atol=1e-5)
     assert np.isclose(en.hwf, ref_en.hwf, atol=1e-5)
     assert np.isclose(en.one_el, ref_en.one_el, atol=5e-5)
@@ -92,50 +109,82 @@ def test_energy():
     assert np.isclose(en.xc, ref_en.xc, atol=5e-5)
     assert np.isclose(en.HO_level, ref_en.HO_level, atol=5e-5)
 
-    
+
 def test_eigenvalues():
     global l_wfn_kgrp
-    ref_eigenvalues = np.array([[-0.17022504,  0.16252761,  0.22588733,  0.22588734],
-                                [-0.15295112,  0.14666559,  0.18508893,  0.19158568],
-                                [-0.08615121,  0.01177918,  0.14573473,  0.17641629],
-                                [-0.12734933,  0.07916298,  0.13864487,  0.20814514],
-                                [-0.09497278, -0.00494601,  0.19909315,  0.19909315],
-                                [-0.07740766,  0.02630399,  0.11573031,  0.16016657],
-                                [-0.02246724, -0.02246723,  0.13688391,  0.13688391]],
-                               like=l_wfn_kgrp[0][0].evl)
-    
-    eigenvalues = np.array([wfn[0].evl for wfn in l_wfn_kgrp], like=l_wfn_kgrp[0][0].evl)
+    ref_eigenvalues = np.array(
+        [
+            [-0.17022504, 0.16252761, 0.22588733, 0.22588734],
+            [-0.15295112, 0.14666559, 0.18508893, 0.19158568],
+            [-0.08615121, 0.01177918, 0.14573473, 0.17641629],
+            [-0.12734933, 0.07916298, 0.13864487, 0.20814514],
+            [-0.09497278, -0.00494601, 0.19909315, 0.19909315],
+            [-0.07740766, 0.02630399, 0.11573031, 0.16016657],
+            [-0.02246724, -0.02246723, 0.13688391, 0.13688391],
+        ],
+        like=l_wfn_kgrp[0][0].evl,
+    )
+
+    eigenvalues = np.array(
+        [wfn[0].evl for wfn in l_wfn_kgrp], like=l_wfn_kgrp[0][0].evl
+    )
     assert np.allclose(eigenvalues, ref_eigenvalues, atol=1e-4)
-    
+
 
 def test_density():
     global rho
     basis_size = 411
-    cryst_40 = np.array([[ 0,  0,  1,  3, -1,  4, -2,  0, -1,  3, -3],
-        [ 0,  0,  1,  2,  2,  3, -5, -3, -2, -1, -1],
-        [ 0, -3,  2,  0, -2,  4, -2, -4,  1,  0, -2]], like=rho.gspc.g_cryst)
-    norm2_40 = np.array([ 0.        , 10.24526408,  3.0356338 , 10.24526408, 13.28089789,
-        16.31653169, 19.35216549, 19.35216549,  7.58908451, 13.66035211,
-            7.58908451], like=rho.gspc.g_norm2)
-    data_40 = np.array([[ 5.21066558e+001+3.04453322e-050j,
-            1.44181634e-001-3.33137527e-019j,
-            1.42408416e+000+1.74072741e-016j,
-            1.37952406e-001+1.23412818e-019j,
-            1.98880687e-003+4.71562066e-019j,
-            7.59122737e-003+1.94214448e-018j,
-            -7.80327799e-006-1.51460401e-018j,
-            2.68389559e-004-1.10400848e-018j,
-            -3.78236396e-100+3.78236396e-100j,
-            -1.55613810e-002-1.95310687e-018j,
-            3.78236396e-100-3.78236396e-100j]], like=rho.data)
-    data_g0 = np.array([52.10665581+3.04453322e-50j], like=rho.data_g0)
-    
+    cryst_40 = np.array(
+        [
+            [0, 0, 1, 3, -1, 4, -2, 0, -1, 3, -3],
+            [0, 0, 1, 2, 2, 3, -5, -3, -2, -1, -1],
+            [0, -3, 2, 0, -2, 4, -2, -4, 1, 0, -2],
+        ],
+        like=rho.gspc.g_cryst,
+    )
+    norm2_40 = np.array(
+        [
+            0.0,
+            10.24526408,
+            3.0356338,
+            10.24526408,
+            13.28089789,
+            16.31653169,
+            19.35216549,
+            19.35216549,
+            7.58908451,
+            13.66035211,
+            7.58908451,
+        ],
+        like=rho.gspc.g_norm2,
+    )
+    data_40 = np.array(
+        [
+            [
+                5.21066558e001 + 3.04453322e-050j,
+                1.44181634e-001 - 3.33137527e-019j,
+                1.42408416e000 + 1.74072741e-016j,
+                1.37952406e-001 + 1.23412818e-019j,
+                1.98880687e-003 + 4.71562066e-019j,
+                7.59122737e-003 + 1.94214448e-018j,
+                -7.80327799e-006 - 1.51460401e-018j,
+                2.68389559e-004 - 1.10400848e-018j,
+                -3.78236396e-100 + 3.78236396e-100j,
+                -1.55613810e-002 - 1.95310687e-018j,
+                3.78236396e-100 - 3.78236396e-100j,
+            ]
+        ],
+        like=rho.data,
+    )
+    data_g0 = np.array([52.10665581 + 3.04453322e-50j], like=rho.data_g0)
+
     assert rho.basis_size == basis_size
-    assert np.allclose(rho.gspc.g_cryst[:,::40], cryst_40)
+    assert np.allclose(rho.gspc.g_cryst[:, ::40], cryst_40)
     assert np.allclose(rho.gspc.g_norm2[::40], norm2_40, atol=1e-6)
-    assert np.allclose(rho.data[...,::40], data_40, atol=1e-4)
+    assert np.allclose(rho.data[..., ::40], data_40, atol=1e-4)
     assert np.allclose(rho.data_g0, data_g0, atol=1e-4)
-    
+
+
 test_energy()
 test_eigenvalues()
 test_density()

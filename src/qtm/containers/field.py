@@ -19,6 +19,7 @@ Note that `get_FieldG` and `get_FieldR` are cached functions, so the same
 `BufferType` class is returned for a given `GSpace` instance, allowing simpler
 checking in array operations.
 """
+
 from __future__ import annotations
 from typing import TYPE_CHECKING
 

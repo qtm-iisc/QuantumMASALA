@@ -315,9 +315,7 @@ class NonlocGenerator:
         for iat, pos_cryst in enumerate(self.species.r_cryst.T):
             phase = np.exp(-TPIJ * (pos_cryst @ gk_cryst))
             l_vkb_iat = l_vkb_full[iat * self.numvkb : (iat + 1) * self.numvkb]
-            l_vkb_iat.data[:] = (
-                phase * l_vkb_atom * (-(1j**self.vkb_l)).reshape(-1, 1)
-            )
+            l_vkb_iat.data[:] = phase * l_vkb_atom * (-(1j**self.vkb_l)).reshape(-1, 1)
             vkb_diag += np.sum(l_vkb_iat * (dij_atom @ l_vkb_iat.conj()), axis=0)
 
         if qtmconfig.gpu_enabled:

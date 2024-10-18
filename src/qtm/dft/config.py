@@ -1,14 +1,15 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from typing import Literal
 __all__ = ["DFTCommMod", "DFTConfig"]
 
-from qtm.mpi.comm import QTMComm, split_comm_pwgrp
+from qtm.config import MPI4PY_INSTALLED, PRIMME_INSTALLED
 from qtm.logger import qtmlogger
+from qtm.mpi.comm import QTMComm, split_comm_pwgrp
 from qtm.msg_format import *
-from qtm.config import PRIMME_INSTALLED
 
 
 class DFTCommMod:
@@ -33,39 +34,54 @@ class DFTCommMod:
 
         self.image_comm = image_comm
 
-        pwgrp_intra, pwgrp_inter = split_comm_pwgrp(self.image_comm, pwgrp_size)
-        self.n_pwgrp = pwgrp_inter.size
-        self.pwgrp_intra = pwgrp_intra
-        """Intra-pwgrp communicator, with size = pwgrp_size."""
-        self.pwgrp_inter_image = pwgrp_inter
-        """Inter-pwgrp communicator, with size = n_procs // pwgrp_size."""
+        if MPI4PY_INSTALLED:
+            pwgrp_intra, pwgrp_inter = split_comm_pwgrp(self.image_comm, pwgrp_size)
+            self.n_pwgrp = pwgrp_inter.size
+            self.pwgrp_intra = pwgrp_intra
+            """Intra-pwgrp communicator, with size = pwgrp_size."""
+            self.pwgrp_inter_image = pwgrp_inter
+            """Inter-pwgrp communicator, with size = n_procs // pwgrp_size."""
 
-        if n_kgrp is None:
-            n_kgrp = self.n_pwgrp
-        elif self.n_pwgrp % n_kgrp != 0:
-            raise ValueError(
-                "'n_kgrp' must evenly divide input 'comm''s"
-                f"{self.n_pwgrp} 'pwgrp' subgroups, but with "
-                f"pwgrp_size = {pwgrp_size} and n_kgrp = {n_kgrp}, "
-                f"it is not possible."
+            if n_kgrp is None:
+                n_kgrp = self.n_pwgrp
+            elif self.n_pwgrp % n_kgrp != 0:
+                raise ValueError(
+                    "'n_kgrp' must evenly divide input 'comm''s"
+                    f"{self.n_pwgrp} 'pwgrp' subgroups, but with "
+                    f"pwgrp_size = {pwgrp_size} and n_kgrp = {n_kgrp}, "
+                    f"it is not possible."
+                )
+            self.n_kgrp = n_kgrp
+            self.n_bgrp = self.n_pwgrp // self.n_kgrp
+
+            kgrp_size = self.n_bgrp * pwgrp_size
+            self.i_kgrp = self.image_comm.rank // kgrp_size
+            key = self.image_comm.rank % kgrp_size
+            self.kgrp_intra = self.image_comm.Split(self.i_kgrp, key)
+            self.kroot_intra = self.image_comm.Incl(
+                tuple(ikgrp * kgrp_size for ikgrp in range(self.n_kgrp))
             )
-        self.n_kgrp = n_kgrp
-        self.n_bgrp = self.n_pwgrp // self.n_kgrp
 
-        kgrp_size = self.n_bgrp * pwgrp_size
-        self.i_kgrp = self.image_comm.rank // kgrp_size
-        key = self.image_comm.rank % kgrp_size
-        self.kgrp_intra = self.image_comm.Split(self.i_kgrp, key)
-        self.kroot_intra = self.image_comm.Incl(
-            tuple(ikgrp * kgrp_size for ikgrp in range(self.n_kgrp))
-        )
-
-        self.i_bgrp = self.pwgrp_inter_image.rank % self.n_bgrp
-        """Index of the band-group (bgrp) within it's k-group."""
-        self.pwgrp_inter_kgrp = self.pwgrp_inter_image.Split(self.i_kgrp, self.i_bgrp)
-        self.pwgrp_inter_kroot = self.pwgrp_inter_image.Incl(
-            tuple(ikgrp * self.n_bgrp for ikgrp in range(self.n_kgrp))
-        )
+            self.i_bgrp = self.pwgrp_inter_image.rank % self.n_bgrp
+            """Index of the band-group (bgrp) within it's k-group."""
+            self.pwgrp_inter_kgrp = self.pwgrp_inter_image.Split(
+                self.i_kgrp, self.i_bgrp
+            )
+            self.pwgrp_inter_kroot = self.pwgrp_inter_image.Incl(
+                tuple(ikgrp * self.n_bgrp for ikgrp in range(self.n_kgrp))
+            )
+        else:
+            self.n_pwgrp = 1
+            self.pwgrp_intra = None
+            self.pwgrp_inter_image = self.image_comm
+            self.n_kgrp = 1
+            self.n_bgrp = 1
+            self.i_kgrp = 0
+            self.kgrp_intra = self.image_comm
+            self.kroot_intra = self.image_comm
+            self.i_bgrp = 0
+            self.pwgrp_inter_kgrp = self.image_comm
+            self.pwgrp_inter_kroot = self.image_comm
 
     def __repr__(self) -> str:
         return (

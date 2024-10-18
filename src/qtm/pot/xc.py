@@ -135,9 +135,11 @@ def compute(
     exch_func, corr_func = tuple(set_threshold([exch_func, corr_func]))
 
     need_grad = sum(
-        True
-        if xcfunc.get_family() in [xc_flags.XC_FAMILY_GGA, xc_flags.XC_FAMILY_MGGA]
-        else False
+        (
+            True
+            if xcfunc.get_family() in [xc_flags.XC_FAMILY_GGA, xc_flags.XC_FAMILY_MGGA]
+            else False
+        )
         for xcfunc in [exch_func, corr_func]
     )
 

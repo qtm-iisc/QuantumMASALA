@@ -3,7 +3,11 @@ import sys
 
 import numpy as np
 import pytest
-from mpi4py.MPI import COMM_WORLD
+from qtm.config import MPI4PY_INSTALLED
+if MPI4PY_INSTALLED:
+    from mpi4py.MPI import COMM_WORLD
+else:
+    COMM_WORLD = None
 from qtm import qtmconfig
 from qtm.constants import RYDBERG
 from qtm.crystal import BasisAtoms, Crystal

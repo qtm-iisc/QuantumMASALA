@@ -2,7 +2,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from qtm.logger import qtmlogger
-from qtm.mpi.containers import get_DistFieldG
+from qtm.config import MPI4PY_INSTALLED
+
+if MPI4PY_INSTALLED:
+    from qtm.mpi.containers import get_DistFieldG
 from qtm.mpi.gspace import DistGSpace, DistGkSpace
 
 if TYPE_CHECKING:
@@ -65,12 +68,10 @@ if version_info[1] >= 8:
             diago_thr: float,
             diago_avgiter: float,
             en: EnergyData,
-        ) -> None:
-            ...
+        ) -> None: ...
 
     class WfnInit(Protocol):
-        def __call__(self, ik: int, kswfn: list[KSWfn]) -> None:
-            ...
+        def __call__(self, ik: int, kswfn: list[KSWfn]) -> None: ...
 
 else:
     IterPrinter = "IterPrinter"

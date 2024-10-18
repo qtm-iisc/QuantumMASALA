@@ -214,9 +214,11 @@ class DistGSpaceBase(GSpaceBase):
             recvbuf = out.reshape((-1, self.size_r))
             for iarr in range(np.prod(shape)):
                 comm.Scatterv(
-                    (sendbuf[iarr], self._scatter_r_bufspec)
-                    if self.pwgrp_rank == 0
-                    else None,
+                    (
+                        (sendbuf[iarr], self._scatter_r_bufspec)
+                        if self.pwgrp_rank == 0
+                        else None
+                    ),
                     recvbuf[iarr],
                 )
         return out
@@ -252,9 +254,11 @@ class DistGSpaceBase(GSpaceBase):
                 else:
                     comm.Gatherv(
                         sendbuf[iarr],
-                        (recvbuf[iarr], self._scatter_r_bufspec)
-                        if is_root or allgather
-                        else None,
+                        (
+                            (recvbuf[iarr], self._scatter_r_bufspec)
+                            if is_root or allgather
+                            else None
+                        ),
                     )
         if is_root or allgather:
             return arr_glob
@@ -277,9 +281,11 @@ class DistGSpaceBase(GSpaceBase):
             recvbuf = out.reshape((-1, self.size_g))
             for iarr in range(np.prod(shape)):
                 comm.Scatterv(
-                    (sendbuf[iarr], self._scatter_g_bufspec)
-                    if self.pwgrp_rank == 0
-                    else None,
+                    (
+                        (sendbuf[iarr], self._scatter_g_bufspec)
+                        if self.pwgrp_rank == 0
+                        else None
+                    ),
                     recvbuf[iarr],
                 )
         return out
@@ -315,9 +321,11 @@ class DistGSpaceBase(GSpaceBase):
                 else:
                     comm.Gatherv(
                         sendbuf[iarr],
-                        (recvbuf[iarr], self._scatter_g_bufspec)
-                        if is_root or allgather
-                        else None,
+                        (
+                            (recvbuf[iarr], self._scatter_g_bufspec)
+                            if is_root or allgather
+                            else None
+                        ),
                     )
         if is_root or allgather:
             return arr_glob

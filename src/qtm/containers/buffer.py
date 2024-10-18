@@ -326,9 +326,11 @@ class BufferType(NDArrayOperatorsMixin, ABC):
             return outputs[0] if len(outputs) == 1 else outputs
         elif isinstance(ufunc_out, tuple):
             return tuple(
-                type(self)(out)
-                if out.ndim > 0 and out.shape[-1] == self.basis_size
-                else out
+                (
+                    type(self)(out)
+                    if out.ndim > 0 and out.shape[-1] == self.basis_size
+                    else out
+                )
                 for out in ufunc_out
             )
         elif ufunc_out.ndim > 0 and ufunc_out.shape[-1] == self.basis_size:

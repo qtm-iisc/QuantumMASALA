@@ -14,7 +14,11 @@ from qtm.logger import qtmlogger
 
 # qtmconfig.fft_backend = "mkl_fft"
 
-from mpi4py.MPI import COMM_WORLD
+from qtm.config import MPI4PY_INSTALLED
+if MPI4PY_INSTALLED:
+    from mpi4py.MPI import COMM_WORLD
+else:
+    COMM_WORLD = None
 
 comm_world = QTMComm(COMM_WORLD)
 

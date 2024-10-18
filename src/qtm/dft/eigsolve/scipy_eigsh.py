@@ -2,6 +2,7 @@
 
 This implementation is purely for demonstration.
 """
+
 from __future__ import annotations
 
 __all__ = ["solve"]

@@ -1,8 +1,9 @@
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Sequence, Any
+    from typing import Any, Sequence
 __all__ = ["QTMComm", "QTMComm", "BufSpec", "BufSpecV", "split_comm_pwgrp"]
 
 from types import MethodType
@@ -10,11 +11,10 @@ from types import MethodType
 from qtm.config import MPI4PY_INSTALLED
 
 if MPI4PY_INSTALLED:
-    from mpi4py.MPI import COMM_WORLD, COMM_NULL, COMM_SELF
-    from mpi4py.MPI import Op, IN_PLACE
+    from mpi4py.MPI import COMM_NULL, COMM_SELF, COMM_WORLD, IN_PLACE, Op
 
     InPlace = type(IN_PLACE)
-    from mpi4py.MPI import SUM, PROD, MIN, MAX, LAND, LOR, IDENT, SIMILAR
+    from mpi4py.MPI import IDENT, LAND, LOR, MAX, MIN, PROD, SIMILAR, SUM
 
     WORLD_SIZE, WORLD_RANK = COMM_WORLD.Get_size(), COMM_WORLD.Get_rank()
     # WARNING: Following import is only done when mpi4py is installed.
@@ -36,7 +36,8 @@ else:
     WORLD_SIZE, WORLD_RANK = 1, 0
     Group = None
 
-from typing import Tuple, Sequence
+from typing import Sequence, Tuple
+
 from qtm.config import NDArray
 
 BufSpec = NDArray
@@ -255,8 +256,10 @@ class QTMComm:
             so that all processes in the parent group will exit the `with`
             code block at the same time
         """
-        comm_split = self.comm.Split(color, key)
-        return QTMComm(comm_split, self, sync_with_parent)
+        if self.mpi4py_installed:
+            comm_split = self.comm.Split(color, key)
+            return QTMComm(comm_split, self, sync_with_parent)
+        return QTMComm(self.comm_null, self, sync_with_parent)
 
     def bcast(self, obj, root: int = 0):
         """Alias of ``mpi4py.MPI.Comm.bcast``"""

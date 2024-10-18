@@ -1,6 +1,7 @@
 """QuantumMASALA's Configuration Module
 
 """
+
 from __future__ import annotations
 
 __all__ = [

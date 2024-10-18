@@ -10,6 +10,7 @@ The timers are automatically disabled when running in interactive mode to
 prevent exceptions due to improper timer usage like, for example,
 stopping an already stopped timer, accessing a non-existing timer, etc.
 """
+
 from __future__ import annotations
 
 __all__ = [
