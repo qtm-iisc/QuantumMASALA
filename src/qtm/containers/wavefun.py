@@ -1,10 +1,15 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Literal
-__all__ = ['WavefunGType', 'get_WavefunG',
-           'WavefunRType', 'get_WavefunR',
-           'WavefunType']
+__all__ = [
+    "WavefunGType",
+    "get_WavefunG",
+    "WavefunRType",
+    "get_WavefunR",
+    "WavefunType",
+]
 
 from functools import lru_cache
 from typing import Union
@@ -24,25 +29,30 @@ class WavefunGType(BufferType):
     gspc: GkSpace = None
     gkspc: GkSpace = None
     numspin: int = None
-    basis_type = 'g'
+    basis_type = "g"
     basis_size: int = None
     ndarray: type = None
 
     def __init_subclass__(cls, gkspc: GkSpace, numspin: int):
         if not isinstance(gkspc, GkSpace):
-            raise TypeError(type_mismatch_msg('gkspc', gkspc, GkSpace))
+            raise TypeError(type_mismatch_msg("gkspc", gkspc, GkSpace))
         if not isinstance(numspin, int) or numspin <= 0:
-            raise TypeError(type_mismatch_msg(
-                'numspin', numspin, 'a positive integer'
-            ))
+            raise TypeError(type_mismatch_msg("numspin", numspin, "a positive integer"))
         cls.gspc, cls.gkspc = gkspc, gkspc
         cls.numspin, cls.basis_size = numspin, numspin * gkspc.size_g
         cls.ndarray = type(cls.gspc.g_cryst)
 
     @classmethod
-    def zgemm(cls, a: NDArray, b: NDArray, trans_a: Literal[0, 1, 2] = 0,
-              trans_b: Literal[0, 1, 2] = 0, alpha: complex = 1.0,
-              out: NDArray | None = None, beta: complex = 0.0) -> NDArray:
+    def zgemm(
+        cls,
+        a: NDArray,
+        b: NDArray,
+        trans_a: Literal[0, 1, 2] = 0,
+        trans_b: Literal[0, 1, 2] = 0,
+        alpha: complex = 1.0,
+        out: NDArray | None = None,
+        beta: complex = 0.0,
+    ) -> NDArray:
         """Implements C := alpha*op( A )*op( B ) + beta*C, where op( X ) is
         one of: op( X ) = X or op( X ) = X**T or op( X ) = X**H
 
@@ -84,7 +94,7 @@ class WavefunGType(BufferType):
         for iwfn, wfn in enumerate(self.data.reshape((-1, self.basis_size))):
             vdot.ravel()[iwfn] = np.vdot(wfn, wfn)
 
-        if hasattr(self.gkspc, 'pwgrp_comm'):
+        if hasattr(self.gkspc, "pwgrp_comm"):
             comm = self.gkspc.pwgrp_comm
             comm.Allreduce(comm.IN_PLACE, vdot, comm.SUM)
         return vdot
@@ -97,7 +107,7 @@ class WavefunGType(BufferType):
         """Normalizes the wavefunction so that its norm is 1."""
         self.data[:] /= self.norm()[:, np.newaxis]
 
-    def vdot(self, ket: get_WavefunG, slice_partial_basis:slice=None) -> NDArray:
+    def vdot(self, ket: get_WavefunG, slice_partial_basis: slice = None) -> NDArray:
         """Evaluates the vector dot product between the wavefunctions in two
         `WavefunG` instances. The values of the instance are conjugated, not
         the ones in the method input.
@@ -117,17 +127,20 @@ class WavefunGType(BufferType):
         # TODO: Reevaluate this implementation when SciPy is compiled with CBLAS too
         # TODO: Add check for C-Contiguity
         if not isinstance(ket, type(self)):
-            raise TypeError(type_mismatch_msg('ket', ket, type(self)))
+            raise TypeError(type_mismatch_msg("ket", ket, type(self)))
         if self.gkspc is not ket.gkspc:
-            raise ValueError(obj_mismatch_msg(
-                'self.gkspc', self.gkspc, 'ket.gkspc', ket.gkspc
-            ))
+            raise ValueError(
+                obj_mismatch_msg("self.gkspc", self.gkspc, "ket.gkspc", ket.gkspc)
+            )
         if slice_partial_basis is None:
             bra_ = self.data.reshape((-1, self.basis_size))
             ket_ = ket.data.reshape((-1, self.basis_size))
             braket = self.zgemm(
-                alpha=1.0, a=bra_.T, trans_a=2,
-                b=ket_.T, trans_b=0,
+                alpha=1.0,
+                a=bra_.T,
+                trans_a=2,
+                b=ket_.T,
+                trans_b=0,
             )
             # braket = bra_.conj() @ ket_.T
 
@@ -138,11 +151,14 @@ class WavefunGType(BufferType):
             else:
                 return braket.reshape((*self.shape, *ket.shape))
         else:
-            bra_ = self.data.reshape((-1, self.basis_size))[:,slice_partial_basis]
-            ket_ = ket.data.reshape((-1, ket.basis_size))[:,slice_partial_basis]
+            bra_ = self.data.reshape((-1, self.basis_size))[:, slice_partial_basis]
+            ket_ = ket.data.reshape((-1, ket.basis_size))[:, slice_partial_basis]
             braket = self.zgemm(
-                alpha=1.0, a=bra_.T, trans_a=2,
-                b=ket_.T, trans_b=0,
+                alpha=1.0,
+                a=bra_.T,
+                trans_a=2,
+                b=ket_.T,
+                trans_b=0,
             )
             if self.shape == ():
                 return braket.reshape(ket.shape)
@@ -156,20 +172,16 @@ class WavefunRType(BufferType):
     gspc: GkSpace = None
     gkspc: GkSpace = None
     numspin: int = None
-    basis_type = 'r'
+    basis_type = "r"
     basis_size: int = None
     ndarray: type = None
     zgemm = None
 
     def __init_subclass__(cls, gkspc: GkSpace, numspin: int):
         if not isinstance(gkspc, GkSpace):
-            raise TypeError(type_mismatch_msg(
-                'gkspc', gkspc, GkSpace
-            ))
+            raise TypeError(type_mismatch_msg("gkspc", gkspc, GkSpace))
         if not isinstance(numspin, int) or numspin <= 0:
-            raise TypeError(type_mismatch_msg(
-                'numspin', numspin, 'a positive integer'
-            ))
+            raise TypeError(type_mismatch_msg("numspin", numspin, "a positive integer"))
         cls.gspc, cls.gkspc = gkspc, gkspc
         cls.numspin, cls.basis_size = numspin, numspin * gkspc.size_r
         cls.ndarray = type(cls.gspc.g_cryst)
@@ -184,7 +196,7 @@ class WavefunRType(BufferType):
         return self
 
     def get_density(self, normalize: bool = True) -> get_FieldR:
-        """"Constructs the probability density from the stored wavefunctions
+        """ "Constructs the probability density from the stored wavefunctions
 
         Parameters
         ----------
@@ -215,11 +227,13 @@ def get_WavefunG(gkspc: GkSpace, numspin: int) -> type[WavefunGType]:
     if MPI4PY_INSTALLED:
         from qtm.mpi.gspace import DistGkSpace
         from qtm.mpi.containers import get_DistWavefunG
+
         if isinstance(gkspc, DistGkSpace):
             return get_DistWavefunG(gkspc, numspin)
 
     class WavefunG(WavefunGType, gkspc=gkspc, numspin=numspin):
         pass
+
     return WavefunG
 
 
@@ -228,9 +242,11 @@ def get_WavefunR(gkspc: GkSpace, numspin: int) -> type[WavefunRType]:
     if MPI4PY_INSTALLED:
         from qtm.mpi.gspace import DistGkSpace
         from qtm.mpi.containers import get_DistWavefunR
+
         if isinstance(gkspc, DistGkSpace):
             return get_DistWavefunR(gkspc, numspin)
 
     class WavefunR(WavefunRType, gkspc=gkspc, numspin=numspin):
         pass
+
     return WavefunR

@@ -1,4 +1,4 @@
-__all__ = ['SplitOper']
+__all__ = ["SplitOper"]
 import numpy as np
 from qtm.containers.field import FieldRType
 from qtm.containers.wavefun import get_WavefunG
@@ -11,14 +11,18 @@ from .base import TDExpOperBase
 
 
 class SplitOper(TDExpOperBase):
+    __slots__ = ["l_exp_dij_halfstep"]
 
-    __slots__ = ['l_exp_dij_halfstep']
-
-    def __init__(self, gkspc: GkSpace, is_spin: int, is_noncolin: bool,
-                 vloc: FieldRType, l_nloc: list[NonlocGenerator],
-                 time_step: float):
-        super().__init__(gkspc, is_spin, is_noncolin, vloc, l_nloc,
-                         time_step)
+    def __init__(
+        self,
+        gkspc: GkSpace,
+        is_spin: int,
+        is_noncolin: bool,
+        vloc: FieldRType,
+        l_nloc: list[NonlocGenerator],
+        time_step: float,
+    ):
+        super().__init__(gkspc, is_spin, is_noncolin, vloc, l_nloc, time_step)
 
         self.l_vkb_dij = []
         self.vnl_diag = 0
@@ -32,10 +36,12 @@ class SplitOper(TDExpOperBase):
         for vkb, dij in self.l_vkb_dij:
             ovl = vkb.vdot(vkb)
             self.l_exp_dij_halfstep.append(
-                np.linalg.inv(ovl) @ (expm(-0.5j * self.time_step * (ovl @ dij))
-                                      - np.identity(dij.shape[0]))
+                np.linalg.inv(ovl)
+                @ (
+                    expm(-0.5j * self.time_step * (ovl @ dij))
+                    - np.identity(dij.shape[0])
+                )
             )
-
 
         self.oper_exp_ke_gk_halfstep = np.exp(-0.5j * self.time_step * self.ke_gk)
         self.oper_exp_vloc_r_fullstep = None
@@ -48,7 +54,9 @@ class SplitOper(TDExpOperBase):
         self.oper_exp_vloc_r_fullstep = np.exp(fac * vloc.data.ravel())
 
     def oper_ke(self, l_prop_psi: list[KSWfn]):
-        np.multiply(self.oper_exp_ke_gk_halfstep, l_prop_psi[0].evc_gk, out=l_prop_psi[0].evc_gk)
+        np.multiply(
+            self.oper_exp_ke_gk_halfstep, l_prop_psi[0].evc_gk, out=l_prop_psi[0].evc_gk
+        )
 
     def oper_nl(self, l_prop_psi: np.ndarray, reverse: bool):
         l_ikb = range(len(self.l_vkb_dij))

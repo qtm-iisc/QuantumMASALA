@@ -365,6 +365,6 @@ def parse_inp(pwin: PWscfIn):
         elif option == "tpiba":
             k_cryst = cryst.recispc.tpiba2cryst(k_coords)
 
-        kpts = KList(cryst.recispc, k_cryst, k_weights, 'cryst')
+        kpts = KList(cryst.recispc, k_cryst, k_weights, "cryst")
 
     return pwin, cryst, kpts

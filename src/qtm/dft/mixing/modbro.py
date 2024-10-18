@@ -1,4 +1,4 @@
-__all__ = ['ModBroyden']
+__all__ = ["ModBroyden"]
 
 import numpy as np
 
@@ -9,9 +9,7 @@ from .base import MixModBase
 
 
 class ModBroyden(MixModBase):
-
-    def __init__(self, dftcomm: DFTCommMod, rho: FieldGType,
-                 beta: float, mixdim: int):
+    def __init__(self, dftcomm: DFTCommMod, rho: FieldGType, beta: float, mixdim: int):
         super().__init__(dftcomm, rho, beta, mixdim)
         self.idxiter = 0
 
@@ -21,8 +19,9 @@ class ModBroyden(MixModBase):
 
             self.l_del_rho = self.FieldG.empty((self.mixdim, self.numspin))
             self.l_del_res = self.FieldG.empty((self.mixdim, self.numspin))
-            self.overlap = np.empty((self.mixdim, self.mixdim), dtype='c16',
-                                    like=self.grho.g_cryst)
+            self.overlap = np.empty(
+                (self.mixdim, self.mixdim), dtype="c16", like=self.grho.g_cryst
+            )
         else:
             self.rho_old, self.res_old = None, None
             self.l_del_rho, self.l_del_res, self.overlap = None, None, None
@@ -58,7 +57,7 @@ class ModBroyden(MixModBase):
             for i in range(numdim):
                 overlap_inv[:i, i] = overlap_inv[i, :i]
 
-            l_dot = np.empty(numdim, dtype='c16', like=self.grho.g_cryst)
+            l_dot = np.empty(numdim, dtype="c16", like=self.grho.g_cryst)
             for i in range(numdim):
                 l_dot[i] = self._dot(self.l_del_res[i], res)
 

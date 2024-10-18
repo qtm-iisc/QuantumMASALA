@@ -57,14 +57,15 @@ def prop_step(
         wfn_gamma_prev[i].evl[:] = wfn_gamma[0][i].evl
         wfn_gamma_prev[i].occ = wfn_gamma[0][i].occ
 
-
     rho = wfn_gamma[0][0].k_weight * wfn_gamma[0][0].compute_rho(ret_raw=True).to_g()
     normalize_rho(rho, numel)
     v_loc = compute_pot_local(rho)
     prop_gamma.update_vloc(v_loc)
     prop_gamma.prop_psi(wfn_gamma_prev, wfn_gamma[0])
 
-    rho_pred = wfn_gamma[0][0].k_weight * wfn_gamma[0][0].compute_rho(ret_raw=True).to_g()
+    rho_pred = (
+        wfn_gamma[0][0].k_weight * wfn_gamma[0][0].compute_rho(ret_raw=True).to_g()
+    )
     normalize_rho(rho_pred, numel)
     rho_pred._data = 0.5 * (rho._data + rho_pred._data)
 
@@ -76,4 +77,3 @@ def prop_step(
     # Propagate the wavefunction using the approximated Hamiltonian at half step
     prop_gamma.prop_psi(wfn_gamma_prev, wfn_gamma[0])
     rho = wfn_gamma[0][0].k_weight * wfn_gamma[0][0].compute_rho(ret_raw=True).to_g()
-

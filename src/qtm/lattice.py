@@ -237,10 +237,10 @@ class Lattice:
             np.linalg.norm(self.primvec - np.asarray(other.primvec, like=self.primvec))
             <= 1e-5
         )
-    
+
     def __repr__(self) -> str:
         return f"Lattice(primvec={self.primvec})"
-    
+
 
 class RealLattice(Lattice):
     """Represents Real-Space Lattice of a Crystal.
@@ -562,30 +562,30 @@ class RealLattice(Lattice):
         coords: str = "cryst",
         origin: tuple[float, float, float] = (0.0, 0.0, 0.0),
     ):
-        """ Generates a mesh of coordinates in the unit cell.
+        """Generates a mesh of coordinates in the unit cell.
 
-            Parameters
-            ----------
-            n1 : int
-                The number of points along the first lattice vector.
-            n2 : int
-                The number of points along the second lattice vector.
-            n3 : int
-                The number of points along the third lattice vector.
-            coords : str, optional
-                The coordinate system to generate the mesh in. Possible values are "cryst" (default), "cart", and "alat".
-            origin : tuple[float, float, float], optional
-                The origin of the mesh in the specified coordinate system. Defaults to (0.0, 0.0, 0.0).
+        Parameters
+        ----------
+        n1 : int
+            The number of points along the first lattice vector.
+        n2 : int
+            The number of points along the second lattice vector.
+        n3 : int
+            The number of points along the third lattice vector.
+        coords : str, optional
+            The coordinate system to generate the mesh in. Possible values are "cryst" (default), "cart", and "alat".
+        origin : tuple[float, float, float], optional
+            The origin of the mesh in the specified coordinate system. Defaults to (0.0, 0.0, 0.0).
 
-            Returns
-            -------
-            numpy.ndarray
-                The mesh of coordinates in the specified coordinate system.
+        Returns
+        -------
+        numpy.ndarray
+            The mesh of coordinates in the specified coordinate system.
 
-            Raises
-            ------
-            ValueError
-                If any of the n1, n2, n3 values are not positive integers.
+        Raises
+        ------
+        ValueError
+            If any of the n1, n2, n3 values are not positive integers.
         """
         xi = []
         for i, n in enumerate([n1, n2, n3]):
@@ -609,12 +609,12 @@ class RealLattice(Lattice):
             return self.cryst2cart(r_cryst)
         elif coords == "alat":
             return self.cryst2alat(r_cryst)
-        
+
     def __repr__(self, indent="        ") -> str:
         # latvec = "\n".join(f"{indent}  {vec}" for vec in self.latvec)
-        latvec = f"{indent}    "+str(self.latvec).replace("\n", f"\n{indent}    ")
+        latvec = f"{indent}    " + str(self.latvec).replace("\n", f"\n{indent}    ")
         return f"RealLattice(\n{indent}  alat={self.alat}, \n{indent}  latvec=\n{latvec},\n{indent})"
-    
+
     def __str__(self) -> str:
         alat_str = f"Lattice parameter 'alat' :   {self.alat:.5f}  a.u."
         cellvol_str = f"Unit cell volume         :  {self.cellvol:.5f}  (a.u.)^3"
@@ -622,17 +622,23 @@ class RealLattice(Lattice):
         num_types_str = "Number of atomic types   : 1"
         num_electrons_str = "Number of electrons      : 16"
 
-        crystal_axes_str = "Crystal Axes: coordinates in units of 'alat' ({:.5f} a.u.)".format(self.alat)
+        crystal_axes_str = (
+            "Crystal Axes: coordinates in units of 'alat' ({:.5f} a.u.)".format(
+                self.alat
+            )
+        )
         crystal_axes = "\n".join(
             f"    a({i+1}) = ({vec[0]:8.5f}, {vec[1]:8.5f}, {vec[2]:8.5f})"
-            for i, vec in enumerate(self.latvec.T/ self.alat)
+            for i, vec in enumerate(self.latvec.T / self.alat)
         )
 
         reci_lattice = ReciLattice.from_reallat(self)
-        tpiba_str = "Reciprocal Axes: coordinates in units of 'tpiba' ({:.5f} (a.u.)^-1)".format(reci_lattice.tpiba)
+        tpiba_str = "Reciprocal Axes: coordinates in units of 'tpiba' ({:.5f} (a.u.)^-1)".format(
+            reci_lattice.tpiba
+        )
         reci_axes = "\n".join(
             f"    b({i+1}) = ({vec[0]:8.5f}, {vec[1]:8.5f}, {vec[2]:8.5f})"
-            for i, vec in enumerate(reci_lattice.recvec.T/ reci_lattice.tpiba)
+            for i, vec in enumerate(reci_lattice.recvec.T / reci_lattice.tpiba)
         )
 
         return (
@@ -646,8 +652,6 @@ class RealLattice(Lattice):
             f"{tpiba_str}\n"
             f"{reci_axes}"
         )
-
-        
 
 
 class ReciLattice(Lattice):

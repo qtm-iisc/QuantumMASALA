@@ -27,21 +27,22 @@ from qtm.interfaces.bgw.epsinp import Epsinp
 #                 is_q0=[True])
 
 # Reading from epsilon.inp file
-epsinp = Epsinp.from_epsilon_inp(filename=dirname+'epsilon.inp')
+epsinp = Epsinp.from_epsilon_inp(filename=dirname + "epsilon.inp")
 # print(epsinp)
 
 # There is an analogous system to read SigmaInp
 from qtm.interfaces.bgw.sigmainp import Sigmainp
-sigmainp = Sigmainp.from_sigma_inp(filename=dirname+'sigma.inp')
+
+sigmainp = Sigmainp.from_sigma_inp(filename=dirname + "sigma.inp")
 # print(sigmainp)
 
 # %% [markdown]
 # ### Load WfnData
 # Calculation of dielectric matrix requires mean field eigenfunctions. \
 # Wavefunction data generated from mean-field codes can be read using the ``wfn2py`` utility, which assumes that the incoming data satisfies BerkeleyGW's [`wfn_h5`](http://manual.berkeleygw.org/3.0/wfn_h5_spec/) specification. The data is stored as a `NamedTuple` object.
-# 
+#
 # For reasons discussed later, we also require wavefunctions on a shifted grid to calculate dielectric matrix at $q\to 0$. This shifted grid dataset will be referred to as `wfnqdata`.
-# 
+#
 # Similarly, the utilities `read_rho` and `read_vxc` can be used to read density and exchange-correlation respectively.
 
 # %%
@@ -49,21 +50,25 @@ sigmainp = Sigmainp.from_sigma_inp(filename=dirname+'sigma.inp')
 from qtm.interfaces.bgw import inp
 from qtm.interfaces.bgw.wfn2py import wfn2py
 
-wfndata = wfn2py(dirname+'WFN.h5')#, wfn_ecutrho_minus_ecutwfn=epsinp.epsilon_cutoff)
+wfndata = wfn2py(
+    dirname + "WFN.h5"
+)  # , wfn_ecutrho_minus_ecutwfn=epsinp.epsilon_cutoff)
 # print(wfndata.__doc__)
 
-wfnqdata = wfn2py(dirname+'WFNq.h5')#, wfn_ecutrho_minus_ecutwfn=epsinp.epsilon_cutoff)
+wfnqdata = wfn2py(
+    dirname + "WFNq.h5"
+)  # , wfn_ecutrho_minus_ecutwfn=epsinp.epsilon_cutoff)
 # print(wfnqdata.__doc__)
 
 # RHO data
-rho = inp.read_rho(dirname+"RHO")
+rho = inp.read_rho(dirname + "RHO")
 
 # Vxc data
-vxc = inp.read_vxc(dirname+"vxc.dat")
+vxc = inp.read_vxc(dirname + "vxc.dat")
 
 # %% [markdown]
 # ### Initialize Epsilon Class
-# 
+#
 # ``Epsilon`` class can be initialized by either directly passing the required `quantummasala.core` objects or by passing the input objects discussed earlier.
 
 # %%
@@ -91,7 +96,7 @@ epsilon = Epsilon.from_data(wfndata=wfndata, wfnqdata=wfnqdata, epsinp=epsinp)
 # 1.  ``matrix_elements``: Calculation of Planewave Matrix elements
 # 2.  ``polarizability``: Calculation of RPA polarizability matrix $P$
 # 3.  ``epsilon_inverse``: Calculation of (static) epsilon-inverse matrix
-# 
+#
 # <!-- 1.  ``matrix_elements``: Calculation of Planewave Matrix elements
 #     $$M_{nn'}({\textbf k},{\textbf q},{\textbf G}) = \bra{n\,{\textbf k}{+}{\textbf q}}e^{i({\textbf q}+{\textbf G})\cdot{\textbf r}}\ket{n'\,\textbf k}$$
 #     where the $\textbf G$-vectors included in the calculation satisfy $|\textbf q + \textbf G|^2 < E_{\text{cut}}$.
@@ -99,8 +104,8 @@ epsilon = Epsilon.from_data(wfndata=wfndata, wfnqdata=wfnqdata, epsinp=epsinp)
 #     $$
 #     M_{nn'}({\bf k},{\bf q},\{{\bf G}\}) = {\rm FFT}^{-1}\left( \phi^{*}_{n,{\bf k}+{\bf q} }({\bf r}) \phi_{n',{\bf k} }({\bf r}) \right).
 #     $$
-#     where $\phi_{n',{\bf k}}({\bf r}) = {\rm FFT}\left( \psi_{n\bf k}(\bf G)\right)$. 
-#     
+#     where $\phi_{n',{\bf k}}({\bf r}) = {\rm FFT}\left( \psi_{n\bf k}(\bf G)\right)$.
+#
 # 2.  ``polarizability``: Calculation of RPA polarizability matrix $P$
 #     $$
 #         P_{\textbf{GG'}}{\left({\textbf q}\;\!;0\right)}=
@@ -131,15 +136,13 @@ def calculate_epsilon(numq=None, writing=False):
     for i_q in trange(0, numq, desc="Epsilon> q-pt index"):
         # Create map between BGW's sorting order and QTm's sorting order
         gkspc = epsilon.l_gq[i_q]
-        
+
         if i_q == epsilon.qpts.index_q0:
             key = gkspc.g_norm2
         else:
             key = gkspc.gk_norm2
 
-        indices_gspace_sorted = sort_cryst_like_BGW(
-            cryst=gkspc.g_cryst, key_array=key
-        )
+        indices_gspace_sorted = sort_cryst_like_BGW(cryst=gkspc.g_cryst, key_array=key)
 
         # Calculate matrix elements
         M = next(epsilon.matrix_elements(i_q=i_q))
@@ -151,12 +154,13 @@ def calculate_epsilon(numq=None, writing=False):
         # chimat = epsilon.polarizability_active(i_q)
 
         # Calculate epsilon inverse matrix
-        epsinv = epsilon.epsilon_inverse(i_q=i_q, polarizability_matrix=chimat, store=True)
-
+        epsinv = epsilon.epsilon_inverse(
+            i_q=i_q, polarizability_matrix=chimat, store=True
+        )
 
         epsinv = reorder_2d_matrix_sorted_gvecs(epsinv, indices_gspace_sorted)
         epsilon.l_epsinv[i_q] = epsinv
-        
+
         # Compare the results with BGW's results
         if i_q == epsilon.qpts.index_q0:
             epsref = epsilon.read_epsmat(dirname + "eps0mat.h5")[0][0, 0]
@@ -173,9 +177,11 @@ def calculate_epsilon(numq=None, writing=False):
 
         epstol = 1e-16
         if np.abs(std_eps) > epstol:
-            print(f"Standard deviation exceeded {epstol} tolerance: {std_eps}, for i_q:{i_q}")
-            print(epsref[:2,:2])
-            print(epsinv[:2,:2])
+            print(
+                f"Standard deviation exceeded {epstol} tolerance: {std_eps}, for i_q:{i_q}"
+            )
+            print(epsref[:2, :2])
+            print(epsinv[:2, :2])
 
     if writing:
         epsilon.write_epsmat(filename="test/epsilon/epsmat_qtm.h5", epsinvmats=epsmats)
@@ -196,7 +202,7 @@ calculate_epsilon()
 # %%
 from qtm.gw.sigma import Sigma
 
-outdir = dirname+"temp/"
+outdir = dirname + "temp/"
 
 sigma = Sigma.from_data(
     wfndata=wfndata,
@@ -210,43 +216,44 @@ sigma = Sigma.from_data(
 )
 
 # %%
-sigma_sx_cohsex_mat = sigma.sigma_sx_static(yielding=True)    
+sigma_sx_cohsex_mat = sigma.sigma_sx_static(yielding=True)
 print("Sigma SX COHSEX")
 sigma.pprint_sigma_mat(sigma_sx_cohsex_mat)
 
 # %% [markdown]
 # from tqdm.auto import tqdm
-# sigma_x_mat = sigma.sigma_x(yielding=True)    
+# sigma_x_mat = sigma.sigma_x(yielding=True)
 # print("Sigma X")
 # sigma.pprint_sigma_mat(sigma_x_mat)
 
 # %%
-sigma_ch_cohsex_mat = sigma.sigma_ch_static()    
+sigma_ch_cohsex_mat = sigma.sigma_ch_static()
 print("Sigma CH COHSEX")
 sigma.pprint_sigma_mat(sigma_ch_cohsex_mat)
 
 # %%
-sigma.autosave=False
-sigma.print_condition=True
+sigma.autosave = False
+sigma.print_condition = True
 cohsex_result = sigma.calculate_static_cohsex()
 
 # %%
 from qtm.interfaces.bgw.sigma_hp_reader import read_sigma_hp
-ref_dict = read_sigma_hp(dirname+"sigma_hp.log")
+
+ref_dict = read_sigma_hp(dirname + "sigma_hp.log")
 for ik in cohsex_result:
-    print("k-point index:",ik)
-    qtty = 'Eqp1'
-    print(np.abs(ref_dict[ik+1][qtty]-np.around(cohsex_result[ik][qtty],6)))
+    print("k-point index:", ik)
+    qtty = "Eqp1"
+    print(np.abs(ref_dict[ik + 1][qtty] - np.around(cohsex_result[ik][qtty], 6)))
 
 # %%
-sigma.print_condition=True
-sigma_ch_exact_mat = sigma.sigma_ch_static_exact()    
+sigma.print_condition = True
+sigma_ch_exact_mat = sigma.sigma_ch_static_exact()
 print("Sigma CH COHSEX EXACT")
 sigma.pprint_sigma_mat(sigma_ch_exact_mat)
 
 # %%
-sigma.print_condition=False
-sigma_ch_gpp,_ = sigma.sigma_ch_gpp()    
+sigma.print_condition = False
+sigma_ch_gpp, _ = sigma.sigma_ch_gpp()
 print("Sigma CH GPP")
 sigma.pprint_sigma_mat(sigma_ch_gpp)
 
@@ -256,10 +263,8 @@ gpp_result = sigma.calculate_gpp()
 # %%
 from qtm.interfaces.bgw.sigma_hp_reader import read_sigma_hp
 
-ref_dict = read_sigma_hp(dirname+"../gpp/sigma_hp.log")
+ref_dict = read_sigma_hp(dirname + "../gpp/sigma_hp.log")
 for ik in gpp_result:
-    print("k-point index:",ik)
-    qtty = 'Eqp1'
-    print(np.abs(ref_dict[ik+1][qtty]-np.around(gpp_result[ik][qtty],6)))
-
-
+    print("k-point index:", ik)
+    qtty = "Eqp1"
+    print(np.abs(ref_dict[ik + 1][qtty] - np.around(gpp_result[ik][qtty], 6)))

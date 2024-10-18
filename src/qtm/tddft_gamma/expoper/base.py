@@ -1,4 +1,4 @@
-__all__ = ['TDExpOperBase', 'TDExpOper']
+__all__ = ["TDExpOperBase", "TDExpOper"]
 
 from abc import ABC, abstractmethod
 from typing import TypeVar
@@ -11,11 +11,16 @@ from qtm.pseudo.nloc import NonlocGenerator
 
 
 class TDExpOperBase(KSHam, ABC):
-
     @abstractmethod
-    def __init__(self, gkspc: GkSpace, is_spin: int, is_noncolin: bool,
-                 vloc: FieldRType, l_nloc: list[NonlocGenerator],
-                 time_step: float):
+    def __init__(
+        self,
+        gkspc: GkSpace,
+        is_spin: int,
+        is_noncolin: bool,
+        vloc: FieldRType,
+        l_nloc: list[NonlocGenerator],
+        time_step: float,
+    ):
         super().__init__(gkspc, is_noncolin, vloc, l_nloc)
         self.time_step = time_step
         """Time step, in Hartree atomic units."""
@@ -34,4 +39,4 @@ class TDExpOperBase(KSHam, ABC):
         pass
 
 
-TDExpOper = TypeVar('TDExpOper', bound=TDExpOperBase)
+TDExpOper = TypeVar("TDExpOper", bound=TDExpOperBase)

@@ -26,7 +26,6 @@ def propagate(
     dipole_updater: Callable[[int, FieldGType, WavefunGType], None],
     libxc_func: Optional[tuple[str, str]] = None,
 ):
-
     # Begin setup ========================================
     config = qtmconfig
 
@@ -107,7 +106,6 @@ def propagate(
         )
     # End selecting expoper and propagator ==============
 
-
     # Begin propagation ================================
 
     v_loc = compute_pot_local(rho_start)
@@ -117,11 +115,12 @@ def propagate(
 
     rho = rho_start.copy()
     for istep in trange(numstep):
-
         # FIXME: We are implicitly assuming that the wavefunction is not spin-polarized.
-        prop_step(wfn_gamma, rho, crystal.numel, compute_pot_local, prop_gamma)        
-        rho = wfn_gamma[0][0].k_weight * wfn_gamma[0][0].compute_rho(ret_raw=True).to_g()
+        prop_step(wfn_gamma, rho, crystal.numel, compute_pot_local, prop_gamma)
+        rho = (
+            wfn_gamma[0][0].k_weight * wfn_gamma[0][0].compute_rho(ret_raw=True).to_g()
+        )
         normalize_rho(rho, numel)
         dipole_updater(istep, rho)
- 
+
     # End propagation ================================

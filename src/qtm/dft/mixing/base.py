@@ -1,4 +1,4 @@
-__all__ = ['MixModBase']
+__all__ = ["MixModBase"]
 
 from abc import ABC, abstractmethod
 import numpy as np
@@ -12,7 +12,6 @@ from qtm.constants import FPI
 
 
 class MixModBase(ABC):
-
     @abstractmethod
     def __init__(self, dftcomm: DFTCommMod, rho: FieldGType, beta: float, mixdim: int):
         assert isinstance(dftcomm, DFTCommMod)
@@ -32,17 +31,15 @@ class MixModBase(ABC):
     def _check_rho(self, rho_in: FieldGType, rho_out: FieldGType):
         assert type(rho_in) is self.FieldG
         assert type(rho_out) is self.FieldG
-        assert rho_in.shape == (self.numspin, )
+        assert rho_in.shape == (self.numspin,)
         assert rho_out.shape == (self.numspin,)
 
     def _dot(self, rho1_g: FieldGType, rho2_g: FieldGType) -> float:
         chden1 = sum(rho1_g)
         chden2 = sum(rho2_g)
-        fac = (
-            0.5 * FPI * self.grho.reallat_dv / np.prod(self.grho.grid_shape)
-        )
+        fac = 0.5 * FPI * self.grho.reallat_dv / np.prod(self.grho.grid_shape)
 
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             dotvec = chden1.conj() * chden2 / self.grho.g_norm2
             if self.grho.has_g0:
                 dotvec.data[..., 0] = 0

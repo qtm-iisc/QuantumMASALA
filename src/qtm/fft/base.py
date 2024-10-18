@@ -1,8 +1,9 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Sequence
-__all__ = ['FFT3D', 'DummyFFT3D']
+__all__ = ["FFT3D", "DummyFFT3D"]
 
 from abc import ABC, abstractmethod
 import numpy as np
@@ -13,7 +14,9 @@ from qtm.config import qtmconfig
 from qtm.config import NDArray
 
 
-def check_g_idxgrid(shape: tuple[int, int, int], idxgrid: NDArray, check_len:bool=True):
+def check_g_idxgrid(
+    shape: tuple[int, int, int], idxgrid: NDArray, check_len: bool = True
+):
     """Function to validate `idxgrid`, the flattened indices corresponding
     to the G-vectors in a 3D FFT array with dimensions ``shape``
 
@@ -22,9 +25,10 @@ def check_g_idxgrid(shape: tuple[int, int, int], idxgrid: NDArray, check_len:boo
      indices are within bounds.
     """
     from qtm.config import NDArray
+
     assert isinstance(idxgrid, NDArray)
     assert idxgrid.ndim == 1
-    assert idxgrid.dtype == 'i8'
+    assert idxgrid.dtype == "i8"
     if check_len:
         assert len(idxgrid) == len(np.unique(idxgrid)), f"idxgrid {idxgrid}"
     assert np.all(idxgrid >= 0) and np.all(idxgrid < np.prod(shape))
@@ -47,11 +51,16 @@ class FFT3D(ABC):
     """
 
     @abstractmethod
-    def __init__(self, shape: tuple[int, int, int],
-                 idxgrid: NDArray | None, normalise_idft: bool,
-                 backend: str | None, skip_check_g_idxgrid_len: bool = False):
+    def __init__(
+        self,
+        shape: tuple[int, int, int],
+        idxgrid: NDArray | None,
+        normalise_idft: bool,
+        backend: str | None,
+        skip_check_g_idxgrid_len: bool = False,
+    ):
         if idxgrid is None:
-            idxgrid = np.arange(np.prod(shape), dtype='i8')
+            idxgrid = np.arange(np.prod(shape), dtype="i8")
         if not skip_check_g_idxgrid_len:
             check_g_idxgrid(shape, idxgrid)
         self.shape: tuple[int, int, int] = shape
@@ -62,11 +71,12 @@ class FFT3D(ABC):
         evaluated; the rest are considered to be zeros and discarded."""
 
         if not isinstance(normalise_idft, bool):
-            raise ValueError(f"'normalise_idft' must be a boolean. "
-                             f"got {type(normalise_idft)}.")
+            raise ValueError(
+                f"'normalise_idft' must be a boolean. " f"got {type(normalise_idft)}."
+            )
         self.normalise_idft: bool = normalise_idft
         """If True, the inverse FFT will be normalised by ``1 / prod(shape)``"""
-        self.normalise_fac: float = 1. / np.prod(self.shape)
+        self.normalise_fac: float = 1.0 / np.prod(self.shape)
         """``1. / prod(shape)``; Normalisation factor applied to backwards FFT"""
 
         if backend is None:
@@ -103,8 +113,7 @@ class FFT3D(ABC):
         """
         pass
 
-    def allocate_array(self, shape: int | Sequence[int],
-                       dtype: str) -> NDArray:
+    def allocate_array(self, shape: int | Sequence[int], dtype: str) -> NDArray:
         """Alias of `FFTBackend.allocate_array`"""
         return self.FFTBackend.allocate_array(shape, dtype)
 

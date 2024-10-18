@@ -222,36 +222,37 @@ class Sigma:
         l_wfn_kgrp_q: List[List[KSWfn]],
         sigmainp: NamedTuple,
         epsinp: NamedTuple,
-        epsilon:Epsilon,
+        epsilon: Epsilon,
         rho: NamedTuple,
         vxc: NamedTuple,
         outdir: str = None,
-        parallel: bool = True,       
+        parallel: bool = True,
     ):
         rho_temp = deepcopy(rho)
         rho_temp._data *= crystal.numel / (sum(rho_temp.data_g0))
 
-        rho_nt = namedtuple("RHO", ["rho", "gvecs"])(rho_temp.data[0], rho_temp.gspc.g_cryst.T)
-        vxc_nt = namedtuple("VXC", ["vxc"])(vxc/ELECTRONVOLT_HART)
-
+        rho_nt = namedtuple("RHO", ["rho", "gvecs"])(
+            rho_temp.data[0], rho_temp.gspc.g_cryst.T
+        )
+        vxc_nt = namedtuple("VXC", ["vxc"])(vxc / ELECTRONVOLT_HART)
 
         sigma = Sigma(
-            crystal = crystal,
-            gspace = gspace,
-            kpts = kpts,
+            crystal=crystal,
+            gspace=gspace,
+            kpts=kpts,
             kptsq=kptsq,
-            l_wfn = [wfn[0] for wfn in l_wfn_kgrp],
-            l_wfnq = [wfn[0] for wfn in l_wfn_kgrp_q],
-            l_gsp_wfn = [wfn[0].gkspc for wfn in l_wfn_kgrp],
-            l_gsp_wfnq = [wfn[0].gkspc for wfn in l_wfn_kgrp_q],
-            qpts = QPoints.from_cryst(kpts.recilat, epsinp.is_q0, *epsinp.qpts),
+            l_wfn=[wfn[0] for wfn in l_wfn_kgrp],
+            l_wfnq=[wfn[0] for wfn in l_wfn_kgrp_q],
+            l_gsp_wfn=[wfn[0].gkspc for wfn in l_wfn_kgrp],
+            l_gsp_wfnq=[wfn[0].gkspc for wfn in l_wfn_kgrp_q],
+            qpts=QPoints.from_cryst(kpts.recilat, epsinp.is_q0, *epsinp.qpts),
             sigmainp=sigmainp,
-            epsinp = epsinp,
+            epsinp=epsinp,
             l_epsmats=epsilon.l_epsinv,
             rho=rho_nt,
             vxc=vxc_nt,
             outdir=outdir,
-            parallel=parallel
+            parallel=parallel,
         )
         return sigma
 
@@ -385,17 +386,24 @@ class Sigma:
 
     def pprint_sigma_mat(self, mat):
         _mat = deepcopy(mat).real.T
-        
+
         if mat.shape[1] <= 4:
             # Create table header
-            header = "k-pt index   k-point (crystal coords)     " + (" "*10).join([f"n={i+1:<3}" for i in range(mat.shape[1])])
+            header = "k-pt index   k-point (crystal coords)     " + (" " * 10).join(
+                [f"n={i+1:<3}" for i in range(mat.shape[1])]
+            )
             print(header)
             print("-" * len(header))
-            
+
             # Create table rows
             for i, k_index in enumerate(self.l_k_indices):
                 k_point = self.kpts.cryst[k_index]
-                row = f"{k_index:<11}   {k_point[0]:>5.3f}  {k_point[1]:>5.3f}  {k_point[2]:>5.3f}   " + "   ".join([f"{mat[i, j].real:12.6f}" for j in range(mat.shape[1])])
+                row = (
+                    f"{k_index:<11}   {k_point[0]:>5.3f}  {k_point[1]:>5.3f}  {k_point[2]:>5.3f}   "
+                    + "   ".join(
+                        [f"{mat[i, j].real:12.6f}" for j in range(mat.shape[1])]
+                    )
+                )
                 print(row)
         else:
             # Too many bands to print in one line
@@ -549,13 +557,13 @@ class Sigma:
             for i_k_ket, i_k_bra in pairs_i_k:
                 i_k_ket_in_mtxel_call = np.where(self.l_k_indices == i_k_ket)[0][0]
                 for i_b_bra in range(n_bra):
-                    E_bra[i_k_ket_in_mtxel_call, i_b_bra] = self.l_wfn[i_k_bra].evl[
-                        i_b_bra + i_b_bra_beg
-                    ]  * 2
+                    E_bra[i_k_ket_in_mtxel_call, i_b_bra] = (
+                        self.l_wfn[i_k_bra].evl[i_b_bra + i_b_bra_beg] * 2
+                    )
                 for i_b_ket in range(n_ket):
-                    E_ket[i_k_ket_in_mtxel_call, i_b_ket] = self.l_wfn[i_k_ket].evl[
-                        i_b_ket + i_b_ket_beg
-                    ]  * 2
+                    E_ket[i_k_ket_in_mtxel_call, i_b_ket] = (
+                        self.l_wfn[i_k_ket].evl[i_b_ket + i_b_ket_beg] * 2
+                    )
 
         # Matrix elements calculation
 
@@ -736,7 +744,7 @@ class Sigma:
     def sigma_x(self, yielding=True, parallel=True):
         """
         Fock exchange energy term
-        
+
         Returns:
           Sigma_x[i_k, i_band]
 
@@ -1045,7 +1053,7 @@ class Sigma:
     def sigma_ch_static_exact(self):
         r"""
         Static Coulomb Hole (Exact)
-        
+
         $$0.5 * \sum_{q,G,G'} = M_{n,n'}(k, q=0, G'-G) * [\varepsilon^{-1}_{G,G'}(q;0) - \delta_{G,G'}] * v(q+G')$$
 
         1e-3 disagreement: Doubt goes to limits on G'-G: is it all G and G' within cutoff or G-G' within cutoff
@@ -1720,7 +1728,9 @@ class Sigma:
         if self.print_condition:
             print()
             for k in range(len(self.l_k_indices)):
-                print(f"\n       k =  {self.kpts.cryst[k,0]:.6f}  {self.kpts.cryst[k,1]:.6f}  {self.kpts.cryst[k,2]:.6f} ik =  {k} spin = 1")
+                print(
+                    f"\n       k =  {self.kpts.cryst[k,0]:.6f}  {self.kpts.cryst[k,1]:.6f}  {self.kpts.cryst[k,2]:.6f} ik =  {k} spin = 1"
+                )
                 print(
                     "   n         Emf          Eo           X        SX-X          CH         Sig         Vxc        Eqp0        Eqp1         CH`        Sig`       Eqp0`       Eqp1`         Znk"
                 )
@@ -1936,7 +1946,9 @@ class Sigma:
         )
         if self.print_condition:
             for k in range(len(self.l_k_indices)):
-                print(f"\n       k =  {self.kpts.cryst[k,0]:.6f}  {self.kpts.cryst[k,1]:.6f}  {self.kpts.cryst[k,2]:.6f} ik =  {k} spin = 1")
+                print(
+                    f"\n       k =  {self.kpts.cryst[k,0]:.6f}  {self.kpts.cryst[k,1]:.6f}  {self.kpts.cryst[k,2]:.6f} ik =  {k} spin = 1"
+                )
                 print(
                     "   n         Emf          Eo           X        SX-X          CH         Sig         Vxc        Eqp0        Eqp1         CH`        Sig`       Eqp0`       Eqp1`         Znk"
                 )

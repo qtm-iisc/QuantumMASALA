@@ -12,9 +12,7 @@ from typing import Optional, List
 from qtm.crystal.basis_atoms import PseudoPotFile
 from qtm.constants import RYDBERG
 
-_LIBXC_MAP = {
-    "pbe": ("gga_x_pbe", "gga_c_pbe")
-}
+_LIBXC_MAP = {"pbe": ("gga_x_pbe", "gga_c_pbe")}
 
 
 @dataclass
@@ -155,10 +153,10 @@ class UPFv2Data(PseudoPotFile):
             data["dij"] = np.zeros((0, 0), dtype=np.float64)
             data["l_beta_times_r"] = []
 
-        data['libxc_func'] = None
-        funcname = data['functional']
+        data["libxc_func"] = None
+        funcname = data["functional"]
         if funcname.lower() in _LIBXC_MAP:
-            data['libxc_func'] = _LIBXC_MAP[funcname.lower()]
+            data["libxc_func"] = _LIBXC_MAP[funcname.lower()]
 
-        valence = int(np.rint(data['z_valence']))
+        valence = int(np.rint(data["z_valence"]))
         return cls(dirname, valence, **data)

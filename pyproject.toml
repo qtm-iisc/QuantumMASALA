@@ -3,9 +3,9 @@ requires = ["setuptools", "wheel", "Cython"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "quantum_masala"
-version = "0.9.0"
-description = "Plane-Wave, Pseudopotential-based Density Functional Theory (DFT) Framework"
+name = "qtm"
+version = "1.0.0"
+description = "Quantum MASALA: Quantum MAterialS Ab initio eLectronic-structure pAckage. It is a plane-wave and pseudopotential-based electronic structure framework"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [

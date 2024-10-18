@@ -1,5 +1,6 @@
 from __future__ import annotations
-__all__ = ['compute_occ']
+
+__all__ = ["compute_occ"]
 
 import numpy as np
 
@@ -28,13 +29,13 @@ def compute_occ(dftcomm: DFTCommMod, l_kswfn: list[list[KSWfn]], numel: int):
             if comm.is_null:
                 comm.skip_with_block()
 
-            max_filled = comm.allreduce(max(
-                np.amax(wfn_k[0].evl[:numfill]) for wfn_k in l_kswfn
-            ), comm.MAX)
+            max_filled = comm.allreduce(
+                max(np.amax(wfn_k[0].evl[:numfill]) for wfn_k in l_kswfn), comm.MAX
+            )
             if numfill < numbnd:
-                min_empty = comm.allreduce(min(
-                    np.amin(wfn_k[0].evl[numfill:]) for wfn_k in l_kswfn
-                ), comm.MIN)
+                min_empty = comm.allreduce(
+                    min(np.amin(wfn_k[0].evl[numfill:]) for wfn_k in l_kswfn), comm.MIN
+                )
             max_filled = comm.bcast(max_filled)
             min_empty = comm.bcast(min_empty)
 

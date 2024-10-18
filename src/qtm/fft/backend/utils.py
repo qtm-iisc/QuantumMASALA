@@ -1,4 +1,3 @@
-
 from typing import Type
 from qtm import config
 

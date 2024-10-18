@@ -108,11 +108,11 @@ class Epsilon:
         # To store epsilon inverse matrices, for sigma calculation
         self.l_epsinv: dict = {}
 
-    #@pw_logger.time("Epsilon:matrix_elements_rewrite")
+    # @pw_logger.time("Epsilon:matrix_elements_rewrite")
     def matrix_elements_rewrite(self, i_q, yielding=False):
         pass
 
-    #@pw_logger.time("Epsilon:matrix_elements")
+    # @pw_logger.time("Epsilon:matrix_elements")
     def matrix_elements(self, i_q, yielding=False):
         """
         Calculate the plane wave matrix elements required for calculation of polarizability.
@@ -173,7 +173,7 @@ class Epsilon:
         # Occupation numbers
         occ_all_bands = np.array(occ_all_bands)
 
-        occ = occ_all_bands[:,0:number_bands]
+        occ = occ_all_bands[:, 0:number_bands]
         # ^ indices for reference: [index of kpoint, band index]
         l_i_v = np.where(occ == 1)  # list of indices of occupied   bands
         l_i_c = np.where(occ == 0)  # list of indices of unoccupied bands
@@ -246,7 +246,9 @@ class Epsilon:
             # phi_c: Fourier transform of wfn_c to real space
             wfn_c = self.l_wfn[i_k_c]
             phi_c = np.zeros(wfn_c.gkspc.grid_shape, dtype=complex)
-            self.l_gsp_wfn[i_k_c]._fft.g2r(arr_inp=wfn_c.evc_gk._data[i_b_c, :], arr_out=phi_c)
+            self.l_gsp_wfn[i_k_c]._fft.g2r(
+                arr_inp=wfn_c.evc_gk._data[i_b_c, :], arr_out=phi_c
+            )
 
             # To avoid re-calculation for different bands of the same k_c-vector:
             if prev_i_k_c != i_k_c:
@@ -254,7 +256,9 @@ class Epsilon:
 
                 l_g_umklapp = self.l_gq[i_q].g_cryst - umklapp[i_k_c][:, None]
 
-                idxgrid = cryst2idxgrid(shape=self.gspace.grid_shape, g_cryst=l_g_umklapp.astype(int))
+                idxgrid = cryst2idxgrid(
+                    shape=self.gspace.grid_shape, g_cryst=l_g_umklapp.astype(int)
+                )
 
                 umklapped_fft_driver = get_fft_driver()(
                     self.gspace.grid_shape,
@@ -322,7 +326,9 @@ class Epsilon:
             epsilon_grid_shape = minimal_grid_shape(
                 wfndata.crystal.recilat, eps_fftgrid_ecut
             )
-            gspace = GSpace(wfndata.crystal.recilat, eps_fftgrid_ecut, epsilon_grid_shape)
+            gspace = GSpace(
+                wfndata.crystal.recilat, eps_fftgrid_ecut, epsilon_grid_shape
+            )
             # l_gk = [
             #     GkSpace(gspace, k_cryst, wfndata.l_wfn[0].gkspc.ecutwfn)
             #     for k_cryst in wfndata.kpts.cryst
@@ -347,7 +353,7 @@ class Epsilon:
 
     # CHI ===========================================================================
 
-    #@pw_logger.time("Epsilon:polarizability")
+    # @pw_logger.time("Epsilon:polarizability")
     def polarizability(self, M):
         """Polarizability Matrix
 
@@ -363,7 +369,7 @@ class Epsilon:
             4 * polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
         )
 
-    #@pw_logger.time("Epsilon:polarizability_active")
+    # @pw_logger.time("Epsilon:polarizability_active")
     def polarizability_active(self, i_q):
         """Calculates Polarizability Matrix.
         Differs from the ``polarizability`` method in that it actively calls ``matrix_element`` function and does the sums in a memory-efficient way.
@@ -375,17 +381,20 @@ class Epsilon:
         """
 
         polarizability_matrix = np.zeros(
-            (self.l_gq[i_q].gk_cryst.shape[-1], self.l_gq[i_q].gk_cryst.shape[-1]), dtype=complex
+            (self.l_gq[i_q].gk_cryst.shape[-1], self.l_gq[i_q].gk_cryst.shape[-1]),
+            dtype=complex,
         )
         for M in self.matrix_elements(i_q=i_q, yielding=True):
             polarizability_matrix += -np.einsum("l,m->lm", np.conj(M), M)
 
         return (
-            (4) * polarizability_matrix / (self.crystal.reallat.cellvol * self.kpts.numk)
+            (4)
+            * polarizability_matrix
+            / (self.crystal.reallat.cellvol * self.kpts.numk)
         )
 
     # EPSILON INVERSE ===========================================================================
-    #@pw_logger.time("Epsilon:epsilon_inverse")
+    # @pw_logger.time("Epsilon:epsilon_inverse")
     def epsilon_inverse(self, i_q, polarizability_matrix, store=True):
         """Calculate epsilon inverse, given index of q-point
 
@@ -397,10 +406,10 @@ class Epsilon:
         """
 
         vqg = self.vcoul.v_bare(i_q)
-        
+
         # FIXME: This is a temporary measure to check correctness of this file while changing units from Ryd to Hartree. Please remove
-        vqg/=2.0
-        
+        vqg /= 2.0
+
         I = np.identity(len(polarizability_matrix))
 
         eps = I - np.einsum("j,ij->ij", vqg, polarizability_matrix, optimize=True)
@@ -413,7 +422,7 @@ class Epsilon:
 
     # READ / WRITE EPSMAT =============================================================
 
-    #@pw_logger.time("Epsilon:write_epsmat")
+    # @pw_logger.time("Epsilon:write_epsmat")
     def write_epsmat(self, filename: str, epsinvmats: List[np.ndarray]):
         """Save data to epsmat.h5 file
 

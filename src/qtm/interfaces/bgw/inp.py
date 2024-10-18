@@ -29,7 +29,7 @@ def dict_to_namedtuple(data, name):
 
 
 def read_input_h5_namedtuple(filename, name, **kwargs):
-    my_dict = read_input_h5(filename,**kwargs)
+    my_dict = read_input_h5(filename, **kwargs)
     data = dict_to_namedtuple(my_dict, name)
     return data
 
@@ -40,13 +40,13 @@ def read_rho(filename):
     Parameters
     ----------
     filename: str
-    
-    Returns 
+
+    Returns
     -------
     rhotuple : NamedTuple
         Contains a) a list of gvecs, and b) a list of corresponding rho values.
-    
-        
+
+
     Comments give the corresponding lines from pw2bgw that wrote out the RHO file.
     We read and ignore irrelevant data.
     """
@@ -140,13 +140,13 @@ def read_epsilon_inp(filename="./QE_data/control_scripts/epsilon.inp"):
     def read_input_epsilon_dict(filename) -> Dict:
         """Load ``epsilon.inp`` file data to dictionary,
         doing automatic type inference using JSON module"""
-        
+
         with open(filename, "r") as file:
-            jsonstr = "{  " # Beginning of JSON string
-            qpts = []       # List of qpoints
-            is_q0 = []      # List of bools: "is qpt 0?"
-            scale_factor=[]
-            options = []    # List of options
+            jsonstr = "{  "  # Beginning of JSON string
+            qpts = []  # List of qpoints
+            is_q0 = []  # List of bools: "is qpt 0?"
+            scale_factor = []
+            options = []  # List of options
 
             for line in file:
                 linedata = line.strip().split()
@@ -176,8 +176,8 @@ def read_epsilon_inp(filename="./QE_data/control_scripts/epsilon.inp"):
                     options.append(linedata[0])
 
         jsonstr = jsonstr[:-1]  # Remove trailing comma
-        jsonstr += "}"          # Close JSON string
-        
+        jsonstr += "}"  # Close JSON string
+
         # Create epsilon input data dictionary by converting from the above jsonstr
         eps_inp_dict = json.loads(jsonstr, parse_float=float, parse_int=int)
         # Add specially parsed kpoints and options data to sigma_inp_dict
@@ -185,11 +185,10 @@ def read_epsilon_inp(filename="./QE_data/control_scripts/epsilon.inp"):
         eps_inp_dict["is_q0"] = is_q0
         eps_inp_dict["options"] = options
         return eps_inp_dict
-    
+
     tempdict = read_input_epsilon_dict(filename)
     epsdata = dict_to_namedtuple(tempdict, "EpsilonInp")
     return epsdata
-
 
 
 def read_sigma_inp(filename="./QE_data/control_scripts/sigma.inp"):
@@ -210,13 +209,12 @@ def read_sigma_inp(filename="./QE_data/control_scripts/sigma.inp"):
         doing automatic type inference using JSON module"""
 
         with open(filename, "r") as file:
-
             # Beginning of JSON string
-            jsonstr = "{  " 
+            jsonstr = "{  "
 
-            kpts = []       # List of kpoints
-            scale_factor=[]
-            options = []    # List of options
+            kpts = []  # List of kpoints
+            scale_factor = []
+            options = []  # List of options
 
             for line in file:
                 linedata = line.strip().split()
@@ -245,8 +243,8 @@ def read_sigma_inp(filename="./QE_data/control_scripts/sigma.inp"):
                     options.append(linedata[0])
 
             jsonstr = jsonstr[:-1]  # Remove trailing comma
-            jsonstr += "}"          # Close JSON string
-            
+            jsonstr += "}"  # Close JSON string
+
             sigma_inp_dict = json.loads(jsonstr, parse_float=float, parse_int=int)
             # Add specially parsed kpoints and options data to sigma_inp_dict
             sigma_inp_dict["kpts"] = np.array(kpts)
@@ -254,10 +252,10 @@ def read_sigma_inp(filename="./QE_data/control_scripts/sigma.inp"):
 
         return sigma_inp_dict
 
-
     sigma_inp_dict = read_input_sigma_dict(filename)
     sigmadata = dict_to_namedtuple(sigma_inp_dict, "SigmaInp")
     return sigmadata
+
 
 # Classes ---------------------------------------------------------------
 # Not used now, they were intermediate consideration.
@@ -268,7 +266,7 @@ def read_sigma_inp(filename="./QE_data/control_scripts/sigma.inp"):
 #     JSON -> Dict -> Namedtuple
 
 #     Use epsdata.__doc__ to see contents.
-    
+
 
 #     Attributes
 #     ----------
@@ -288,7 +286,7 @@ def read_sigma_inp(filename="./QE_data/control_scripts/sigma.inp"):
 #         """Load ``epsilon.inp`` file data to dictionary,
 
 #         doing automatic type inference using JSON module"""
-        
+
 #         with open(filename, "r") as file:
 #             jsonstr = "{  " # Beginning of JSON string
 #             qpts = []       # List of qpoints
@@ -323,7 +321,7 @@ def read_sigma_inp(filename="./QE_data/control_scripts/sigma.inp"):
 
 #         jsonstr = jsonstr[:-1]  # Remove trailing comma
 #         jsonstr += "}"          # Close JSON string
-        
+
 #         # Create epsilon input data dictionary by converting from the above jsonstr
 #         eps_inp_dict = json.loads(jsonstr, parse_float=float, parse_int=int)
 #         # Add specially parsed kpoints and options data to sigma_inp_dict
@@ -359,7 +357,7 @@ def read_sigma_inp(filename="./QE_data/control_scripts/sigma.inp"):
 #         with open(filename, "r") as file:
 
 #             # Beginning of JSON string
-#             jsonstr = "{  " 
+#             jsonstr = "{  "
 
 #             kpts = []       # List of kpoints
 #             options = []    # List of options
@@ -390,7 +388,7 @@ def read_sigma_inp(filename="./QE_data/control_scripts/sigma.inp"):
 
 #             jsonstr = jsonstr[:-1]  # Remove trailing comma
 #             jsonstr += "}"          # Close JSON string
-            
+
 #             sigma_inp_dict = json.loads(jsonstr, parse_float=float, parse_int=int)
 #             # Add specially parsed kpoints and options data to sigma_inp_dict
 #             sigma_inp_dict["kpts"] = np.array(kpts)

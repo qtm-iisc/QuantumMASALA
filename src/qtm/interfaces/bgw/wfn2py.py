@@ -7,8 +7,9 @@ from qtm.constants import RYDBERG, RYDBERG_HART
 from qtm.gspace import GkSpace, GSpace
 from qtm.klist import KList
 from qtm.lattice import RealLattice
-from qtm.crystal import BasisAtoms, Crystal 
+from qtm.crystal import BasisAtoms, Crystal
 from qtm.dft.kswfn import KSWfn
+
 # from qtm.gw.gwwfn import MeanFieldWavefun
 
 
@@ -120,7 +121,7 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
     for ityp, typ_num in enumerate(l_typ):
         l_species.append(
             BasisAtoms.from_alat(
-                typ_num, None, None, reallat, l_coords[ityp]#, valence=valence
+                typ_num, None, None, reallat, l_coords[ityp]  # , valence=valence
             )
         )
 
@@ -323,7 +324,7 @@ def wfn2py(filename="../test/bgw/WFN.h5", verbose=False):
     )
 
     for ik, wfns in enumerate(l_wfn):
-        wfn=wfns
+        wfn = wfns
         wfn.evl[:] = kpoints["el"][:, ik, :] * RYDBERG_HART
         wfn.occ[:] = kpoints["occ"][:, ik, :]
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
-__all__ = ['Crystal', 'CrystalSymm']
+
+__all__ = ["Crystal", "CrystalSymm"]
 
 import numpy as np
 from spglib import get_symmetry
@@ -22,9 +23,10 @@ class Crystal:
         Represents the crystal's atom basis where each element represents
         a subset of basis atoms belonging to the same species
     """
+
     def __init__(self, reallat: RealLattice, l_atoms: list[BasisAtoms]):
         if not isinstance(reallat, RealLattice):
-            raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
+            raise TypeError(type_mismatch_msg("reallat", reallat, RealLattice))
         self.reallat: RealLattice = reallat
         """Represents the crystal's lattice in real space"""
         self.recilat: ReciLattice = ReciLattice.from_reallat(self.reallat)
@@ -32,14 +34,15 @@ class Crystal:
 
         for ityp, typ in enumerate(l_atoms):
             if not isinstance(typ, BasisAtoms):
-                raise TypeError(type_mismatch_msg(
-                    f'l_atoms[{ityp}]', l_atoms[ityp], BasisAtoms
-                ))
+                raise TypeError(
+                    type_mismatch_msg(f"l_atoms[{ityp}]", l_atoms[ityp], BasisAtoms)
+                )
             if typ.reallat is not self.reallat:
-                raise ValueError(obj_mismatch_msg(
-                    f'l_atoms[{ityp}].reallat', typ.reallat,
-                    'reallat', reallat
-                ))
+                raise ValueError(
+                    obj_mismatch_msg(
+                        f"l_atoms[{ityp}].reallat", typ.reallat, "reallat", reallat
+                    )
+                )
         self.l_atoms: list[BasisAtoms] = l_atoms
         """Represents the crystal's atom basis where each element represents
         a subset of basis atoms belonging to the same species"""
@@ -52,7 +55,7 @@ class Crystal:
         return sum(sp.valence * sp.numatoms for sp in self.l_atoms)
 
     def gen_supercell(self, repeats: tuple[int, int, int]) -> Crystal:
-        """Generates a supercell """
+        """Generates a supercell"""
         try:
             repeats = tuple(repeats)
             for ni in repeats:
@@ -60,15 +63,18 @@ class Crystal:
                     raise TypeError
         except TypeError as e:
             raise TypeError(
-                type_mismatch_seq_msg('repeats', repeats, 'positive integers')
+                type_mismatch_seq_msg("repeats", repeats, "positive integers")
             ) from e
 
         if len(repeats) != 3:
-            raise ValueError("'repeats' must contain 3 elements. "
-                             f"got {len(repeats)}")
+            raise ValueError(
+                "'repeats' must contain 3 elements. " f"got {len(repeats)}"
+            )
 
-        xi = [np.arange(n, dtype='i8') for n in repeats]
-        grid = np.array(np.meshgrid(*xi, indexing='ij'), like=self.reallat.latvec).reshape((3, -1, 1))
+        xi = [np.arange(n, dtype="i8") for n in repeats]
+        grid = np.array(
+            np.meshgrid(*xi, indexing="ij"), like=self.reallat.latvec
+        ).reshape((3, -1, 1))
 
         reallat = self.reallat
         alat_sup = repeats[0] * reallat.alat
@@ -84,16 +90,15 @@ class Crystal:
             )
 
         return Crystal(reallat_sup, l_atoms_sup)
-    
-        
+
     def __repr__(self) -> str:
         res = f"Crystal(\n    reallat={self.reallat}, \n    l_atoms=["
         for sp in self.l_atoms:
             res += "\n" + sp.__repr__(indent="    \t")
-            
+
         res += "\n    \t])"
         return res
-    
+
     def __str__(self) -> str:
         reallat_str = str(self.reallat)
         atoms_str = ""
@@ -103,11 +108,10 @@ class Crystal:
         return f"{reallat_str}\n{atoms_str}"
 
 
-
 class CrystalSymm:
     """Module for working with symmetries of given crystal"""
 
-    symprec: float = 1E-5
+    symprec: float = 1e-5
     check_supercell: bool = True
     use_all_frac: bool = False
 
@@ -116,46 +120,54 @@ class CrystalSymm:
 
         lattice = crystal.reallat.latvec.T
         positions = [sp.r_cryst.T for sp in crystal.l_atoms]
-        numbers = np.repeat(range(len(positions)),
-                            [len(pos) for pos in positions])
+        numbers = np.repeat(range(len(positions)), [len(pos) for pos in positions])
         positions = np.concatenate(positions, axis=0)
-        
+
         if qtmconfig.gpu_enabled:
-            reallat_symm = get_symmetry((lattice.get(), positions.get(), numbers),
-                                    symprec=self.symprec)
+            reallat_symm = get_symmetry(
+                (lattice.get(), positions.get(), numbers), symprec=self.symprec
+            )
         else:
-            reallat_symm = get_symmetry((lattice, positions, numbers),
-                                    symprec=self.symprec)
-        del reallat_symm['equivalent_atoms']
+            reallat_symm = get_symmetry(
+                (lattice, positions, numbers), symprec=self.symprec
+            )
+        del reallat_symm["equivalent_atoms"]
         if reallat_symm is None:
             reallat_symm = {
-                'rotations': np.eye(3, dtype="i4").reshape((1, 3, 3)),
-                'translations': np.zeros(3, dtype="f8"),
+                "rotations": np.eye(3, dtype="i4").reshape((1, 3, 3)),
+                "translations": np.zeros(3, dtype="f8"),
             }
 
         if self.check_supercell:
             idx_identity = np.nonzero(
-                np.all(reallat_symm['rotations'] == np.eye(3, dtype='i8'), axis=(1, 2))
+                np.all(reallat_symm["rotations"] == np.eye(3, dtype="i8"), axis=(1, 2))
             )[0]
             if len(idx_identity) != 1:
                 idx_notrans = np.nonzero(
-                    np.linalg.norm(reallat_symm['translations'], axis=1) <= self.symprec
+                    np.linalg.norm(reallat_symm["translations"], axis=1) <= self.symprec
                 )[0]
                 for k, v in reallat_symm.items():
                     reallat_symm[k] = v[idx_notrans]
 
         recilat_symm = np.linalg.inv(
-            reallat_symm['rotations'].transpose((0, 2, 1))
-        ).astype('i4')
+            reallat_symm["rotations"].transpose((0, 2, 1))
+        ).astype("i4")
 
-        numsymm = len(reallat_symm['rotations'])
+        numsymm = len(reallat_symm["rotations"])
         self.symm: np.ndarray = np.array(
             [
-                (reallat_symm['rotations'][i], reallat_symm['translations'][i],
-                 recilat_symm[i]) for i in range(numsymm)
+                (
+                    reallat_symm["rotations"][i],
+                    reallat_symm["translations"][i],
+                    recilat_symm[i],
+                )
+                for i in range(numsymm)
             ],
-            dtype=[('reallat_rot', 'i4', (3, 3)), ('reallat_trans', 'f8', (3,)),
-                   ('recilat_rot', 'i4', (3, 3))]
+            dtype=[
+                ("reallat_rot", "i4", (3, 3)),
+                ("reallat_trans", "f8", (3,)),
+                ("recilat_rot", "i4", (3, 3)),
+            ],
         )
         """List of Symmetry operations of input crystal"""
 
@@ -166,21 +178,21 @@ class CrystalSymm:
 
     @property
     def reallat_rot(self):
-        return self.symm['reallat_rot']
+        return self.symm["reallat_rot"]
 
     @property
     def reallat_trans(self):
-        return self.symm['reallat_trans']
+        return self.symm["reallat_trans"]
 
     @property
     def recilat_rot(self):
-        return self.symm['recilat_rot']
+        return self.symm["recilat_rot"]
 
     def filter_frac_trans(self, grid_shape: tuple[int, int, int]):
         if self.use_all_frac:
             return
 
-        fac = np.multiply(self.symm['reallat_trans'], grid_shape)
+        fac = np.multiply(self.symm["reallat_trans"], grid_shape)
         idx_comm = np.nonzero(
             np.linalg.norm(fac - np.rint(fac), axis=1) <= self.symprec
         )[0]

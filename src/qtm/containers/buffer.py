@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import numbers
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Literal, Sequence, Self
-__all__ = ['BufferType']
+__all__ = ["BufferType"]
 
 from abc import ABC, abstractmethod
 from numbers import Number
@@ -62,7 +63,7 @@ class BufferType(NDArrayOperatorsMixin, ABC):
     # `__init_subclass__` method, which takes a `GSpaceBase` argument.
     gspc: GSpaceBase = None
     """`GSpaceBase` instance representing the basis of the space"""
-    basis_type: Literal['r', 'g'] = None
+    basis_type: Literal["r", "g"] = None
     """If ``'r'``, data is represented in real-space basis and if ``'g'``, data
     is represented in G-Space"""
     basis_size: int = None
@@ -82,6 +83,7 @@ class BufferType(NDArrayOperatorsMixin, ABC):
         """Array instance containing the data"""
         if qtmconfig.gpu_enabled:
             import cupy
+
             self._data = cupy.asarray(self._data)
 
     @classmethod
@@ -97,7 +99,8 @@ class BufferType(NDArrayOperatorsMixin, ABC):
                 return False
             raise ValueError(
                 "input 'data' failed assertion checks. "
-                "Refer to error messages above.") from e
+                "Refer to error messages above."
+            ) from e
 
     @property
     def data(self) -> NDArray:
@@ -124,8 +127,7 @@ class BufferType(NDArrayOperatorsMixin, ABC):
         return type(self)(self._data.imag)
 
     @classmethod
-    def empty(cls, shape: int | Sequence[int] = (),
-              dtype: str = 'c16') -> Self:
+    def empty(cls, shape: int | Sequence[int] = (), dtype: str = "c16") -> Self:
         """Creates a empty `BufferType` instance of given shape.
 
         Parameters
@@ -144,13 +146,12 @@ class BufferType(NDArrayOperatorsMixin, ABC):
         if shape is None:
             shape = ()
         elif isinstance(shape, int):
-            shape = (shape, )
+            shape = (shape,)
         data = cls.gspc.allocate_array((*shape, cls.basis_size), dtype=dtype)
         return cls(data)
 
     @classmethod
-    def zeros(cls, shape: int | Sequence[int] = (),
-              dtype: str = 'c16') -> Self:
+    def zeros(cls, shape: int | Sequence[int] = (), dtype: str = "c16") -> Self:
         """Creates a `BufferType` instance of given shape containing zeros.
 
         Parameters
@@ -186,11 +187,11 @@ class BufferType(NDArrayOperatorsMixin, ABC):
         """
         assert type(data) is cls.ndarray
         assert data.shape[-1] == cls.basis_size
-        return cls(data.copy(order='C'))
+        return cls(data.copy(order="C"))
 
     def copy(self) -> Self:
         """Makes a copy of itself"""
-        data = self._data.copy(order='C')
+        data = self._data.copy(order="C")
         return self.__class__(data)
 
     def conj(self) -> Self:
@@ -228,24 +229,28 @@ class BufferType(NDArrayOperatorsMixin, ABC):
             dimension matches `basis_size`.
         """
         if isinstance(shape, int):
-            shape = (shape, )
+            shape = (shape,)
         try:
             data = self._data.reshape((*shape, self.basis_size))
             return self.__class__(data)
         except Exception as e:
-            raise Exception("reshape failed. refer to the rest of the exception "
-                            "for further info.") from e
+            raise Exception(
+                "reshape failed. refer to the rest of the exception "
+                "for further info."
+            ) from e
 
     def __getitem__(self, item) -> Self:
         if not isinstance(item, tuple):
-            item = (item, )
+            item = (item,)
         sl = (*item, Ellipsis, slice(None))
         try:
             data = self._data[sl]
             return self.__class__(data)
         except Exception as e:
-            raise Exception("slicing failed. refer to the rest of the "
-                            "exception message for further info.") from e
+            raise Exception(
+                "slicing failed. refer to the rest of the "
+                "exception message for further info."
+            ) from e
 
     def __setitem__(self, key, value: Self):
         try:
@@ -255,7 +260,8 @@ class BufferType(NDArrayOperatorsMixin, ABC):
             raise Exception(
                 "slicing failed. Refer to the rest of the exception message "
                 "for further info. Make sure you are not slicing across the "
-                "last axis. If so, aceess it via the 'data' attribute.") from e
+                "last axis. If so, aceess it via the 'data' attribute."
+            ) from e
         self._data[key] = value.data if type(self) is type(value) else value
 
     def __len__(self):
@@ -268,15 +274,13 @@ class BufferType(NDArrayOperatorsMixin, ABC):
             yield self[idx]
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        if method in ['__call__', 'reduce']:
+        if method in ["__call__", "reduce"]:
             if ufunc.signature is not None and ufunc is not np.matmul:
                 raise NotImplementedError(
                     "Only scalar ufuncs and 'matmul' are supported."
                 )
-            if ufunc == np.matmul and 'axes' in kwargs:
-                raise NotImplementedError(
-                    "'axes' keyword for 'matmul' not supported"
-                )
+            if ufunc == np.matmul and "axes" in kwargs:
+                raise NotImplementedError("'axes' keyword for 'matmul' not supported")
         else:
             raise NotImplementedError(
                 "'BufferType' instances only support '__call__' and 'reduce' methods "
@@ -297,7 +301,7 @@ class BufferType(NDArrayOperatorsMixin, ABC):
 
         # If kwarg 'out' is given and if any one is a 'Buffer' instance, the
         # data array is extracted. Unlike in input, no casting is done here
-        outputs = kwargs.get('out', ())
+        outputs = kwargs.get("out", ())
         if outputs:
             ufunc_out = []
             for out in outputs:
@@ -307,11 +311,11 @@ class BufferType(NDArrayOperatorsMixin, ABC):
                     ufunc_out.append(out.data)
                 else:
                     return NotImplemented
-            kwargs['out'] = tuple(ufunc_out)
+            kwargs["out"] = tuple(ufunc_out)
 
-        if method == '__call__':
-            if 'order' in kwargs:
-                if kwargs['order'] != 'C':
+        if method == "__call__":
+            if "order" in kwargs:
+                if kwargs["order"] != "C":
                     raise ValueError("'order' keyword only suports 'C'.")
             # kwargs['order'] = 'C'
 
@@ -321,9 +325,12 @@ class BufferType(NDArrayOperatorsMixin, ABC):
         if outputs:
             return outputs[0] if len(outputs) == 1 else outputs
         elif isinstance(ufunc_out, tuple):
-            return tuple(type(self)(out)
-                         if out.ndim > 0 and out.shape[-1] == self.basis_size
-                         else out for out in ufunc_out)
+            return tuple(
+                type(self)(out)
+                if out.ndim > 0 and out.shape[-1] == self.basis_size
+                else out
+                for out in ufunc_out
+            )
         elif ufunc_out.ndim > 0 and ufunc_out.shape[-1] == self.basis_size:
             return type(self)(ufunc_out)
         else:

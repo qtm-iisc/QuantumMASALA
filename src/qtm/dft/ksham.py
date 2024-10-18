@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from qtm.msg_format import shape_mismatch_msg
-__all__ = ['KSHam']
+
+__all__ = ["KSHam"]
 from collections.abc import Sequence
 import numpy as np
 
@@ -15,39 +16,46 @@ from qtm.msg_format import *
 
 
 class KSHam:
-
-    def __init__(self, gkspc: GkSpace, is_noncolin: bool, vloc: FieldRType,
-                 l_nloc: Sequence[NonlocGenerator]):
+    def __init__(
+        self,
+        gkspc: GkSpace,
+        is_noncolin: bool,
+        vloc: FieldRType,
+        l_nloc: Sequence[NonlocGenerator],
+    ):
         if not isinstance(gkspc, GkSpace):
-            raise TypeError(type_mismatch_msg('gkspc', gkspc, GkSpace))
+            raise TypeError(type_mismatch_msg("gkspc", gkspc, GkSpace))
         self.gkspc: GkSpace = gkspc
-        self.ke_gk = get_WavefunG(gkspc, 1)((0.5 * self.gkspc.gk_norm2).astype('c16'))
+        self.ke_gk = get_WavefunG(gkspc, 1)((0.5 * self.gkspc.gk_norm2).astype("c16"))
 
         if not isinstance(is_noncolin, bool):
-            raise TypeError(type_mismatch_msg('is_noncolin', is_noncolin, bool))
+            raise TypeError(type_mismatch_msg("is_noncolin", is_noncolin, bool))
         self.is_noncolin: bool = is_noncolin
 
         if not isinstance(vloc, FieldRType):
-            raise TypeError(type_mismatch_msg('vloc', vloc, FieldRType))
+            raise TypeError(type_mismatch_msg("vloc", vloc, FieldRType))
         if vloc.gspc is not gkspc.gwfn:
-            raise ValueError(obj_mismatch_msg(
-                'vloc.gspc', vloc.gspc, 'gkspc.gwfn', gkspc.gwfn
-            ))
+            raise ValueError(
+                obj_mismatch_msg("vloc.gspc", vloc.gspc, "gkspc.gwfn", gkspc.gwfn)
+            )
 
-        if vloc.shape != (1 + is_noncolin, ):
+        if vloc.shape != (1 + is_noncolin,):
             if not is_noncolin and vloc.shape == ():
                 pass
             else:
-                raise ValueError(value_mismatch_msg(
-                    'vloc.shape', vloc.shape,
-                    f"{(1 + is_noncolin, )} when is_noncolin = {is_noncolin}"
-                ))
+                raise ValueError(
+                    value_mismatch_msg(
+                        "vloc.shape",
+                        vloc.shape,
+                        f"{(1 + is_noncolin, )} when is_noncolin = {is_noncolin}",
+                    )
+                )
         self.vloc = vloc
 
         if not isinstance(l_nloc, Sequence) or any(
-                not isinstance(nloc, NonlocGenerator) for nloc in l_nloc
+            not isinstance(nloc, NonlocGenerator) for nloc in l_nloc
         ):
-            raise TypeError(type_mismatch_msg('l_nloc', l_nloc, NonlocGenerator))
+            raise TypeError(type_mismatch_msg("l_nloc", l_nloc, NonlocGenerator))
         self.l_vkb_dij = []
         self.vnl_diag = 0
         for nloc in l_nloc:
@@ -55,11 +63,12 @@ class KSHam:
             self.l_vkb_dij.append((vkb, dij))
             self.vnl_diag += vkb_diag
 
-
-    @qtmlogger.time('KSHam:h_psi')
+    @qtmlogger.time("KSHam:h_psi")
     def h_psi(self, l_psi: get_WavefunG, l_hpsi: get_WavefunG):
         # l_hpsi[:] = self.ke_gk * l_psi
-        assert l_psi.shape == l_hpsi.shape, shape_mismatch_msg('l_psi', 'l_hpsi', l_psi, l_hpsi)
+        assert l_psi.shape == l_hpsi.shape, shape_mismatch_msg(
+            "l_psi", "l_hpsi", l_psi, l_hpsi
+        )
         l_psi = l_psi.reshape(-1)
         l_hpsi = l_hpsi.reshape(-1)
 
@@ -75,5 +84,4 @@ class KSHam:
 
             proj = vkb.vdot(l_psi)
             proj = dij @ proj
-            l_hpsi.zgemm(vkb.data.T, proj.T,
-                         0, 1, 1.0, l_hpsi.data.T, 1.0)
+            l_hpsi.zgemm(vkb.data.T, proj.T, 0, 1, 1.0, l_hpsi.data.T, 1.0)

@@ -1,5 +1,6 @@
 from __future__ import annotations
-__all__ = ['compute']
+
+__all__ = ["compute"]
 import numpy as np
 from scipy.special import erfc
 
@@ -15,8 +16,17 @@ def compute(crystal: Crystal, gspc: GSpace) -> float:
     _2pibv = 2 * np.pi / cellvol
 
     l_charges = np.asarray(
-        sum(([sp.valence, ] * sp.numatoms for sp in l_species), []),
-        like=gspc.g_cryst
+        sum(
+            (
+                [
+                    sp.valence,
+                ]
+                * sp.numatoms
+                for sp in l_species
+            ),
+            [],
+        ),
+        like=gspc.g_cryst,
     )
     numat = l_charges.shape[0]
     r_cryst_all = np.concatenate([sp.r_cryst for sp in l_species], axis=1)
@@ -46,22 +56,18 @@ def compute(crystal: Crystal, gspc: GSpace) -> float:
 
     E_self = beta / np.sqrt(np.pi) * np.sum(l_charges**2)
 
-    rij_cryst = r_cryst_all.reshape((3, -1, 1)) - r_cryst_all.reshape(
-        (3, 1, -1)
-    )
+    rij_cryst = r_cryst_all.reshape((3, -1, 1)) - r_cryst_all.reshape((3, 1, -1))
     qij = l_charges.reshape(-1, 1) * l_charges.reshape(1, -1)
-    ni = np.floor(4 / beta / np.linalg.norm(latvec, axis=1)).astype('i8') + 1
+    ni = np.floor(4 / beta / np.linalg.norm(latvec, axis=1)).astype("i8") + 1
 
-    xi = [np.arange(-n, n + 1, dtype='i8', like=g_cryst) for n in ni.tolist()]
-    N = np.array(np.meshgrid(*xi, indexing='ij'),
-                 like=g_cryst).reshape((3, -1, 1, 1))
+    xi = [np.arange(-n, n + 1, dtype="i8", like=g_cryst) for n in ni.tolist()]
+    N = np.array(np.meshgrid(*xi, indexing="ij"), like=g_cryst).reshape((3, -1, 1, 1))
     Rij_cryst = N + np.expand_dims(rij_cryst, axis=1)
     Rij_cart = reallat.cryst2cart(Rij_cryst)
     Rij_norm = np.linalg.norm(Rij_cart, axis=0)
 
     # Finding index where N=0
-    i_N0 = ni[0] * (2 * ni[1] + 1) * (2 * ni[2] + 1) \
-        + ni[1] * (2 * ni[2] + 1) + ni[2]
+    i_N0 = ni[0] * (2 * ni[1] + 1) * (2 * ni[2] + 1) + ni[1] * (2 * ni[2] + 1) + ni[2]
     # CUPY_NOTE: np.fill_diagonal is bugged for some reason here
     # np.fill_diagonal(Rij_norm[i_N0], 1E50)
     for iat in range(numat):
@@ -70,7 +76,5 @@ def compute(crystal: Crystal, gspc: GSpace) -> float:
     E_S = 0.5 * np.sum(sij)
 
     f = np.exp(-g_norm2[1:] / (4 * alpha)) / g_norm2[1:]
-    E_L = _2pibv * (
-        np.sum(f * np.abs(struct_fac[1:]) ** 2) - np.sum(qij) / (4 * alpha)
-    )
+    E_L = _2pibv * (np.sum(f * np.abs(struct_fac[1:]) ** 2) - np.sum(qij) / (4 * alpha))
     return E_S + E_L - E_self

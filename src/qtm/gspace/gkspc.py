@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from typing import Sequence
-__all__ = ['GkSpace']
+
+__all__ = ["GkSpace"]
 
 import numpy as np
 
@@ -13,33 +14,38 @@ from qtm.config import NDArray
 
 
 class GkSpace(GSpaceBase):
-
     FFT3D = FFT3DFull
     _normalise_idft = False
 
-    def __init__(self, gwfn: GSpace, k_cryst: tuple[float, float, float], ecutwfn:float=None):
+    def __init__(
+        self, gwfn: GSpace, k_cryst: tuple[float, float, float], ecutwfn: float = None
+    ):
         if not isinstance(gwfn, GSpace):
-            raise TypeError("'gwfn' must be a 'GSpace' instance. "
-                            f"got '{type(gwfn)}'")
+            raise TypeError(
+                "'gwfn' must be a 'GSpace' instance. " f"got '{type(gwfn)}'"
+            )
         self.gwfn = gwfn
 
-        if ecutwfn==None:
+        if ecutwfn == None:
             self.ecutwfn = self.gwfn.ecut / 4
         else:
             self.ecutwfn = ecutwfn
 
         self.k_cryst = tuple(k_cryst)
         g_cryst = self.gwfn.g_cryst[:, self.gwfn.idxsort]
-        gk_cryst = g_cryst.astype('f8')
+        gk_cryst = g_cryst.astype("f8")
         for ipol in range(3):
             gk_cryst[ipol] += self.k_cryst[ipol]
         gk_norm2 = self.gwfn.recilat.norm2(gk_cryst)
         self.idxgk = np.nonzero(gk_norm2 <= 2 * self.ecutwfn)[0]
-        super().__init__(self.gwfn.recilat, self.gwfn.grid_shape,
-                         g_cryst[:, self.idxgk], self.gwfn._fft.backend,
-                         )
+        super().__init__(
+            self.gwfn.recilat,
+            self.gwfn.grid_shape,
+            g_cryst[:, self.idxgk],
+            self.gwfn._fft.backend,
+        )
 
-        self.gk_cryst = self.g_cryst.copy().astype('f8')
+        self.gk_cryst = self.g_cryst.copy().astype("f8")
         for ipol in range(3):
             self.gk_cryst[ipol] += self.k_cryst[ipol]
 
@@ -56,7 +62,7 @@ class GkSpace(GSpaceBase):
     @property
     def gk_norm2(self) -> NDArray:
         # TODO: Bug when using 'cryst'. Fix it
-        return self.recilat.norm2(self.gk_cart, 'cart')
+        return self.recilat.norm2(self.gk_cart, "cart")
 
     @property
     def gk_norm(self) -> NDArray:
@@ -65,14 +71,14 @@ class GkSpace(GSpaceBase):
 
     def cryst_to_norm2(self, l_vecs: Sequence) -> Sequence:
         """Calculate the norm^2 of a given list of vectors in crystal coordinates.
-        
+
         Parameters
         ----------
         l_vec: Sequence
             List of vectors in crystal coordinates. shape: (3,:)
-        
+
         Returns
         -------
         np.ndarray of shape (:)
         """
-        return self.recilat.norm2(l_vecs, 'cryst')
+        return self.recilat.norm2(l_vecs, "cryst")

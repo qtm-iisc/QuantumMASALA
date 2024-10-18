@@ -1,8 +1,9 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Literal
-__all__ = ['get_zgemm', 'ZGEMMWrapper']
+__all__ = ["get_zgemm", "ZGEMMWrapper"]
 
 from sys import version_info
 from functools import lru_cache
@@ -30,9 +31,16 @@ if version_info[1] >= 8:
         using the wrapper.
         """
 
-        def __call__(self, a: NDArray, b: NDArray, trans_a: Literal[0, 1, 2] = 0,
-                     trans_b: Literal[0, 1, 2] = 0, alpha: complex = 1.0,
-                     out: NDArray | None = None, beta: complex = 0.0) -> NDArray:
+        def __call__(
+            self,
+            a: NDArray,
+            b: NDArray,
+            trans_a: Literal[0, 1, 2] = 0,
+            trans_b: Literal[0, 1, 2] = 0,
+            alpha: complex = 1.0,
+            out: NDArray | None = None,
+            beta: complex = 0.0,
+        ) -> NDArray:
             """Implements C := alpha*op( A )*op( B ) + beta*C, where op( X ) is
             one of: op( X ) = X or op( X ) = X**T or op( X ) = X**H
 
@@ -58,9 +66,11 @@ if version_info[1] >= 8:
             -------
             out : NDarray
             """
+
         ...
+
 else:
-    ZGEMMWrapper = 'ZGEMMWrapper'
+    ZGEMMWrapper = "ZGEMMWrapper"
 
 
 @lru_cache(maxsize=None)
@@ -68,17 +78,30 @@ def get_zgemm(arr_type: type) -> ZGEMMWrapper:
     if arr_type is np.ndarray:
         from scipy.linalg.blas import zgemm
 
-        def zgemm_sp(a: NDArray, b: NDArray, trans_a: Literal[0, 1, 2] = 0,
-                     trans_b: Literal[0, 1, 2] = 0, alpha: complex = 1.0,
-                     out: NDArray | None = None, beta: complex = 0.0):
+        def zgemm_sp(
+            a: NDArray,
+            b: NDArray,
+            trans_a: Literal[0, 1, 2] = 0,
+            trans_b: Literal[0, 1, 2] = 0,
+            alpha: complex = 1.0,
+            out: NDArray | None = None,
+            beta: complex = 0.0,
+        ):
             overwrite_c = 0
             out_ = None
             if out is not None:
                 overwrite_c = 1
-                out_ = np.asarray(out, 'F')
-            out_ = zgemm(alpha=alpha, a=a, b=b, c=out_,
-                         trans_a=trans_a, trans_b=trans_b,
-                         overwrite_c=overwrite_c, beta=beta)
+                out_ = np.asarray(out, "F")
+            out_ = zgemm(
+                alpha=alpha,
+                a=a,
+                b=b,
+                c=out_,
+                trans_a=trans_a,
+                trans_b=trans_b,
+                overwrite_c=overwrite_c,
+                beta=beta,
+            )
             if out is None:
                 return out_
             if out_ is not out:
@@ -88,13 +111,21 @@ def get_zgemm(arr_type: type) -> ZGEMMWrapper:
         return zgemm_sp
     elif CUPY_INSTALLED:
         import cupy as cp
+
         if arr_type is cp.ndarray:
             from cupy.cublas import gemm
 
-            def zgemm_cp(a: NDArray, b: NDArray, trans_a: Literal[0, 1, 2] = 0,
-                         trans_b: Literal[0, 1, 2] = 0, alpha: complex = 1.0,
-                         out: NDArray | None = None, beta: complex = 0.0):
+            def zgemm_cp(
+                a: NDArray,
+                b: NDArray,
+                trans_a: Literal[0, 1, 2] = 0,
+                trans_b: Literal[0, 1, 2] = 0,
+                alpha: complex = 1.0,
+                out: NDArray | None = None,
+                beta: complex = 0.0,
+            ):
                 return gemm(trans_a, trans_b, a, b, out, alpha, beta)
+
             return zgemm_cp
     else:
         raise NotImplementedError(

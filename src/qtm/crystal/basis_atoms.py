@@ -1,5 +1,6 @@
 from __future__ import annotations
-__all__ = ['BasisAtoms', 'PseudoPotFile']
+
+__all__ = ["BasisAtoms", "PseudoPotFile"]
 
 import os
 import numpy as np
@@ -79,14 +80,19 @@ class BasisAtoms:
         (``(3, numatoms)``) Crystal Coordinates of atoms in unit cell.
     """
 
-    def __init__(self, label: str, ppdata: PseudoPotFile | int, mass: float | None,
-                 reallat: RealLattice, r_cryst: NDArray,
-                 ):
+    def __init__(
+        self,
+        label: str,
+        ppdata: PseudoPotFile | int,
+        mass: float | None,
+        reallat: RealLattice,
+        r_cryst: NDArray,
+    ):
         self.label: str = label
         """Label assigned to the atomic species."""
 
         if not isinstance(reallat, RealLattice):
-            raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
+            raise TypeError(type_mismatch_msg("reallat", reallat, RealLattice))
         self.reallat: RealLattice = reallat
         """Real Lattice of the crystal"""
 
@@ -98,7 +104,7 @@ class BasisAtoms:
         elif ppdata is None:
             valence = -1
         else:
-            raise TypeError(type_mismatch_msg('ppdata', ppdata, [PseudoPotFile, int]))
+            raise TypeError(type_mismatch_msg("ppdata", ppdata, [PseudoPotFile, int]))
         self.valence: int = valence
         """Number of valence electrons per atom."""
         self.ppdata: PseudoPotFile | None = ppdata
@@ -106,20 +112,21 @@ class BasisAtoms:
 
         if mass is not None:
             if not isinstance(mass, float) or mass < 0:
-                raise TypeError(type_mismatch_msg('mass', mass, "a positive float"))
+                raise TypeError(type_mismatch_msg("mass", mass, "a positive float"))
         self.mass: float | None = mass
         """Mass of the atomic species in a.m.u."""
 
         try:
-            r_cryst = np.asarray(r_cryst, dtype='f8', order='C',
-                                 like=self.reallat.latvec)
+            r_cryst = np.asarray(
+                r_cryst, dtype="f8", order="C", like=self.reallat.latvec
+            )
         except Exception as e:
-            raise TypeError(type_mismatch_msg('r_cryst', r_cryst, NDArray)) from e
+            raise TypeError(type_mismatch_msg("r_cryst", r_cryst, NDArray)) from e
         if r_cryst.ndim != 2:
-            raise ValueError(value_mismatch_msg('r_cryst.ndim', r_cryst.ndim, 2))
+            raise ValueError(value_mismatch_msg("r_cryst.ndim", r_cryst.ndim, 2))
         if r_cryst.shape[0] != 3:
             raise ValueError(
-                value_mismatch_msg('r_cryst.shape[0]', r_cryst.shape[0], 3)
+                value_mismatch_msg("r_cryst.shape[0]", r_cryst.shape[0], 3)
             )
         self.r_cryst: NDArray = r_cryst
         """(``(3, self.numatoms)``) Crystal Coordinates of atoms in unit cell"""
@@ -142,8 +149,14 @@ class BasisAtoms:
         return self.reallat.cryst2alat(self.r_cryst)
 
     @classmethod
-    def from_cart(cls, label: str, ppdata: PseudoPotFile | int | None, mass: float | None,
-                  reallat: RealLattice, *r_cart) -> BasisAtoms:
+    def from_cart(
+        cls,
+        label: str,
+        ppdata: PseudoPotFile | int | None,
+        mass: float | None,
+        reallat: RealLattice,
+        *r_cart,
+    ) -> BasisAtoms:
         """Generates `BasisAtoms` instance from cartesian coordinates
 
         Parameters
@@ -163,69 +176,94 @@ class BasisAtoms:
             Atomic Mass of the species
         """
         if not isinstance(reallat, RealLattice):
-            raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
-        r_cart = np.array(r_cart, dtype='f8', like=reallat.latvec).T
+            raise TypeError(type_mismatch_msg("reallat", reallat, RealLattice))
+        r_cart = np.array(r_cart, dtype="f8", like=reallat.latvec).T
         r_cryst = reallat.cart2cryst(r_cart)
         return cls(label, ppdata, mass, reallat, r_cryst)
 
     @classmethod
-    def from_cryst(cls, label: str, ppdata: PseudoPotFile | int, mass: float | None,
-                   reallat: RealLattice, *r_cryst) -> BasisAtoms:
+    def from_cryst(
+        cls,
+        label: str,
+        ppdata: PseudoPotFile | int,
+        mass: float | None,
+        reallat: RealLattice,
+        *r_cryst,
+    ) -> BasisAtoms:
         """Generates `BasisAtoms` instance from crystal coordinates.
         Refer to `from_cart` for a descripton of the input
         arguments"""
         if not isinstance(reallat, RealLattice):
-            raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
-        r_cryst = np.array(r_cryst, dtype='f8', like=reallat.latvec).T
+            raise TypeError(type_mismatch_msg("reallat", reallat, RealLattice))
+        r_cryst = np.array(r_cryst, dtype="f8", like=reallat.latvec).T
         return cls(label, ppdata, mass, reallat, r_cryst)
 
     @classmethod
-    def from_alat(cls, label: str, ppdata: PseudoPotFile | int, mass: float | None,
-                  reallat: RealLattice, r_alat) -> BasisAtoms:
+    def from_alat(
+        cls,
+        label: str,
+        ppdata: PseudoPotFile | int,
+        mass: float | None,
+        reallat: RealLattice,
+        r_alat,
+    ) -> BasisAtoms:
         """Generates `BasisAtoms` instance from cartesian coordinates in
         alat units. Refer to `from_cart` for a descripton of the input
         arguments"""
         if not isinstance(reallat, RealLattice):
-            raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
-        r_alat = np.array(r_alat, dtype='f8', like=reallat.latvec).T
+            raise TypeError(type_mismatch_msg("reallat", reallat, RealLattice))
+        r_alat = np.array(r_alat, dtype="f8", like=reallat.latvec).T
         r_cryst = reallat.alat2cryst(r_alat)
         return cls(label, ppdata, mass, reallat, r_cryst)
 
     @classmethod
-    def from_angstrom(cls, label: str, ppdata: PseudoPotFile | int, mass: float | None,
-                      reallat: RealLattice, *r_ang) -> BasisAtoms:
+    def from_angstrom(
+        cls,
+        label: str,
+        ppdata: PseudoPotFile | int,
+        mass: float | None,
+        reallat: RealLattice,
+        *r_ang,
+    ) -> BasisAtoms:
         """Generates `BasisAtoms` instance from cartesian coordinates in
         angstrom units. Refer to `from_cart` for a descripton of the input
         arguments"""
         if not isinstance(reallat, RealLattice):
-            raise TypeError(type_mismatch_msg('reallat', reallat, RealLattice))
-        r_cart = np.array(r_ang, dtype='f8', like=reallat.latvec).T * ANGSTROM
+            raise TypeError(type_mismatch_msg("reallat", reallat, RealLattice))
+        r_cart = np.array(r_ang, dtype="f8", like=reallat.latvec).T * ANGSTROM
         r_cryst = reallat.cart2cryst(r_cart)
         return cls(label, ppdata, mass, reallat, r_cryst)
 
     @classmethod
-    def from_bohr(cls, label: str, ppdata: PseudoPotFile | int, mass: float | None,
-                  reallat: RealLattice, *r_cart) -> BasisAtoms:
+    def from_bohr(
+        cls,
+        label: str,
+        ppdata: PseudoPotFile | int,
+        mass: float | None,
+        reallat: RealLattice,
+        *r_cart,
+    ) -> BasisAtoms:
         """Alias of `from_cart` classmethod"""
         return cls.from_cart(label, ppdata, mass, reallat, *r_cart)
-
 
     def __repr__(self, indent="") -> str:
         r_cryst_str = ""
         for i in range(self.numatoms):
-            r_cryst_str += f"\n{indent}    {np.array2string(self.r_cryst[:, i], separator=', ')},"
+            r_cryst_str += (
+                f"\n{indent}    {np.array2string(self.r_cryst[:, i], separator=', ')},"
+            )
         res = f"{indent}BasisAtoms(\n{indent}  label='{self.label}', \n{indent}  ppdata.filename={self.ppdata.filename}, \n{indent}  ppdata.md5_checksum={self.ppdata.md5_checksum}, \n{indent}  mass={self.mass}, \n{indent}  r_cryst={r_cryst_str}\n{indent}  )"
         return res
-    
+
     def __str__(self) -> str:
         label_str = f"    Label   : {self.label}"
         mass_str = f"    Mass    : {self.mass:.2f}"
         valence_str = f"    Valence : {self.ppdata.valence:.2f}"
         pseudopot_str = f"    Pseudpot: {self.ppdata.filename}\n              MD5: {self.ppdata.md5_checksum}"
-        
+
         coords_str = "    Coordinates (in units of alat)"
         for i in range(self.numatoms):
             coords = self.r_cryst[:, i]
             coords_str += f"\n          {i + 1} - ({coords[0]:8.5f}, {coords[1]:8.5f}, {coords[2]:8.5f})"
-        
+
         return f"{label_str}\n{mass_str}\n{valence_str}\n{pseudopot_str}\n{coords_str}"

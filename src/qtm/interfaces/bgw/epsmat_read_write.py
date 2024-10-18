@@ -84,12 +84,15 @@ template_dict = {
 }
 
 
-
 import h5py
 import numpy as np
 
-from qtm.interfaces.bgw.h5_utils import (cplx_to_real, create_empty_h5,
-                                              real_to_cplx, write_recursive_h5)
+from qtm.interfaces.bgw.h5_utils import (
+    cplx_to_real,
+    create_empty_h5,
+    real_to_cplx,
+    write_recursive_h5,
+)
 
 TOLERANCE = 1e-5
 
@@ -113,7 +116,7 @@ def unpad_array(arr):
     mindim = min(arr.shape[-2:])
     # print(mindim)
 
-    return arr[...,:mindim,:mindim]
+    return arr[..., :mindim, :mindim]
 
 
 def write_mats(filename, mats, auxfile=None):
@@ -159,7 +162,7 @@ def write_mats(filename, mats, auxfile=None):
     # Populate known entities
     f.create_group("mats")
     f["mats"].create_dataset("matrix", data=np_mats)
-    
+
     f["mats"].create_dataset(
         "matrix-diagonal",
         data=np.stack([np.diagonal(mat.T, axis1=1, axis2=2) for mat in np_mats]),
@@ -199,4 +202,3 @@ if __name__ == "__main__":
 
     # mats = read_mats("testmat.h5")
     # print(*mats, sep="\n")
-

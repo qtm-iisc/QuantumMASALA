@@ -1,5 +1,6 @@
 from __future__ import annotations
-__all__ = ['GSpaceCuPy', 'GkSpaceCuPy']
+
+__all__ = ["GSpaceCuPy", "GkSpaceCuPy"]
 
 from functools import lru_cache
 import numpy as np
@@ -21,19 +22,26 @@ class FFT3DFullCuPy(FFT3DFull):
 
     """
 
-    def __init__(self, shape: tuple[int, int, int],
-                 idxgrid: NDArray, normalise_idft: bool, backend: str | None = 'cupy',
-                 ):
-        super().__init__(shape, idxgrid, normalise_idft, 'cupy')
+    def __init__(
+        self,
+        shape: tuple[int, int, int],
+        idxgrid: NDArray,
+        normalise_idft: bool,
+        backend: str | None = "cupy",
+    ):
+        super().__init__(shape, idxgrid, normalise_idft, "cupy")
 
 
 class GSpaceCuPy(GSpace):
-
     FFT3D = FFT3DFullCuPy
     _normalise_idft = True
 
-    def __init__(self, recilat: ReciLattice, ecut: float,
-                 grid_shape: tuple[int, int, int] | None = None):
+    def __init__(
+        self,
+        recilat: ReciLattice,
+        ecut: float,
+        grid_shape: tuple[int, int, int] | None = None,
+    ):
         assert isinstance(recilat, ReciLattice)
         assert isinstance(recilat.recvec, cp.ndarray)
         super().__init__(recilat, ecut, grid_shape)
@@ -54,14 +62,14 @@ class GSpaceCuPy(GSpace):
 
 
 class GkSpaceCuPy(GkSpace):
-
     FFT3D = FFT3DFullCuPy
     _normalise_idft = False
 
     def __init__(self, gspc: GSpaceCuPy, k_cryst: tuple[float, float, float]):
         if not isinstance(gspc, GSpaceCuPy):
-            raise TypeError(f"'gspc' must be a '{GSpaceCuPy}' instance. "
-                            f"got '{type(gspc)}'")
+            raise TypeError(
+                f"'gspc' must be a '{GSpaceCuPy}' instance. " f"got '{type(gspc)}'"
+            )
         super().__init__(gspc, k_cryst)
 
     @classmethod

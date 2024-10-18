@@ -1,5 +1,5 @@
 # from future import __annotations__
-__all__ = ['SymmFieldMod']
+__all__ = ["SymmFieldMod"]
 
 import numpy as np
 
@@ -16,19 +16,15 @@ ROUND_PREC: int = 6
 
 
 class SymmFieldMod:
-
     def __init__(self, crystal: Crystal, gspc: GSpace):
         if not isinstance(crystal, Crystal):
-            raise TypeError(
-                type_mismatch_msg('crystal', crystal, Crystal)
-            )
+            raise TypeError(type_mismatch_msg("crystal", crystal, Crystal))
         if not isinstance(gspc, GSpace):
-            raise TypeError(
-                type_mismatch_msg('gspc', gspc, GSpace)
-            )
+            raise TypeError(type_mismatch_msg("gspc", gspc, GSpace))
 
         if MPI4PY_INSTALLED:
             from qtm.mpi.gspace import DistGSpace
+
             if isinstance(gspc, DistGSpace):
                 gspc = gspc.gspc_glob
 
@@ -49,12 +45,11 @@ class SymmFieldMod:
         i1, i2, i3 = g_cryst
         # CUPY NOTE: Arrays stacked below because CuPy's lexsort works with a
         # single 2D array and not tuple of 1d arrays
-        idxsort = np.lexsort(np.stack((
-            i3 + n3 * (i3 < 0),
-            i2 + n2 * (i2 < 0),
-            i1 + n1 * (i1 < 0),
-            g_norm2
-        )))
+        idxsort = np.lexsort(
+            np.stack(
+                (i3 + n3 * (i3 < 0), i2 + n2 * (i2 < 0), i1 + n1 * (i1 < 0), g_norm2)
+            )
+        )
 
         # Splitting the set of G-vectors into groups with same lengths (shells)
         _, isplit = np.unique(g_norm2[idxsort], return_index=True)
@@ -70,9 +65,11 @@ class SymmFieldMod:
 
             # Computing the idxgrid of all generated G-vectors
             i1, i2, i3 = g_cryst_rot.transpose((1, 0, 2))
-            idxgrid_rot = n2 * n3 * (i1 + n1 * (i1 < 0)) \
-                + n3 * (i2 + n2 * (i2 < 0)) \
+            idxgrid_rot = (
+                n2 * n3 * (i1 + n1 * (i1 < 0))
+                + n3 * (i2 + n2 * (i2 < 0))
                 + (i3 + n3 * (i3 < 0))
+            )
 
             # Constructing a subset of G-vectors that will yield all G-vectors
             # in shell using symmetry operations.
@@ -86,41 +83,46 @@ class SymmFieldMod:
             # is enough to generate all the G-vectors in shell
             _, idx_red = np.unique(np.amin(idxgrid_rot, axis=0), return_index=True)
 
-            shells_ig.append(ig[np.searchsorted(
-                idxgrid_rot[0], idxgrid_rot[:, idx_red]
-            )])
-            shells_phase.append(np.exp(TPIJ * np.sum(
-                reallat_trans[..., np.newaxis]
-                * g_cryst_rot[:, :, idx_red], axis=1
-            )))
+            shells_ig.append(
+                ig[np.searchsorted(idxgrid_rot[0], idxgrid_rot[:, idx_red])]
+            )
+            shells_phase.append(
+                np.exp(
+                    TPIJ
+                    * np.sum(
+                        reallat_trans[..., np.newaxis] * g_cryst_rot[:, :, idx_red],
+                        axis=1,
+                    )
+                )
+            )
 
         self.shells_ig = np.concatenate(shells_ig, axis=1)
 
         self.shells_phase = np.concatenate(shells_phase, axis=1)
 
-        g_phase = np.zeros(size_g, dtype='c16', like=g_cryst)
-        g_count = np.zeros(size_g, dtype='i8', like=g_cryst)
+        g_phase = np.zeros(size_g, dtype="c16", like=g_cryst)
+        g_count = np.zeros(size_g, dtype="i8", like=g_cryst)
         for ig, phase in zip(self.shells_ig, self.shells_phase):
             g_phase[ig] += phase
             g_count[ig] += 1
         self.g_phaseconj = np.conj(g_phase) / g_count
 
     def _symmetrize(self, arr_g: np.ndarray):
-        out = np.empty_like(arr_g, dtype='c16')
+        out = np.empty_like(arr_g, dtype="c16")
         out[..., self.shells_ig] = np.mean(
-            arr_g[..., self.shells_ig] * self.shells_phase,
-            axis=-2, keepdims=True
+            arr_g[..., self.shells_ig] * self.shells_phase, axis=-2, keepdims=True
         )
         out *= self.g_phaseconj
         return out
 
     def symmetrize(self, field_g: FieldGType):
         if not isinstance(field_g, FieldGType):
-            raise TypeError(type_mismatch_msg('field_g', field_g, FieldGType))
+            raise TypeError(type_mismatch_msg("field_g", field_g, FieldGType))
 
         is_dist = False
         if MPI4PY_INSTALLED:
             from qtm.mpi.containers import DistBufferType
+
             if isinstance(field_g, DistBufferType):
                 is_dist = True
         if is_dist:
@@ -130,8 +132,9 @@ class SymmFieldMod:
 
         if field_g_.gspc is not self.gspc:
             raise ValueError(
-                obj_mismatch_msg('field_g.gspc', field_g_.gspc,
-                                 'SymmetrizeMod.gspc', self.gspc)
+                obj_mismatch_msg(
+                    "field_g.gspc", field_g_.gspc, "SymmetrizeMod.gspc", self.gspc
+                )
             )
 
         for f in field_g_.reshape(-1):

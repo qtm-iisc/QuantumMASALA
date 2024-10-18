@@ -1,8 +1,11 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Sequence
-__all__ = ['FFTBackend', ]
+__all__ = [
+    "FFTBackend",
+]
 
 from abc import ABC, abstractmethod
 from qtm.config import NDArray
@@ -41,8 +44,7 @@ class FFTBackend(ABC):
     """type of the ndarray the backend supports; used for type checking"""
 
     @abstractmethod
-    def __init__(self, shape: Sequence[int],
-                 axes: Sequence[int]):
+    def __init__(self, shape: Sequence[int], axes: Sequence[int]):
         shape = tuple(shape)
         assert all(isinstance(ni, int) and ni > 0 for ni in shape)
         self.shape: tuple[int, ...] = shape
@@ -53,8 +55,8 @@ class FFTBackend(ABC):
         self.axes: tuple[int, ...] = axes
         """Axes over which to perform the FFT operations"""
 
-        self._inp_fwd: NDArray = self.allocate_array(self.shape, 'c16')
-        self._inp_bwd: NDArray = self.allocate_array(self.shape, 'c16')
+        self._inp_fwd: NDArray = self.allocate_array(self.shape, "c16")
+        self._inp_bwd: NDArray = self.allocate_array(self.shape, "c16")
 
     @property
     def inp_fwd(self) -> NDArray:
@@ -77,8 +79,7 @@ class FFTBackend(ABC):
         self._inp_bwd[:] = data
 
     @classmethod
-    def allocate_array(cls, shape: int | Sequence[int],
-                       dtype: str) -> NDArray:
+    def allocate_array(cls, shape: int | Sequence[int], dtype: str) -> NDArray:
         """Create a C-contiguous empty array with given datatype
 
         Parameters
@@ -110,8 +111,9 @@ class FFTBackend(ABC):
             Raised if 'arr' fails to match the type `ndarray`.
         """
         if not isinstance(arr, cls.ndarray):
-            raise TypeError(f"'arr' must be a {cls.ndarray} instance. "
-                            f"got {type(arr)}")
+            raise TypeError(
+                f"'arr' must be a {cls.ndarray} instance. " f"got {type(arr)}"
+            )
 
     @abstractmethod
     def fft(self) -> NDArray:

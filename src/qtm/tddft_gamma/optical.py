@@ -86,7 +86,9 @@ def dipole_response(
         *gspc_wfn.grid_shape, "cart", tuple(rcenter_cart)
     )
 
-    def compute_dipole(istep: int, rho: FieldGType, write_freq: int = 10, fname: str = "dipz_temp.npy"):
+    def compute_dipole(
+        istep: int, rho: FieldGType, write_freq: int = 10, fname: str = "dipz_temp.npy"
+    ):
         r"""Compute the dipole at time step 'istep' and store it in 'dip_t'.
         $ dip = \int r \rho(r) dr = \Omega / N_{cell} \sum r_i \rho(r_i) $
         """
@@ -110,8 +112,8 @@ def dipole_response(
         # Units: dipole is in atomic units: a_0^4 * e
         if write_freq > 0 and istep % write_freq == 0:
             qtmlogger.info(f"Step {istep}: Saving partial dipole to 'dipz.npy'.")
-            
-            if comm_world.rank==0:
+
+            if comm_world.rank == 0:
                 if os.path.exists(fname) and os.path.isfile(fname):
                     os.remove(fname)
                 np.save(fname, dip_t[: istep + 1] / kick_strength)
@@ -134,7 +136,7 @@ def dipole_response(
     # evc_r = wfn_gamma[0][0].evc_gk.to_r()
     # evc_r *= efield_kick.reshape(-1)
     # gkwfn.r2g(evc_r._data, wfn_gamma[0][0].evc_gk._data)
-    
+
     if hasattr(wfn_gamma[0][0].evc_gk.gspc, "is_dist"):
         evc_r = wfn_gamma[0][0].evc_gk.to_r().allgather()
         evc_r *= efield_kick.reshape(-1)
@@ -143,7 +145,7 @@ def dipole_response(
         evc_r = wfn_gamma[0][0].evc_gk.to_r()
         evc_r *= efield_kick.reshape(-1)
         gkwfn.r2g(evc_r._data, wfn_gamma[0][0].evc_gk._data)
-        
+
     tddft_rho_start = (
         wfn_gamma[0][0].k_weight * wfn_gamma[0][0].compute_rho(ret_raw=True).to_g()
     )
@@ -173,7 +175,7 @@ def dipole_spectrum(
     damp_func: str = None,
     damp_fac: float = None,
 ):
-    """Compute the dipole spectrum from the time-dependent dipole moment data. 
+    """Compute the dipole spectrum from the time-dependent dipole moment data.
     All quantities are in Hartree atomic units.
 
     Args:
@@ -189,11 +191,11 @@ def dipole_spectrum(
         l_en (np.ndarray): List of energies (in Hartree).
         dip_en (np.ndarray): Dipole spectrum.
     """
-    
+
     numstep = dip_t.shape[0] - 1
     prop_time = numstep * time_step
     if en_step is None:
-        en_step = 2 * np.pi / prop_time # in Hartree units
+        en_step = 2 * np.pi / prop_time  # in Hartree units
     time = np.linspace(0, prop_time, numstep + 1)
     l_en = np.arange(en_start, en_end, en_step)
     numen = len(l_en)

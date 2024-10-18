@@ -1,6 +1,7 @@
 **/benchmarks/
 **/*.save/
 *.hdf5
+docs/source/rst_files/
 
  # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -149,6 +150,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# pyright
+pyrightconfig.json
 
 # pytype static type analyzer
 .pytype/

@@ -21,11 +21,10 @@ checking in array operations.
 """
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from typing import Type
-__all__ = ['FieldGType', 'get_FieldG',
-           'FieldRType', 'get_FieldR',
-           'FieldType']
+__all__ = ["FieldGType", "get_FieldG", "FieldRType", "get_FieldR", "FieldType"]
 
 from functools import lru_cache
 from numbers import Number
@@ -45,21 +44,20 @@ class FieldGType(BufferType):
     (as fourier components)
 
     """
+
     gspc: GSpace = None
-    basis_type = 'g'
+    basis_type = "g"
     basis_size: int = None
     ndarray: type = None
 
     def __init_subclass__(cls, gspc: GSpace):
         if not isinstance(gspc, GSpace):
-            raise TypeError(type_mismatch_msg(
-                'gspc', gspc, GSpace
-            ))
+            raise TypeError(type_mismatch_msg("gspc", gspc, GSpace))
         cls.gspc, cls.basis_size = gspc, gspc.size_g
         cls.ndarray = type(cls.gspc.g_cryst)
 
     def to_r(self) -> FieldRType:
-        field_r = get_FieldR(self.gspc).empty(self.shape, 'c16')
+        field_r = get_FieldR(self.gspc).empty(self.shape, "c16")
         self.gspc._g2r(self._data, field_r._data)
         return field_r
 
@@ -72,24 +70,21 @@ class FieldGType(BufferType):
 
 
 class FieldRType(BufferType):
-    """Container Template for storing periodic fields represented in real space
+    """Container Template for storing periodic fields represented in real space"""
 
-    """
     gspc: GSpace = None
-    basis_type = 'r'
+    basis_type = "r"
     basis_size: int = None
     ndarray: type = None
 
     def __init_subclass__(cls, gspc: GSpace):
         if not isinstance(gspc, GSpace):
-            raise TypeError(type_mismatch_msg(
-                'gspc', gspc, GSpace
-            ))
+            raise TypeError(type_mismatch_msg("gspc", gspc, GSpace))
         cls.gspc, cls.basis_size = gspc, gspc.size_r
         cls.ndarray = type(cls.gspc.g_cryst)
 
     def to_g(self) -> FieldGType:
-        field_g = get_FieldG(self.gspc).empty(self.shape, 'c16')
+        field_g = get_FieldG(self.gspc).empty(self.shape, "c16")
         self.gspc._r2g(self._data, field_g._data)
         return field_g
 
@@ -110,12 +105,12 @@ class FieldRType(BufferType):
             `self.data` summed across the last axis.
         """
         if other is not None:
-            return np.sum(np.sum(self._data*other, axis=-1), axis=axis) * self.gspc.reallat_dv
+            return (
+                np.sum(np.sum(self._data * other, axis=-1), axis=axis)
+                * self.gspc.reallat_dv
+            )
         else:
             return np.sum(self, axis=axis) * self.gspc.reallat_dv
-
-
-
 
 
 FieldType = Union[FieldGType, FieldRType]
@@ -126,11 +121,13 @@ def get_FieldG(gspc: GSpace) -> Type[FieldGType]:
     if MPI4PY_INSTALLED:
         from qtm.mpi.gspace import DistGSpace
         from qtm.mpi.containers import get_DistFieldG
+
         if isinstance(gspc, DistGSpace):
             return get_DistFieldG(gspc)
 
     class FieldG(FieldGType, gspc=gspc):
         pass
+
     return FieldG
 
 
@@ -139,9 +136,11 @@ def get_FieldR(gspc: GSpace) -> Type[FieldRType]:
     if MPI4PY_INSTALLED:
         from qtm.mpi.gspace import DistGSpace
         from qtm.mpi.containers import get_DistFieldR
+
         if isinstance(gspc, DistGSpace):
             return get_DistFieldR(gspc)
 
     class FieldR(FieldRType, gspc=gspc):
         pass
+
     return FieldR

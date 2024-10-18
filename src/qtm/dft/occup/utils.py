@@ -1,10 +1,11 @@
 from __future__ import annotations
-__all__ = ['check_args']
+
+__all__ = ["check_args"]
 
 from qtm.dft.kswfn import KSWfn
 from qtm.dft.config import DFTCommMod
 
-EPS = 1E-7
+EPS = 1e-7
 
 
 def check_args(dftcomm: DFTCommMod, l_wfn: list[KSWfn], numel: float | int):

@@ -2,9 +2,17 @@
 
 """
 from __future__ import annotations
-__all__ = ['QTMConfig', 'qtmconfig', 'NDArray',
-           'MPI4PY_INSTALLED', 'MKL_FFT_INSTALLED', 'PYFFTW_INSTALLED',
-           'CUPY_INSTALLED', 'FFT_AVAILABLE_BACKENDS']
+
+__all__ = [
+    "QTMConfig",
+    "qtmconfig",
+    "NDArray",
+    "MPI4PY_INSTALLED",
+    "MKL_FFT_INSTALLED",
+    "PYFFTW_INSTALLED",
+    "CUPY_INSTALLED",
+    "FFT_AVAILABLE_BACKENDS",
+]
 
 from typing import Union  # Required import for Runtime checking
 
@@ -13,23 +21,24 @@ from importlib.util import find_spec
 
 from qtm import logger
 
-MPI4PY_INSTALLED = find_spec('mpi4py') is not None
-MKL_FFT_INSTALLED = find_spec('mkl_fft') is not None
-PYFFTW_INSTALLED = find_spec('pyfftw') is not None
-CUPY_INSTALLED = find_spec('cupy') is not None
-PRIMME_INSTALLED = find_spec('primme') is not None
+MPI4PY_INSTALLED = find_spec("mpi4py") is not None
+MKL_FFT_INSTALLED = find_spec("mkl_fft") is not None
+PYFFTW_INSTALLED = find_spec("pyfftw") is not None
+CUPY_INSTALLED = find_spec("cupy") is not None
+PRIMME_INSTALLED = find_spec("primme") is not None
 
-FFT_AVAILABLE_BACKENDS = ['scipy', 'numpy']
+FFT_AVAILABLE_BACKENDS = ["scipy", "numpy"]
 if PYFFTW_INSTALLED:
-    FFT_AVAILABLE_BACKENDS.insert(0, 'pyfftw')
+    FFT_AVAILABLE_BACKENDS.insert(0, "pyfftw")
 if MKL_FFT_INSTALLED:
-    FFT_AVAILABLE_BACKENDS.insert(0, 'mkl_fft')
+    FFT_AVAILABLE_BACKENDS.insert(0, "mkl_fft")
 if CUPY_INSTALLED:
-    FFT_AVAILABLE_BACKENDS.append('cupy')
+    FFT_AVAILABLE_BACKENDS.append("cupy")
 
 if CUPY_INSTALLED:
     from cupyx import seterr
-    seterr(linalg='raise')
+
+    seterr(linalg="raise")
 
 fft_use_sticks = False
 
@@ -43,15 +52,15 @@ class QTMConfig:
 
     # Default values
     _RNG_DEFAULT_SEED = 489
-    _LOGFILE_DEFAULT_DIR = './qtmpy.log'
+    _LOGFILE_DEFAULT_DIR = "./qtmpy.log"
 
     # TDDFT
-    tddft_prop_method: str = 'etrs'
-    tddft_exp_method: str = 'taylor'
+    tddft_prop_method: str = "etrs"
+    tddft_exp_method: str = "taylor"
     taylor_order: int = 4
 
-
     _logging_enabled: bool = False
+
     @property  # noqa : E301
     def logging_enabled(self) -> bool:
         """True if logging is enabled, else False. Note: Unless `init_logfile` is
@@ -61,10 +70,12 @@ class QTMConfig:
     @logging_enabled.setter
     def logging_enabled(self, val: bool):
         if not isinstance(val, bool):
-            raise TypeError("'logging_enabled' must be a boolean. "
-                            f"got {val} (type {type(val)}).")
+            raise TypeError(
+                "'logging_enabled' must be a boolean. " f"got {val} (type {type(val)})."
+            )
         self._logging_enabled = val
         from logging import disable, NOTSET
+
         if self.logging_enabled:
             disable(NOTSET)
         else:
@@ -106,7 +117,8 @@ class QTMConfig:
             return False
         try:
             import cupy as cp
-            _ = cp.zeros((10, 10, 10), dtype='c16')
+
+            _ = cp.zeros((10, 10, 10), dtype="c16")
             return True
         except Exception as e:
             if suppress_exception:
@@ -122,6 +134,7 @@ class QTMConfig:
         return FFT_AVAILABLE_BACKENDS
 
     _fft_backend = None
+
     @property  # noqa : E301
     def fft_backend(self) -> str:
         """Configured backend for FFT routines. One of the following:
@@ -134,11 +147,14 @@ class QTMConfig:
     @fft_backend.setter
     def fft_backend(self, val):
         if val not in FFT_AVAILABLE_BACKENDS:
-            raise ValueError("'fft_backend' must be one of the following: "
-                             f"{str(FFT_AVAILABLE_BACKENDS)[1:-1]}. got {val}")
+            raise ValueError(
+                "'fft_backend' must be one of the following: "
+                f"{str(FFT_AVAILABLE_BACKENDS)[1:-1]}. got {val}"
+            )
         self._fft_backend = val
 
     _fft_threads: int = 1
+
     @property
     def fft_threads(self) -> int:
         """Number of threads used in FFT routines. Supported only when `backend` is
@@ -148,28 +164,36 @@ class QTMConfig:
     @fft_threads.setter
     def fft_threads(self, val: int):
         if not isinstance(val, int) or val < 1:
-            raise ValueError("'fft_threads' must be a positive integer. "
-                             f"got {val} (type {type(val)})")
+            raise ValueError(
+                "'fft_threads' must be a positive integer. "
+                f"got {val} (type {type(val)})"
+            )
         self._fft_threads = val
 
     _pyfftw_planner = None
+
     @property  # noqa : E301
     def pyfftw_planner(self) -> str:
         """FFTW Planner flags. Effective only when `fft_backend` is `pyfftw`.
         One of the following: ``'FFTW_ESTIMATE'``, ``'FFTW_MEASURE'`` (default),
         ``'FFTW_PATIENT'``, ``'FFTW_EXHAUSTIVE'``"""
         if self._pyfftw_planner is None:
-            self._pyfftw_planner = 'FFTW_MEASURE'
+            self._pyfftw_planner = "FFTW_MEASURE"
         return self._pyfftw_planner
 
     @pyfftw_planner.setter
     def pyfftw_planner(self, val):
         available_planners = (
-            'FFTW_ESTIMATE', 'FFTW_MEASURE', 'FFTW_PATIENT', 'FFTW_EXHAUSTIVE'
+            "FFTW_ESTIMATE",
+            "FFTW_MEASURE",
+            "FFTW_PATIENT",
+            "FFTW_EXHAUSTIVE",
         )
         if val not in available_planners:
-            raise ValueError("'pyfftw_planner' must be one of the followinig: "
-                             f"{str(available_planners)[1:-1]}. got {val}")
+            raise ValueError(
+                "'pyfftw_planner' must be one of the followinig: "
+                f"{str(available_planners)[1:-1]}. got {val}"
+            )
         self._pyfftw_planner = val
 
     pyfftw_flags: tuple[str, ...] = ()
@@ -177,6 +201,7 @@ class QTMConfig:
     """
 
     _rng_seed = _RNG_DEFAULT_SEED
+
     @property  # noqa : E301
     def rng_seed(self):
         """Seed object to be passed to NumPy's RNG routines.
@@ -188,30 +213,30 @@ class QTMConfig:
         self._rng_seed = val
         if MPI4PY_INSTALLED:
             from mpi4py.MPI import COMM_WORLD
+
             self._rng_seed = COMM_WORLD.bcast(self._rng_seed)
 
-    
     def __init__(self, gpu_enabled=True):
         self.NDArray = np.ndarray
         self.set_gpu(gpu_enabled=gpu_enabled)
 
-    def set_gpu(self, gpu_enabled):        
+    def set_gpu(self, gpu_enabled):
         global NDArray
         if self.check_cupy() and gpu_enabled:
             self.gpu_enabled = True
-            self.fft_backend = 'cupy'
+            self.fft_backend = "cupy"
             NDArray = cp.ndarray
         else:
             self.gpu_enabled = False
             self.fft_backend = self.fft_available_backends[0]
             NDArray = np.ndarray
-            
-    
+
 
 if CUPY_INSTALLED:
     import cupy as cp
+
     NDArray = Union[np.ndarray, cp.ndarray]
     qtmconfig = QTMConfig(gpu_enabled=True)
 else:
-    NDArray = np.ndarray        
+    NDArray = np.ndarray
     qtmconfig = QTMConfig(gpu_enabled=False)

@@ -16,8 +16,6 @@ if MPI4PY_INSTALLED:
     from mpi4py import MPI
 
 
-
-
 class Vcoul:
     r"""Vcoul Generator Class
 
@@ -218,7 +216,9 @@ class Vcoul:
         index_G0 = np.argmin(
             np.linalg.norm(
                 self.l_gspace_q[i_q].g_cryst.T[
-                    sort_cryst_like_BGW(self.l_gspace_q[i_q].gk_cryst, self.l_gspace_q[i_q].gk_norm2)
+                    sort_cryst_like_BGW(
+                        self.l_gspace_q[i_q].gk_cryst, self.l_gspace_q[i_q].gk_norm2
+                    )
                     # self.l_gspace_q[i_q].gk_indices_tosorted
                 ],
                 axis=1,
@@ -399,8 +399,15 @@ class Vcoul:
         """Generate a neighbourhood of q=0, that will be used to determine minibz, while sampling points later."""
         # Since qpts are all positive, we copy the qpts 8 times to create (2*n_q-1)^3 sized grid around q=0.
         full_qpts = []
-        l_signs = np.array([(1-2*i,1-2*j,1-2*k) for i in (0,1) for j in (0,1) for k in (0,1)])
-        
+        l_signs = np.array(
+            [
+                (1 - 2 * i, 1 - 2 * j, 1 - 2 * k)
+                for i in (0, 1)
+                for j in (0, 1)
+                for k in (0, 1)
+            ]
+        )
+
         # Equivalent, older version
         # l_signs = np.array([ [1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1], [-1, 1, 1], [-1, 1, -1], [-1, -1, 1], [-1, -1, -1]])
 
@@ -415,7 +422,9 @@ class Vcoul:
         # and hence their wigner-seitz plane can cut the sphere with radius k_cutoff
         # nbhd converted to CARTESIAN coords (a.u.), because we need norm.
         normsq_arr = self.gspace.recilat.norm2(full_qpts.T)
-        q_cutoff = np.sqrt(np.min(normsq_arr[np.where(normsq_arr > self.TOL_SMALL)])) / 2
+        q_cutoff = (
+            np.sqrt(np.min(normsq_arr[np.where(normsq_arr > self.TOL_SMALL)])) / 2
+        )
 
         # 32.0D0 * PI_D**2 * SQRT(q0sph2) / ( 8.0D0 * PI_D**3 / (celvol * dble(nfk)) )
         nbhd_crys = full_qpts[np.where(normsq_arr <= (8 * q_cutoff) ** 2)]
@@ -501,7 +510,6 @@ class Vcoul:
         )
 
     def oneoverq_minibz_montecarlo(self, shift_vec_cryst=None):
-
         # Add G-space shift, useful for non-q0 points.
         if shift_vec_cryst is None:
             shift_vec_cart = self.gspace.recilat.cryst2cart(np.zeros((1, 3), float).T).T
@@ -511,7 +519,7 @@ class Vcoul:
             ).T
 
         # Since qpts are all positive, we copy the qpts 8 times to create (2*n_q-1)^3 sized grid around q=0
-        q_cutoff, nbhd_cart= self.get_gamma_nbhd_qpts()
+        q_cutoff, nbhd_cart = self.get_gamma_nbhd_qpts()
 
         oneoverq_corr = 0
 
@@ -558,10 +566,10 @@ class Vcoul:
         return 12 * np.pi / q_cutoff
 
     def load_vcoul(self, filename):
-        """Read `vcoul` file. 
-        
+        """Read `vcoul` file.
+
         Data format is `q1_cryst  q2_cryst  q3_cryst  G_1  G_2  G_3  vcoul`."""
-        
+
         vcoul_data = np.genfromtxt(filename)
 
         return (
@@ -612,7 +620,7 @@ class Vcoul:
         return
 
     # METHODS :
-    #@pw_logger.time('Vcoul:calculate_vcoul_single_qpt')
+    # @pw_logger.time('Vcoul:calculate_vcoul_single_qpt')
     def calculate_vcoul_single_qpt(
         self, i_q, averaging_func=None, bare=False, random_avg=True
     ):
@@ -654,8 +662,7 @@ class Vcoul:
                         vqg[i_g] = res[0][0]
                     else:
                         vqg[i_g] = res[0]
-                    
-                    
+
                 else:
                     vqg[i_g] = self.v_minibz_sphere_shifted(qvec + gvec)
 
@@ -717,7 +724,9 @@ class Vcoul:
         Use fixwings for q or q'==0
         Sample wcoul as <eps_head(q) * vcoul(q)> over minibz.
         """
-        sort_order = sort_cryst_like_BGW(self.l_gspace_q[i_q].gk_cryst, self.l_gspace_q[i_q].gk_norm2)
+        sort_order = sort_cryst_like_BGW(
+            self.l_gspace_q[i_q].gk_cryst, self.l_gspace_q[i_q].gk_norm2
+        )
         vcoul = self.vcoul[i_q][sort_order][0]
         if wcoul0 is None:
             wcoul0 = epsinv[0, 0] * vcoul

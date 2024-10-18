@@ -1,4 +1,4 @@
-__all__ = ['GenBroyden']
+__all__ = ["GenBroyden"]
 
 
 import numpy as np
@@ -10,9 +10,7 @@ from .base import MixModBase
 
 
 class GenBroyden(MixModBase):
-
-    def __init__(self, dftcomm: DFTCommMod, rho: FieldGType,
-                 beta: float, mixdim: int):
+    def __init__(self, dftcomm: DFTCommMod, rho: FieldGType, beta: float, mixdim: int):
         super().__init__(dftcomm, rho, beta, mixdim)
         self.idxiter = 0
 
@@ -22,15 +20,15 @@ class GenBroyden(MixModBase):
 
             self.l_del_rho = self.FieldG.empty((self.mixdim, self.numspin))
             self.l_del_res = self.FieldG.empty((self.mixdim, self.numspin))
-            self.overlap = np.empty((self.mixdim, self.mixdim), dtype='c16',
-                                    like=self.grho.g_cryst)
+            self.overlap = np.empty(
+                (self.mixdim, self.mixdim), dtype="c16", like=self.grho.g_cryst
+            )
         else:
             self.rho_old, self.res_old = None, None
             self.l_del_rho, self.l_del_res, self.overlap = None, None, None
 
         shape = (self.numspin, self.grho.size_g)
         self.G_1 = -self.beta * np.ones(shape)
-
 
     def _mix(self, rho_in: FieldGType, rho_out: FieldGType) -> FieldGType:
         res = rho_out.data - rho_in.data

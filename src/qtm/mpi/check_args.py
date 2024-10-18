@@ -1,6 +1,14 @@
 from __future__ import annotations
-__all__ = ['check_lattice', 'check_basisatoms', 'check_crystal', 'check_gspace',
-           'check_gkspace', 'check_kpts', 'check_system']
+
+__all__ = [
+    "check_lattice",
+    "check_basisatoms",
+    "check_crystal",
+    "check_gspace",
+    "check_gkspace",
+    "check_kpts",
+    "check_system",
+]
 
 import numpy as np
 from qtm.lattice import Lattice, RealLattice, ReciLattice
@@ -13,7 +21,7 @@ from .comm import QTMComm
 from qtm.config import MPI4PY_INSTALLED
 from qtm.msg_format import obj_mismatch_msg
 
-EPS = 1E-8
+EPS = 1e-8
 
 
 def mismatch_msg(obj_name: str, obj_type: type):
@@ -35,7 +43,7 @@ def check_lattice(comm: QTMComm, lattice: Lattice):
         elif isinstance(lattice, ReciLattice):
             assert abs(lattice.tpiba - comm.bcast(lattice.tpiba)) <= EPS
     except AssertionError as e:
-        raise Exception(mismatch_msg('lattice', Lattice)) from e
+        raise Exception(mismatch_msg("lattice", Lattice)) from e
 
 
 def check_basisatoms(comm: QTMComm, atoms: BasisAtoms, check_reallat: bool = False):
@@ -50,13 +58,12 @@ def check_basisatoms(comm: QTMComm, atoms: BasisAtoms, check_reallat: bool = Fal
         assert atoms.valence == comm.bcast(atoms.valence)
         assert atoms.ppdata.filename == comm.bcast(atoms.ppdata.filename)
         assert atoms.ppdata.md5_checksum == comm.bcast(atoms.ppdata.md5_checksum)
-        assert atoms.mass == comm.bcast(atoms.mass) \
-            if atoms.mass is not None else True
+        assert atoms.mass == comm.bcast(atoms.mass) if atoms.mass is not None else True
         r_cryst_root = atoms.r_cryst.copy()
         comm.Bcast(r_cryst_root)
         assert np.allclose(atoms.r_cryst, r_cryst_root)
     except AssertionError as e:
-        raise Exception(mismatch_msg('atoms', BasisAtoms)) from e
+        raise Exception(mismatch_msg("atoms", BasisAtoms)) from e
 
 
 def check_crystal(comm: QTMComm, crystal: Crystal):
@@ -67,21 +74,21 @@ def check_crystal(comm: QTMComm, crystal: Crystal):
         for typ in crystal.l_atoms:
             check_basisatoms(comm, typ)
     except AssertionError as e:
-        raise Exception(mismatch_msg('crystal', Crystal)) from e
+        raise Exception(mismatch_msg("crystal", Crystal)) from e
 
 
 def check_gspace(comm: QTMComm, gspc: GSpace):
     assert isinstance(comm, QTMComm)
     assert isinstance(gspc, GSpace)
     try:
-        assert np.allclose(gspc.recilat.recvec,
-                           comm.bcast(gspc.recilat.recvec))
-        assert abs(gspc.ecut - comm.bcast(gspc.ecut)) <= 1E-8
+        assert np.allclose(gspc.recilat.recvec, comm.bcast(gspc.recilat.recvec))
+        assert abs(gspc.ecut - comm.bcast(gspc.ecut)) <= 1e-8
         for ipol in range(3):
             assert gspc.grid_shape[ipol] == comm.bcast(gspc.grid_shape[ipol])
         is_dist = False
         if MPI4PY_INSTALLED:
             from .gspace import DistGSpace
+
             if isinstance(gspc, DistGSpace):
                 is_dist = True
         assert is_dist == comm.bcast(is_dist), (
@@ -90,7 +97,7 @@ def check_gspace(comm: QTMComm, gspc: GSpace):
             f"the local instance is {'parallel' if is_dist else 'serial'}."
         )
     except AssertionError as e:
-        raise Exception(mismatch_msg('gspc', GSpace)) from e
+        raise Exception(mismatch_msg("gspc", GSpace)) from e
 
 
 def check_gkspace(comm: QTMComm, gkspc: GkSpace, check_gwfn: bool = False):
@@ -106,6 +113,7 @@ def check_gkspace(comm: QTMComm, gkspc: GkSpace, check_gwfn: bool = False):
         is_dist = False
         if MPI4PY_INSTALLED:
             from .gspace import DistGkSpace
+
             if isinstance(gkspc, DistGkSpace):
                 is_dist = True
         assert is_dist == comm.bcast(is_dist), (
@@ -114,7 +122,7 @@ def check_gkspace(comm: QTMComm, gkspc: GkSpace, check_gwfn: bool = False):
             f"the local instance is {'parallel' if is_dist else 'serial'}."
         )
     except AssertionError as e:
-        raise Exception(mismatch_msg('gkspc', gkspc)) from e
+        raise Exception(mismatch_msg("gkspc", gkspc)) from e
 
 
 def check_kpts(comm: QTMComm, kpts: KList, check_recilat: bool = False):
@@ -132,23 +140,24 @@ def check_kpts(comm: QTMComm, kpts: KList, check_recilat: bool = False):
         comm.Bcast(k_weights_root)
         assert np.allclose(kpts.k_weights, k_weights_root)
     except AssertionError as e:
-        raise Exception(mismatch_msg('kpts', kpts)) from e
+        raise Exception(mismatch_msg("kpts", kpts)) from e
 
 
-def check_system(comm: QTMComm, crystal: Crystal, grho: GSpace, gwfn: GSpace,
-                 kpts: KList):
+def check_system(
+    comm: QTMComm, crystal: Crystal, grho: GSpace, gwfn: GSpace, kpts: KList
+):
     assert isinstance(comm, QTMComm)
     with comm:
         check_crystal(comm, crystal)
         check_gspace(comm, grho)
         assert grho.recilat == crystal.recilat, obj_mismatch_msg(
-            'grho.recilat', grho.recilat, 'crystal.recilat', crystal.recilat
+            "grho.recilat", grho.recilat, "crystal.recilat", crystal.recilat
         )
         check_gspace(comm, gwfn)
         assert gwfn.recilat is grho.recilat, obj_mismatch_msg(
-            'gwfn.recilat', gwfn.recilat, 'crystal.recilat', crystal.recilat
+            "gwfn.recilat", gwfn.recilat, "crystal.recilat", crystal.recilat
         )
         check_kpts(comm, kpts)
         assert kpts.recilat is crystal.recilat, obj_mismatch_msg(
-            'kpts.recilat', kpts.recilat, 'crystal.recilat', crystal.recilat
+            "kpts.recilat", kpts.recilat, "crystal.recilat", crystal.recilat
         )

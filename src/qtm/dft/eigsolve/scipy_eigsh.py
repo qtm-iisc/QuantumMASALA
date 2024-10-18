@@ -3,18 +3,21 @@
 This implementation is purely for demonstration.
 """
 from __future__ import annotations
-__all__ = ['solve']
+
+__all__ = ["solve"]
 from scipy.sparse.linalg import LinearOperator, eigsh
 
 from qtm.containers import WavefunGType
 from qtm.dft import KSWfn, KSHam, DFTCommMod
 
 
-def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn,
-          diago_thr: float, *args, **kwargs) -> tuple[KSWfn, int]:
+def solve(
+    dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float, *args, **kwargs
+) -> tuple[KSWfn, int]:
     assert isinstance(dftcomm, DFTCommMod)
-    assert dftcomm.kgrp_intra.size == 1, \
-        "band and PW distribution not possible with 'scipy' routines"
+    assert (
+        dftcomm.kgrp_intra.size == 1
+    ), "band and PW distribution not possible with 'scipy' routines"
 
     kgrp_intra = dftcomm.kgrp_intra
 
@@ -40,11 +43,13 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn,
             ksham.h_psi(psi, hpsi)
             return hpsi.data
 
-        ksham_lo = LinearOperator((gkspc.size_g, gkspc.size_g),
-                                  matvec=ksham_matvec,
-                                  matmat=ksham_matvec,
-                                  dtype='c16')
+        ksham_lo = LinearOperator(
+            (gkspc.size_g, gkspc.size_g),
+            matvec=ksham_matvec,
+            matmat=ksham_matvec,
+            dtype="c16",
+        )
 
-        evl[:], evc_gk[:] = eigsh(ksham_lo, numbnd, which='SA')
+        evl[:], evc_gk[:] = eigsh(ksham_lo, numbnd, which="SA")
 
     return kswfn, n_hpsi

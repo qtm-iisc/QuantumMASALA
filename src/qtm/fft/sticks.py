@@ -1,5 +1,6 @@
 from __future__ import annotations
-__all__ = ['FFT3DSticks']
+
+__all__ = ["FFT3DSticks"]
 
 import numpy as np
 
@@ -14,15 +15,21 @@ class FFT3DSticks(FFT3D):
     that is compact (like for instance a sphere of points within the
     3D box)
     """
-    def __init__(self, shape: tuple[int, int, int],
-                 idxgrid: NDArray, normalise_idft: bool,
-                 backend: str | None = None, **kwargs):
+
+    def __init__(
+        self,
+        shape: tuple[int, int, int],
+        idxgrid: NDArray,
+        normalise_idft: bool,
+        backend: str | None = None,
+        **kwargs,
+    ):
         super().__init__(shape, idxgrid, normalise_idft, backend, **kwargs)
         if self.idxgrid is None:
             raise Exception("'idxgrid' is None. Use 'FFT3DSlab' instead")
 
         # Getting the x, y, z indices from flattened indices
-        idxgrid = np.unravel_index(self.idxgrid, self.shape, order='C')
+        idxgrid = np.unravel_index(self.idxgrid, self.shape, order="C")
         nx, ny, nz = self.shape
         ix, iy, iz = idxgrid
 
@@ -38,7 +45,7 @@ class FFT3DSticks(FFT3D):
         self.g2sticks = nx * np.searchsorted(iyz_sticks, iyz) + ix
         # FFT is performed along the length of the stick, which corresponds
         # to 3D arrays FFT along X-Axis
-        self.fftx = self.FFTBackend((self.numsticks, nx), (1, ))
+        self.fftx = self.FFTBackend((self.numsticks, nx), (1,))
         # Zeroing out ifft input array after initializing
         self.fftx.inp_bwd = 0
         # Points lying outside 'g2sticks' will not be accessed and thus will
@@ -58,7 +65,7 @@ class FFT3DSticks(FFT3D):
         work_sticks = self.fftx.inp_fwd
         work_full.take(self.sticks2full, axis=0, out=work_sticks)
         work_sticks = self.fftx.fft()
-        work_sticks.take(self.g2sticks, out=arr_out, mode='clip')
+        work_sticks.take(self.g2sticks, out=arr_out, mode="clip")
 
     def g2r(self, arr_inp: NDArray, arr_out: NDArray) -> None:
         self.fftx.inp_bwd.reshape(-1)[self.g2sticks] = arr_inp
