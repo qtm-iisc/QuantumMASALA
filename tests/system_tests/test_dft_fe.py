@@ -121,11 +121,11 @@ def test_eigenvalues():
             [-1.65155144, 0.82435361, 1.10766899, 1.52010296],
             [-1.56930836, 0.76526929, 1.13823324, 1.46425011],
             [-1.56130804, 0.77814812, 1.05221834, 1.56026077],
-        ]
+        ], like=l_wfn_kgrp[0][0].evl
     )
 
     assert np.allclose(
-        np.array([wfn[0].evl[1::3] for wfn in l_wfn_kgrp[::7]]),
+        np.array([wfn[0].evl[1::3] for wfn in l_wfn_kgrp[::7]], like=l_wfn_kgrp[0][0].evl),
         ref_eigenvalues,
         atol=1e-3,
     )
@@ -139,7 +139,7 @@ def test_density():
             [0, -2, -1, 2, 1, 3, -1, -2, -3, -5, 1, 1, 1, -2],
             [0, 0, 1, 1, 2, 2, 3, 4, -4, -3, -2, -2, -1, -1],
             [0, 5, 0, -3, 2, -1, 4, 3, 1, 2, 0, -3, 2, -2],
-        ]
+        ], like=l_wfn_kgrp[0][0].evl
     )
     norm2_40 = np.array(
         [
@@ -157,7 +157,7 @@ def test_density():
             21.19122471,
             33.30049597,
             27.24586034,
-        ]
+        ], like=l_wfn_kgrp[0][0].evl
     )
     data_40 = np.array(
         [
@@ -193,9 +193,9 @@ def test_density():
                 -9.60904137e-01 + 2.57076685e-19j,
                 -1.89454052e00 - 1.18628421e-18j,
             ],
-        ]
+        ], like=l_wfn_kgrp[0][0].evl
     )
-    data_g0 = np.array([213.10682674 - 1.70798383e-17j, 202.03466628 + 1.70798383e-17j])
+    data_g0 = np.array([213.10682674 - 1.70798383e-17j, 202.03466628 + 1.70798383e-17j], like=l_wfn_kgrp[0][0].evl)
 
     # print(rho.basis_size)
     # print(rho.gspc.g_cryst[:,::40].__repr__())

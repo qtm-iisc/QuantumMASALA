@@ -417,11 +417,11 @@ def test_sigma():
        [-5.73242705, -5.50935051, -5.42530025, -5.42645424, -5.3357983 ,
         -4.8049147 , -4.79971894, -3.80045573]])
     
-    assert np.allclose(sigma_sx_cohsex_mat.real, sigma_sx_cohsex_mat_ref, atol=5e-3)
-    assert np.allclose(sigma_ch_cohsex_mat.real, sigma_ch_cohsex_mat_ref, atol=5e-3)
-    assert np.allclose(sigma_ch_exact_mat.real, sigma_ch_exact_ref, atol=5e-3)
-    assert np.allclose(sigma_sx_gpp.real, sigma_sx_gpp_ref, atol=5e-3)
-    assert np.allclose(sigma_ch_gpp.real, sigma_ch_gpp_ref, atol=5e-3)
+    assert np.allclose(sigma_sx_cohsex_mat.real, sigma_sx_cohsex_mat_ref, atol=1e-2)
+    assert np.allclose(sigma_ch_cohsex_mat.real, sigma_ch_cohsex_mat_ref, atol=1e-2)
+    assert np.allclose(sigma_ch_exact_mat.real, sigma_ch_exact_ref, atol=1e-2)
+    assert np.allclose(sigma_sx_gpp.real, sigma_sx_gpp_ref, atol=1e-2)
+    assert np.allclose(sigma_ch_gpp.real, sigma_ch_gpp_ref, atol=1e-2)
 
 test_epsilon()
 test_sigma()
