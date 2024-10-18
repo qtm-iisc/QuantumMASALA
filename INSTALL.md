@@ -56,6 +56,13 @@ cd examples/dft-si
 mpirun -np 2 python si_scf.py
 ```
 
+To perform a complete test, use `pytest` from the main directory which contains the tests folder:
+```
+python -m pip install pytest
+pytest
+```
+
+
 ## Installing on Linux
 
 ### Quick Installation
@@ -108,8 +115,14 @@ Inside the `QuantumMASALA` root directory, execute the following to complete the
 python -m pip install -e .
 ```
 
-Test the installation by running the following example: (Replace `10` with the number of cores)
+Test the installation by running the following example: (Replace `2` with the number of cores)
 ```
-cd examples/dft-fe
-mpirun -np 10 python fe_scf.py
+cd examples/dft-si
+mpirun -np 2 python si_scf.py
+```
+
+To perform a complete test, use `pytest` from the main directory which contains the tests folder:
+```
+python -m pip install pytest
+pytest
 ```
