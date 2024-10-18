@@ -21,6 +21,7 @@ def check_g_idxgrid(shape: tuple[int, int, int], idxgrid: NDArray, check_len:boo
      non-negative and bounded by the prodcut of `shape`. This ensures
      indices are within bounds.
     """
+    from qtm.config import NDArray
     assert isinstance(idxgrid, NDArray)
     assert idxgrid.ndim == 1
     assert idxgrid.dtype == 'i8'

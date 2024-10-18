@@ -207,8 +207,11 @@ class QTMConfig:
             NDArray = np.ndarray
             
     
-NDArray = np.ndarray        
-qtmconfig = QTMConfig(gpu_enabled=False)
 
-# if CUPY_INSTALLED:
-#     import cupy as cp
+if CUPY_INSTALLED:
+    import cupy as cp
+    NDArray = Union[np.ndarray, cp.ndarray]
+    qtmconfig = QTMConfig(gpu_enabled=True)
+else:
+    NDArray = np.ndarray        
+    qtmconfig = QTMConfig(gpu_enabled=False)

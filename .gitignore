@@ -172,3 +172,4 @@ examples/gw-silicon/si.scf.out
 **/NOTES_TDDFT.md
 
 examples/dft-si/tempdir/
+dipz_temp.npy

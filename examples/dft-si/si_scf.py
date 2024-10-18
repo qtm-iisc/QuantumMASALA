@@ -1,7 +1,3 @@
-from qtm import qtmconfig
-qtmconfig.set_gpu(False)
-print("GPU enabled:", qtmconfig.gpu_enabled)
-
 import numpy as np
 from qtm.constants import RYDBERG
 from qtm.lattice import RealLattice
