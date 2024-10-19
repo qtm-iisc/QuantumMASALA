@@ -1,4 +1,3 @@
-**/benchmarks/
 **/*.save/
 *.hdf5
 docs/source/rst_files/

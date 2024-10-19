@@ -1,0 +1,43 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Cr-104'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 2
+   starting_magnetization(1) = 0.07142857142857142
+   starting_magnetization(2) = -0.07142857142857142
+   ntyp             = 2
+   nat              = 2
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Cr  51.9961 Cr_ONCV_PBE-1.2.upf
+Cr1 51.9961 Cr_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+36 36 36  1 1 1
+
+CELL_PARAMETERS angstrom
+2.90878064836773 0.00000000000000 0.00000000000000
+0.00000000000000 2.90878064836773 0.00000000000000
+0.00000000000000 0.00000000000000 2.90878064836773
+
+ATOMIC_POSITIONS angstrom
+Cr  0.7271951621 0.7271951621 0.7271951621
+Cr1 2.1815854863 2.1815854863 2.1815854863
+

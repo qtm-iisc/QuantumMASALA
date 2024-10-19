@@ -1,0 +1,41 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Te-96'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 3
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Te 127.6 Te_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+26 26 16  1 1 1
+
+CELL_PARAMETERS angstrom
+4.44695523425314 0.00000000000000 0.00000000000000
+-2.22347761712657 3.85117620235540 0.00000000000000
+0.00000000000000 0.00000000000000 5.88286282271471
+
+ATOMIC_POSITIONS angstrom
+Te 1.4989574356 0.5192540874 2.9414019970 
+Te -0.2997914871 1.5577622621 4.9023954904 
+Te 1.9236861300 3.3319221150 0.9804673323 
+

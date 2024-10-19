@@ -1,0 +1,40 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Re-96'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 2
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Re 186.207 Re_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+42 42 22  1 1 1
+
+CELL_PARAMETERS angstrom
+2.73697256554706 0.00000000000000 0.00000000000000
+1.36848628277353 2.37028777122483 0.00000000000000
+0.00000000000000 0.00000000000000 4.41938298326212
+
+ATOMIC_POSITIONS angstrom
+Re 1.3684931252 0.7900998742 1.1048457458 
+Re 2.7369657231 1.5801878970 3.3145372374 
+

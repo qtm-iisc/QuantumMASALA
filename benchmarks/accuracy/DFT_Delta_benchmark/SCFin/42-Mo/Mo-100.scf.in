@@ -1,0 +1,40 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Mo-100'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 2
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Mo 95.95 Mo_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+32 32 32  1 1 1
+
+CELL_PARAMETERS angstrom
+3.16930000000000 0.00000000000000 0.00000000000000
+0.00000000000000 3.16930000000000 0.00000000000000
+0.00000000000000 0.00000000000000 3.16930000000000
+
+ATOMIC_POSITIONS angstrom
+Mo 0.7923250000 0.7923250000 0.7923250000 
+Mo 2.3769750000 2.3769750000 2.3769750000 
+

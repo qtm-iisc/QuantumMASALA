@@ -1,0 +1,46 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'O-98'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 2
+   starting_magnetization(1) = 0.16666666666666666
+   starting_magnetization(2) = -0.16666666666666666
+   ntyp             = 2
+   nat              = 4
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+   mixing_beta      = 0.2
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+O  15.999 O_ONCV_PBE-1.2.upf
+O1 15.999 O_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+26 24 24  1 1 1
+
+CELL_PARAMETERS angstrom
+4.24296047845254 0.00000000000000 0.00000000000000
+0.00000000000000 4.24811564518822 0.00000000000000
+1.79454316240249 0.00000000000000 4.17114628496657
+
+ATOMIC_POSITIONS angstrom
+O  4.2423388415 1.0620289113 0.6117820256
+O  1.7951647993 1.0620289113 3.5593642594
+O1 2.1208586023 3.1860867339 0.6117820256
+O1 3.9166450385 3.1860867339 3.5593642594
+

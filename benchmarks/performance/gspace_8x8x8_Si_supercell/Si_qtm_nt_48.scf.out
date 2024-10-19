@@ -1,0 +1,553 @@
+arg not found: in ; using default value: SiSupercell8x8x8-100.scf.in
+in: SiSupercell8x8x8-100.scf.in
+arg not found: npools ; using default value: 1
+npools: 1
+ntg: 48
+arg not found: nband ; using default value: 1
+nband: 1
+{}
+Parallelization info:
+npools: 1
+ntaskgroups: 48
+nbandgroups: 1
+pwgrp_size: 48
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x72d8281e3df0>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+parallel gspace run
+135834.62399999984 57.69991334482228 [[-40.8   0.  -40.8]
+ [  0.   40.8  40.8]
+ [ 40.8  40.8   0. ]]
+starting scf calculation...
+Quantum MASALA SCF calculation started on 2024-09-17 22:55:04.
+ - Project Git Info:
+    - Commit hash:          210b6ea917ec8ebba811d3cf53fcc8af1d3b6eb4
+    - Commit date and time: Sunday, 08 September, 2024 21:41:14
+=====================================================================
+SCF Parameters:
+
+	dftcomm: DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x72d8281e3df0>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+	crystal: <qtm.crystal.crystal.Crystal object at 0x72d82ebb7e80>
+	grho:
+		cutoff: 50.0
+		grid_size: (192, 192, 192)
+		num_g: 56176
+	gwfn:
+		cutoff: 50.0
+		grid_size: (192, 192, 192)
+		num_g: 56176
+	numbnd: 2048
+	is_spin: False
+	is_noncolin: False
+	symm_rho: True
+	rho_start: <qtm.mpi.containers.get_DistFieldG.<locals>.DistFieldG object at 0x72d657af8a00>
+	wfn_init: None
+	libxc_func: None
+	occ_typ: fixed
+	smear_typ: gauss
+	e_temp: 0.0
+	conv_thr: 5e-09
+	maxiter: 100
+	diago_thr_init: 5e-06
+	iter_printer: <function print_scf_status at 0x72d657afa1f0>
+	mix_beta: 0.7
+	mix_dim: 8
+	dftconfig: <qtm.dft.config.DFTConfig object at 0x72d657af88e0>
+	ret_vxc: False
+	kpts:
+		kpt[0]  kpt[1]  kpt[2];  weight
+		 0.0000  0.0000  0.0000; 1.000000
+=====================================================================
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x790ee2de3df0>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7da783c10df0>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7a8b643a6df0>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7a64c2693df0>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7b9b8b438df0>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7591875e3e20>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7e8e7dfe3e20>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x78f82b7d6df0>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x705706c7de20>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x71d93b67de50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x758e8f67de50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x79604ee53e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x763528053e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7305cdbe3e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7d2de5810e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x75e4b807de50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7b53167eae50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7266a23e3e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x78fe3ce7de50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7beafec7de50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x753a4307de50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x723de55ade50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x77a19bfbde50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x75eb105e3e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7cecf8deae50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x799dcd453e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x723a7bde3e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7a97365f3e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7fee66dd6e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x76dadd453e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x70910f9f3e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x73a5f887de50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x78c95567de50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x73efee610e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7c6cc7ff7e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x77d82b893e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7ddbcc9e3e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7b3ce0bbde50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7f5d64810e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x70cbabb9de50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7ca625a93e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7b193fa53e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x75da14e53e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7c82fe7bfe50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7b0875653e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x7b9187be3e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+{}
+DFTCommMod(image_comm=<qtm.mpi.comm.QTMComm object at 0x78ed575d6e50>, image_comm.size=48, n_kgrp=1, n_bgrp=1, pwgrp_size=48, 
+
+Iteration # 1, Run Time: 3022.4 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.8010e+01 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 1.00e-05 Ry
+
+Total Energy:        -8174.95435911 Ry
+
+      one-el:         2477.41052195 Ry
+     Hartree:          413.04114942 Ry
+          XC:        -2412.72964272 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            5.90669624 eV
+----------------------------------------
+
+Iteration # 2, Run Time: 3784.9 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.0109e+00 Ry
+Avg Diago Iterations: 10.0
+Diago Threshold     : 1.00e-05 Ry
+
+Total Energy:        -8079.43794779 Ry
+
+      one-el:         2499.92921308 Ry
+     Hartree:          538.00591809 Ry
+          XC:        -2464.69669118 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.37631456 eV
+----------------------------------------
+
+Iteration # 3, Run Time: 4077.9 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.6847e-02 Ry
+Avg Diago Iterations: 2.0
+Diago Threshold     : 6.55e-07 Ry
+
+Total Energy:        -8070.30975417 Ry
+
+      one-el:         2501.61330819 Ry
+     Hartree:          555.31751416 Ry
+          XC:        -2474.56418876 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43286638 eV
+----------------------------------------
+
+Iteration # 4, Run Time: 4580.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.1544e-02 Ry
+Avg Diago Iterations: 5.0
+Diago Threshold     : 6.55e-07 Ry
+
+Total Energy:        -8069.76388070 Ry
+
+      one-el:         2502.13381428 Ry
+     Hartree:          556.56923312 Ry
+          XC:        -2475.79054034 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43762262 eV
+----------------------------------------
+
+Iteration # 5, Run Time: 4970.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.6203e-03 Ry
+Avg Diago Iterations: 4.0
+Diago Threshold     : 3.96e-08 Ry
+
+Total Energy:        -8069.83035069 Ry
+
+      one-el:         2502.17819607 Ry
+     Hartree:          556.39271182 Ry
+          XC:        -2475.72487082 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43437012 eV
+----------------------------------------
+
+Iteration # 6, Run Time: 5508.8 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.6572e-03 Ry
+Avg Diago Iterations: 7.0
+Diago Threshold     : 3.96e-08 Ry
+
+Total Energy:        -8070.26700436 Ry
+
+      one-el:         2502.08309171 Ry
+     Hartree:          555.82037502 Ry
+          XC:        -2475.49408333 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43188905 eV
+----------------------------------------
+
+Iteration # 7, Run Time: 5842.0 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.6884e-04 Ry
+Avg Diago Iterations: 3.0
+Diago Threshold     : 1.14e-08 Ry
+
+Total Energy:        -8070.48472217 Ry
+
+      one-el:         2502.02610177 Ry
+     Hartree:          555.55089199 Ry
+          XC:        -2475.38532816 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43081879 eV
+----------------------------------------
+
+Iteration # 8, Run Time: 6204.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 9.0312e-05 Ry
+Avg Diago Iterations: 3.0
+Diago Threshold     : 2.20e-09 Ry
+
+Total Energy:        -8070.49808193 Ry
+
+      one-el:         2502.02040719 Ry
+     Hartree:          555.53852498 Ry
+          XC:        -2475.38062634 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43075368 eV
+----------------------------------------
+
+Iteration # 9, Run Time: 6692.8 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.7293e-05 Ry
+Avg Diago Iterations: 5.0
+Diago Threshold     : 4.22e-10 Ry
+
+Total Energy:        -8070.48005813 Ry
+
+      one-el:         2502.02169374 Ry
+     Hartree:          555.56762398 Ry
+          XC:        -2475.39298808 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43085933 eV
+----------------------------------------
+
+Iteration # 10, Run Time: 7069.0 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.6251e-05 Ry
+Avg Diago Iterations: 3.0
+Diago Threshold     : 4.22e-10 Ry
+
+Total Energy:        -8070.46048110 Ry
+
+      one-el:         2502.02569673 Ry
+     Hartree:          555.59452763 Ry
+          XC:        -2475.40431770 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43095823 eV
+----------------------------------------
+
+Iteration # 11, Run Time: 7418.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 7.5934e-06 Ry
+Avg Diago Iterations: 3.0
+Diago Threshold     : 1.85e-10 Ry
+
+Total Energy:        -8070.45097556 Ry
+
+      one-el:         2502.02811270 Ry
+     Hartree:          555.60658305 Ry
+          XC:        -2475.40928355 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43100059 eV
+----------------------------------------
+
+Iteration # 12, Run Time: 7822.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.1510e-07 Ry
+Avg Diago Iterations: 4.0
+Diago Threshold     : 1.26e-11 Ry
+
+Total Energy:        -8070.44815091 Ry
+
+      one-el:         2502.02853443 Ry
+     Hartree:          555.61081787 Ry
+          XC:        -2475.41111544 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43101532 eV
+----------------------------------------
+
+Iteration # 13, Run Time: 8441.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.7936e-06 Ry
+Avg Diago Iterations: 6.0
+Diago Threshold     : 1.26e-11 Ry
+
+Total Energy:        -8070.44741294 Ry
+
+      one-el:         2502.02856036 Ry
+     Hartree:          555.61214515 Ry
+          XC:        -2475.41173069 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43101994 eV
+----------------------------------------
+
+Iteration # 14, Run Time: 8903.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 6.3124e-07 Ry
+Avg Diago Iterations: 4.0
+Diago Threshold     : 1.26e-11 Ry
+
+Total Energy:        -8070.44607431 Ry
+
+      one-el:         2502.02883265 Ry
+     Hartree:          555.61393817 Ry
+          XC:        -2475.41245737 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43102635 eV
+----------------------------------------
+
+Iteration # 15, Run Time: 9240.1 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.1488e-07 Ry
+Avg Diago Iterations: 2.0
+Diago Threshold     : 5.25e-12 Ry
+
+Total Energy:        -8070.44590590 Ry
+
+      one-el:         2502.02880274 Ry
+     Hartree:          555.61433269 Ry
+          XC:        -2475.41265357 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43102757 eV
+----------------------------------------
+
+Iteration # 16, Run Time: 9593.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 6.6496e-08 Ry
+Avg Diago Iterations: 3.0
+Diago Threshold     : 1.62e-12 Ry
+
+Total Energy:        -8070.44611098 Ry
+
+      one-el:         2502.02878199 Ry
+     Hartree:          555.61398012 Ry
+          XC:        -2475.41248532 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43102636 eV
+----------------------------------------
+
+Iteration # 17, Run Time: 9965.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.8731e-08 Ry
+Avg Diago Iterations: 4.0
+Diago Threshold     : 4.57e-13 Ry
+
+Total Energy:        -8070.44610294 Ry
+
+      one-el:         2502.02878148 Ry
+     Hartree:          555.61399317 Ry
+          XC:        -2475.41248983 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43102645 eV
+----------------------------------------
+
+Iteration # 18, Run Time: 10469.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.8441e-08 Ry
+Avg Diago Iterations: 5.0
+Diago Threshold     : 4.50e-13 Ry
+
+Total Energy:        -8070.44615860 Ry
+
+      one-el:         2502.02876157 Ry
+     Hartree:          555.61392695 Ry
+          XC:        -2475.41245935 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43102621 eV
+----------------------------------------
+
+Iteration # 19, Run Time: 10825.6 sec
+Convergence Status   :  Converged
+SCF Error           : 6.8061e-09 Ry
+Avg Diago Iterations: 3.0
+Diago Threshold     : 4.50e-13 Ry
+
+Total Energy:        -8070.44611704 Ry
+
+      one-el:         2502.02877616 Ry
+     Hartree:          555.61397621 Ry
+          XC:        -2475.41248164 Ry
+       Ewald:        -8652.67638777 Ry
+
+    HO Level:            6.43102638 eV
+----------------------------------------
+
+SCF Converged.
+     number of atoms/cell      = 1024
+     unit-cell volume          = 135834.62399999984
+!    total energy              = -8070.446117036604
+!    hwf energy                = -8070.446117036604
+SCF Routine has exited
+SCF has converged
+                          TIMERS                           
+-----------------------------------------------------------
+|            LABEL             |  CALL  |  TIME  | STATUS  |
+-----------------------------------------------------------
+|           scf:scf            |       1|10829.10| STOPPED |
+|     rho_generate_atomic      |       1|    3.42| STOPPED |
+|         loc_generate         |       1|    3.37| STOPPED |
+|          nloc:init           |       1|    0.11| STOPPED |
+|          xc_compute          |      19|    3.79| STOPPED |
+|       nloc:gen_vkb_dij       |       1|    1.90| STOPPED |
+|           davidson           |      19|10372.14| STOPPED |
+|    davidson:compute_hpsi     |     115| 4631.35| STOPPED |
+|         KSHam:h_psi          |     115| 4631.33| STOPPED |
+|     davidson:update_red      |     115| 1546.70| STOPPED |
+|     davidson:expand_psi      |      96| 3909.23| STOPPED |
+|     davidson:apply_g_psi     |      96|   38.93| STOPPED |
+-----------------------------------------------------------
+
+
+	Command being timed: "mpirun -n 48 python ../../../src/qtm/qe/inp/pw.py SiSupercell8x8x8-100.scf.in -nt 48"
+	User time (seconds): 511596.46
+	System time (seconds): 8177.54
+	Percent of CPU this job got: 4798%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 3:00:33
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 74105728
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 386
+	Minor (reclaiming a frame) page faults: 197473001
+	Voluntary context switches: 5957
+	Involuntary context switches: 1251785
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 200
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

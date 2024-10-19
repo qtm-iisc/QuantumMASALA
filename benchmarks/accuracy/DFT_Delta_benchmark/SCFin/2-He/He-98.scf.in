@@ -1,0 +1,40 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'He-98'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 2
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+He 4.002602 He_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+40 40 22  1 1 1
+
+CELL_PARAMETERS angstrom
+2.90696773031465 0.00000000000000 0.00000000000000
+1.45348386515733 2.51750790243408 0.00000000000000
+0.00000000000000 0.00000000000000 4.74705433555501
+
+ATOMIC_POSITIONS angstrom
+He 1.4534911326 0.8391734967 1.1867635839 
+He 2.9069604629 1.6783344058 3.5602907517 
+

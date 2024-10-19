@@ -1,0 +1,40 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Si-106'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 2
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Si 28.085 Si_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+32 32 32  1 1 1
+
+CELL_PARAMETERS angstrom
+3.94293454946073 0.00000000000000 0.00000000000000
+1.97146727473036 3.41468148529234 0.00000000000000
+1.97146727473037 1.13822716176411 3.21939257845649
+
+ATOMIC_POSITIONS angstrom
+Si 2.9572009121 1.7073407426 1.2072722169 
+Si 4.9286681868 2.8455679044 2.0121203615 
+

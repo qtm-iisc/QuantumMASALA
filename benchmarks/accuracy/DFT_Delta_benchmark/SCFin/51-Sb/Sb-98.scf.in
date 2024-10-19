@@ -1,0 +1,44 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Sb-98'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 6
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Sb 121.76 Sb_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+26 26 8  1 1 1
+
+CELL_PARAMETERS angstrom
+4.35106998664373 0.00000000000000 0.00000000000000
+-2.17553499332187 3.76813714207749 0.00000000000000
+0.00000000000000 0.00000000000000 11.40100385335278
+
+ATOMIC_POSITIONS angstrom
+Sb 0.3625855397 0.6280165768 2.6600822191 
+Sb 0.3625855397 0.6280165768 8.7409216343 
+Sb 2.5381422883 1.8840497304 6.4604928435 
+Sb 2.5381422883 1.8840497304 1.1402143954 
+Sb 0.3625637843 3.1401205653 10.2607894580 
+Sb 0.3625637843 3.1401205653 4.9405110098 
+

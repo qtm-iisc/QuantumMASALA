@@ -1,0 +1,42 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Kr-98'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 4
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Kr 83.798 Kr_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+16 16 16  1 1 1
+
+CELL_PARAMETERS angstrom
+6.38614903540683 0.00000000000000 0.00000000000000
+0.00000000000000 6.38614903540683 0.00000000000000
+0.00000000000000 0.00000000000000 6.38614903540683
+
+ATOMIC_POSITIONS angstrom
+Kr 1.5965372589 1.5965372589 1.5965372589 
+Kr 1.5965372589 4.7896117766 4.7896117766 
+Kr 4.7896117766 1.5965372589 4.7896117766 
+Kr 4.7896117766 4.7896117766 1.5965372589 
+

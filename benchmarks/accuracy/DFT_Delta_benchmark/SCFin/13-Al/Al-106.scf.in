@@ -1,0 +1,42 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Al-106'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 4
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Al 26.9815385 Al_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+24 24 24  1 1 1
+
+CELL_PARAMETERS angstrom
+4.11944992127846 0.00000000000000 0.00000000000000
+0.00000000000000 4.11944992127846 0.00000000000000
+0.00000000000000 0.00000000000000 4.11944992127846
+
+ATOMIC_POSITIONS angstrom
+Al 1.0298624803 1.0298624803 1.0298624803 
+Al 1.0298624803 3.0895874410 3.0895874410 
+Al 3.0895874410 1.0298624803 3.0895874410 
+Al 3.0895874410 3.0895874410 1.0298624803 
+

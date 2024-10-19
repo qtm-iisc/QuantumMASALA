@@ -1,0 +1,46 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Br-102'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 8
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Br 79.904 Br_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+12 24 12  1 1 1
+
+CELL_PARAMETERS angstrom
+8.28309562788635 0.00000000000000 0.00000000000000
+0.00000000000000 4.25530624635056 0.00000000000000
+0.00000000000000 0.00000000000000 9.09305445867970
+
+ATOMIC_POSITIONS angstrom
+Br 2.0707739070 1.5988887690 8.0277121983 
+Br 2.0707739070 0.5287643542 3.4811849690 
+Br 2.0707739070 3.7265418922 5.6118694897 
+Br 2.0707739070 2.6564174773 1.0653422604 
+Br 6.2123217209 3.7265418922 8.0277121983 
+Br 6.2123217209 2.6564174773 3.4811849690 
+Br 6.2123217209 1.5988887690 5.6118694897 
+Br 6.2123217209 0.5287643542 1.0653422604 
+
