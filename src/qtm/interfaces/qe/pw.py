@@ -1,28 +1,27 @@
 from qtm.mpi.gspace import DistGSpace
 
-
 if __name__ == "__main__":
-    from pprint import pprint
-    from qtm.interfaces.qe.read_inp import PWscfIn
     import sys
+    from pprint import pprint
 
     import numpy as np
-
-    from qtm.constants import RYDBERG, ELECTRONVOLT, RYDBERG_HART
-    from qtm.gspace import GSpace
-    from qtm.mpi import QTMComm
-    from qtm.dft import DFTCommMod, scf
-
-    from qtm.io_utils.dft_printers import print_scf_status
-
-    from qtm.logger import qtmlogger
 
     # from qtm import qtmconfig
     # qtmconfig.fft_backend = 'mkl_fft'
     # qtmconfig.fft_backend = "pyfftw"
+    from qtm.config import MPI4PY_INSTALLED
+    from qtm.constants import ELECTRONVOLT, RYDBERG, RYDBERG_HART
+    from qtm.dft import DFTCommMod, scf
+    from qtm.gspace import GSpace
+    from qtm.interfaces.qe.read_inp import PWscfIn
+    from qtm.io_utils.dft_printers import print_scf_status
+    from qtm.logger import qtmlogger
+    from qtm.mpi import QTMComm
 
-    from mpi4py.MPI import COMM_WORLD
-
+    if MPI4PY_INSTALLED:
+        from mpi4py.MPI import COMM_WORLD
+    else:
+        COMM_WORLD = None
     comm_world = QTMComm(COMM_WORLD)
 
     filename = None
