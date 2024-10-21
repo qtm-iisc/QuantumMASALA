@@ -1,0 +1,186 @@
+Quantum MASALA
+ - Project Git Info:
+    - Commit hash:          829e78595e098e79b86ebe8dd2af64b456c339b8
+    - Commit date and time: Saturday, 19 October, 2024 23:06:48
+=========================================
+SCF Parameters:
+
+dftcomm         = DFTCommMod(image_comm.size=2, n_kgrp=1, n_bgrp=1, pwgrp_size=2)
+crystal         = Crystal(
+    reallat=Lattice parameter 'alat' :   10.20000  a.u.
+Unit cell volume         :  265.30200  (a.u.)^3
+Number of atoms/cell     : 1
+Number of atomic types   : 1
+Number of electrons      : 16
+
+Crystal Axes: coordinates in units of 'alat' (10.20000 a.u.)
+    a(1) = (-0.50000,  0.00000,  0.50000)
+    a(2) = ( 0.00000,  0.50000,  0.50000)
+    a(3) = (-0.50000,  0.50000,  0.00000)
+
+Reciprocal Axes: coordinates in units of 'tpiba' (0.61600 (a.u.)^-1)
+    b(1) = (-1.00000, -1.00000,  1.00000)
+    b(2) = ( 1.00000,  1.00000,  1.00000)
+    b(3) = (-1.00000,  1.00000, -1.00000), 
+    l_atoms=[
+    	BasisAtoms(
+    	  label='si', 
+    	  ppdata.filename=Si_ONCV_PBE-1.2.upf, 
+    	  ppdata.md5_checksum=7f029a58b69e3aa87b46a36c608bf45e, 
+    	  mass=28.086, 
+    	  r_cryst=
+    	    [0.875, 0.875, 0.875],
+    	    [0.125, 0.125, 0.125],
+    	  )
+    	])
+grho            = GSpace(crystal.recilat, ecut_rho=50.0, grid_shape=(24, 24, 24))
+grho.num_g      = 2336
+gwfn            = GSpace(crystal.recilat, ecut_wfn=50.0, grid_shape=(24, 24, 24))
+gwfn.num_g      = 2336
+numbnd          = 4
+is_spin         = False
+is_noncolin     = False
+symm_rho        = True
+rho_start       = <qtm.mpi.containers.get_DistFieldG.<locals>.DistFieldG object at 0x7f3f6109a950>
+wfn_init        = None
+libxc_func      = None
+occ_typ         = fixed
+smear_typ       = gauss
+e_temp          = 0.001 # Ha
+conv_thr        = 5e-09 # Ha
+maxiter         = 100
+diago_thr_init  = 0.005
+mix_beta        = 0.7
+mix_dim         = 8
+ret_vxc         = False
+dftconfig       = DFTConfig(
+                      symm_check_supercell = True,
+                      symm_use_all_frac = False,
+                      spglib_symprec = 1e-05,
+                      eigsolve_method = 'davidson',
+                      davidson_maxiter = 20,
+                      davidson_numwork = 2,
+                      mixing_method = 'modbroyden')
+iter_printer    = print_scf_status
+kpts            =
+    kpt[0]  kpt[1]  kpt[2];  weight
+     0.0000  0.0000  0.0000; 1.000000
+
+=========================================
+Iteration # 1, Run Time:   0.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.9379e-01 Ry
+Avg Diago Iterations: 9.0
+Diago Threshold     : 3.67e-03 Ry
+
+Total Energy:          -15.00559738 Ry
+
+      one-el:            5.79980291 Ry
+     Hartree:            0.80672099 Ry
+          XC:           -4.71236258 Ry
+       Ewald:          -16.89975869 Ry
+
+    HO Level:            6.09116437 eV
+----------------------------------------
+
+Iteration # 2, Run Time:   0.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.6402e-02 Ry
+Avg Diago Iterations: 2.0
+Diago Threshold     : 2.05e-04 Ry
+
+Total Energy:          -14.58819280 Ry
+
+      one-el:            5.83864724 Ry
+     Hartree:            1.46892872 Ry
+          XC:           -4.99601007 Ry
+       Ewald:          -16.89975869 Ry
+
+    HO Level:            7.17343495 eV
+----------------------------------------
+
+Iteration # 3, Run Time:   0.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.3418e-04 Ry
+Avg Diago Iterations: 6.0
+Diago Threshold     : 4.18e-06 Ry
+
+Total Energy:          -14.48987030 Ry
+
+      one-el:            5.83988189 Ry
+     Hartree:            1.68563206 Ry
+          XC:           -5.11562555 Ry
+       Ewald:          -16.89975869 Ry
+
+    HO Level:            7.43164901 eV
+----------------------------------------
+
+Iteration # 4, Run Time:   0.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.2300e-06 Ry
+Avg Diago Iterations: 5.0
+Diago Threshold     : 4.04e-08 Ry
+
+Total Energy:          -14.49737238 Ry
+
+      one-el:            5.83981041 Ry
+     Hartree:            1.68860836 Ry
+          XC:           -5.12603245 Ry
+       Ewald:          -16.89975869 Ry
+
+    HO Level:            7.42707266 eV
+----------------------------------------
+
+Iteration # 5, Run Time:   0.4 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.1067e-07 Ry
+Avg Diago Iterations: 9.0
+Diago Threshold     : 1.38e-09 Ry
+
+Total Energy:          -14.49836604 Ry
+
+      one-el:            5.83956896 Ry
+     Hartree:            1.68576960 Ry
+          XC:           -5.12394591 Ry
+       Ewald:          -16.89975869 Ry
+
+    HO Level:            7.42310751 eV
+----------------------------------------
+
+Iteration # 6, Run Time:   0.4 sec
+Convergence Status   :  Converged
+SCF Error           : 2.9512e-09 Ry
+Avg Diago Iterations: 5.0
+Diago Threshold     : 1.38e-09 Ry
+
+Total Energy:          -14.49830787 Ry
+
+      one-el:            5.83959924 Ry
+     Hartree:            1.68601432 Ry
+          XC:           -5.12416274 Ry
+       Ewald:          -16.89975869 Ry
+
+    HO Level:            7.42338715 eV
+----------------------------------------
+
+SCF Converged.
+SCF Routine has exited
+                          TIMERS                           
+-----------------------------------------------------------
+|            LABEL             |  CALL  |  TIME  | STATUS  |
+-----------------------------------------------------------
+|           scf:scf            |       1|    0.41| STOPPED |
+|     rho_generate_atomic      |       1|    0.04| STOPPED |
+|         loc_generate         |       1|    0.04| STOPPED |
+|          nloc:init           |       1|    0.15| STOPPED |
+|          xc_compute          |       6|    0.03| STOPPED |
+|       nloc:gen_vkb_dij       |       1|    0.00| STOPPED |
+|           davidson           |       6|    0.06| STOPPED |
+|    davidson:compute_hpsi     |      42|    0.03| STOPPED |
+|         KSHam:h_psi          |      42|    0.03| STOPPED |
+|     davidson:update_red      |      42|    0.00| STOPPED |
+|     davidson:expand_psi      |      36|    0.04| STOPPED |
+|     davidson:apply_g_psi     |      36|    0.01| STOPPED |
+-----------------------------------------------------------
+
+

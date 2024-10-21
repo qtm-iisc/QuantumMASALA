@@ -1,0 +1,302 @@
+1
+Quantum MASALA
+ - Project Git Info:
+    - Commit hash:          6cf3f410909f331c1b9748a0262561d5dc1b194e
+    - Commit date and time: Monday, 21 October, 2024 12:06:29
+=========================================
+SCF Parameters:
+
+dftcomm         = DFTCommMod(image_comm.size=16, n_kgrp=1, n_bgrp=1, pwgrp_size=16)
+crystal         = Crystal(
+    reallat=Lattice parameter 'alat' :   30.00000  a.u.
+Unit cell volume         :  27000.00000  (a.u.)^3
+Number of atoms/cell     : 1
+Number of atomic types   : 1
+Number of electrons      : 16
+
+Crystal Axes: coordinates in units of 'alat' (30.00000 a.u.)
+    a(1) = ( 1.00000,  0.00000,  0.00000)
+    a(2) = ( 0.00000,  1.00000,  0.00000)
+    a(3) = ( 0.00000,  0.00000,  1.00000)
+
+Reciprocal Axes: coordinates in units of 'tpiba' (0.20944 (a.u.)^-1)
+    b(1) = ( 1.00000,  0.00000,  0.00000)
+    b(2) = ( 0.00000,  1.00000,  0.00000)
+    b(3) = ( 0.00000,  0.00000,  1.00000), 
+    l_atoms=[
+    	BasisAtoms(
+    	  label='C', 
+    	  ppdata.filename=C_ONCV_PBE-1.2.upf, 
+    	  ppdata.md5_checksum=1a5f83a7b1f58d24996abe00ed223ac6, 
+    	  mass=12.011, 
+    	  r_cryst=
+    	    [0.4999998, 0.4999998, 0.4999998],
+    	  )
+    	BasisAtoms(
+    	  label='H', 
+    	  ppdata.filename=H_ONCV_PBE-1.2.upf, 
+    	  ppdata.md5_checksum=bf21e08b90ac4ce7d0149ac4e8138190, 
+    	  mass=1.0, 
+    	  r_cryst=
+    	    [0.54049122, 0.54049122, 0.54049122],
+    	    [0.45950838, 0.45950838, 0.54049122],
+    	    [0.54049122, 0.45950838, 0.45950838],
+    	    [0.45950838, 0.54049122, 0.45950838],
+    	  )
+    	])
+grho            = GSpace(crystal.recilat, ecut_rho=50.0, grid_shape=(96, 96, 96))
+grho.num_g      = 33298
+gwfn            = GSpace(crystal.recilat, ecut_wfn=50.0, grid_shape=(96, 96, 96))
+gwfn.num_g      = 33298
+numbnd          = 4
+is_spin         = False
+is_noncolin     = False
+symm_rho        = True
+rho_start       = <qtm.mpi.containers.get_DistFieldG.<locals>.DistFieldG object at 0x7ff5908ccc10>
+wfn_init        = None
+libxc_func      = None
+occ_typ         = fixed
+smear_typ       = gauss
+e_temp          = 0.001 # Ha
+conv_thr        = 5e-11 # Ha
+maxiter         = 100
+diago_thr_init  = 5e-06
+mix_beta        = 0.7
+mix_dim         = 8
+ret_vxc         = False
+dftconfig       = DFTConfig(
+                      symm_check_supercell = True,
+                      symm_use_all_frac = False,
+                      spglib_symprec = 1e-05,
+                      eigsolve_method = 'davidson',
+                      davidson_maxiter = 20,
+                      davidson_numwork = 2,
+                      mixing_method = 'modbroyden')
+iter_printer    = print_scf_status
+kpts            =
+    kpt[0]  kpt[1]  kpt[2];  weight
+     0.0000  0.0000  0.0000; 1.000000
+
+=========================================
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+Iteration # 1, Run Time:   2.1 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.6646e-01 Ry
+Avg Diago Iterations: 16.0
+Diago Threshold     : 1.00e-05 Ry
+
+Total Energy:          -19.46622735 Ry
+
+      one-el:          -47.74963860 Ry
+     Hartree:           21.23094290 Ry
+          XC:           -5.61828006 Ry
+       Ewald:           12.67074841 Ry
+
+    HO Level:          -13.57647428 eV
+----------------------------------------
+
+Iteration # 2, Run Time:   2.2 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.4921e-01 Ry
+Avg Diago Iterations: 6.0
+Diago Threshold     : 1.00e-05 Ry
+
+Total Energy:          -14.36309683 Ry
+
+      one-el:          -45.16090569 Ry
+     Hartree:           24.43219499 Ry
+          XC:           -6.30513455 Ry
+       Ewald:           12.67074841 Ry
+
+    HO Level:           -8.45901563 eV
+----------------------------------------
+
+Iteration # 3, Run Time:   2.4 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.1425e-03 Ry
+Avg Diago Iterations: 4.0
+Diago Threshold     : 1.00e-05 Ry
+
+Total Energy:          -16.22211433 Ry
+
+      one-el:          -46.29500268 Ry
+     Hartree:           23.58964673 Ry
+          XC:           -6.18750679 Ry
+       Ewald:           12.67074841 Ry
+
+    HO Level:           -9.65279231 eV
+----------------------------------------
+
+Iteration # 4, Run Time:   2.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.9509e-05 Ry
+Avg Diago Iterations: 2.0
+Diago Threshold     : 6.19e-07 Ry
+
+Total Energy:          -15.93596709 Ry
+
+      one-el:          -46.19576879 Ry
+     Hartree:           23.84419474 Ry
+          XC:           -6.25514145 Ry
+       Ewald:           12.67074841 Ry
+
+    HO Level:           -9.25900064 eV
+----------------------------------------
+
+Iteration # 5, Run Time:   2.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.4853e-06 Ry
+Avg Diago Iterations: 2.0
+Diago Threshold     : 6.86e-08 Ry
+
+Total Energy:          -15.92880907 Ry
+
+      one-el:          -46.18276832 Ry
+     Hartree:           23.83155978 Ry
+          XC:           -6.24834894 Ry
+       Ewald:           12.67074841 Ry
+
+    HO Level:           -9.27871802 eV
+----------------------------------------
+
+Iteration # 6, Run Time:   2.8 sec
+Convergence Status   : NOT Converged
+SCF Error           : 7.8869e-07 Ry
+Avg Diago Iterations: 1.0
+Diago Threshold     : 9.86e-09 Ry
+
+Total Energy:          -15.92723559 Ry
+
+      one-el:          -46.18276339 Ry
+     Hartree:           23.83441294 Ry
+          XC:           -6.24963354 Ry
+       Ewald:           12.67074841 Ry
+
+    HO Level:           -9.27420589 eV
+----------------------------------------
+
+Iteration # 7, Run Time:   2.9 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.4885e-07 Ry
+Avg Diago Iterations: 2.0
+Diago Threshold     : 3.11e-09 Ry
+
+Total Energy:          -15.93229013 Ry
+
+      one-el:          -46.18615041 Ry
+     Hartree:           23.83273128 Ry
+          XC:           -6.24961942 Ry
+       Ewald:           12.67074841 Ry
+
+    HO Level:           -9.27674779 eV
+----------------------------------------
+
+Iteration # 8, Run Time:   3.0 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.2426e-08 Ry
+Avg Diago Iterations: 1.0
+Diago Threshold     : 1.55e-10 Ry
+
+Total Energy:          -15.93105251 Ry
+
+      one-el:          -46.18535835 Ry
+     Hartree:           23.83312838 Ry
+          XC:           -6.24957095 Ry
+       Ewald:           12.67074841 Ry
+
+    HO Level:           -9.27616785 eV
+----------------------------------------
+
+Iteration # 9, Run Time:   3.2 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.7990e-09 Ry
+Avg Diago Iterations: 2.0
+Diago Threshold     : 3.50e-11 Ry
+
+Total Energy:          -15.93088334 Ry
+
+      one-el:          -46.18521345 Ry
+     Hartree:           23.83314383 Ry
+          XC:           -6.24956213 Ry
+       Ewald:           12.67074841 Ry
+
+    HO Level:           -9.27614539 eV
+----------------------------------------
+
+Iteration # 10, Run Time:   3.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.0693e-10 Ry
+Avg Diago Iterations: 2.0
+Diago Threshold     : 1.34e-12 Ry
+
+Total Energy:          -15.93065779 Ry
+
+      one-el:          -46.18504499 Ry
+     Hartree:           23.83319859 Ry
+          XC:           -6.24955981 Ry
+       Ewald:           12.67074841 Ry
+
+    HO Level:           -9.27606300 eV
+----------------------------------------
+
+Iteration # 11, Run Time:   3.4 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.3458e-10 Ry
+Avg Diago Iterations: 2.0
+Diago Threshold     : 1.34e-12 Ry
+
+Total Energy:          -15.93064595 Ry
+
+      one-el:          -46.18502727 Ry
+     Hartree:           23.83319117 Ry
+          XC:           -6.24955826 Ry
+       Ewald:           12.67074841 Ry
+
+    HO Level:           -9.27607521 eV
+----------------------------------------
+
+SCF Routine has exited
+                          TIMERS                           
+-----------------------------------------------------------
+|            LABEL             |  CALL  |  TIME  | STATUS  |
+-----------------------------------------------------------
+|           scf:scf            |       1|    4.45| STOPPED |
+|     rho_generate_atomic      |       2|    0.38| STOPPED |
+|         loc_generate         |       2|    0.39| STOPPED |
+|          nloc:init           |       2|    0.24| STOPPED |
+|          xc_compute          |      12|    0.38| STOPPED |
+|       nloc:gen_vkb_dij       |       2|    0.00| STOPPED |
+|           davidson           |      12|    0.40| STOPPED |
+|    davidson:compute_hpsi     |      54|    0.29| STOPPED |
+|         KSHam:h_psi          |      54|    0.29| STOPPED |
+|     davidson:update_red      |      54|    0.02| STOPPED |
+|     davidson:expand_psi      |      42|    0.28| STOPPED |
+|     davidson:apply_g_psi     |      42|    0.02| STOPPED |
+-----------------------------------------------------------
+
+
+TDDFT Parameters:
+Electric field kick: 0.0001
+Time step: 0.1
+Number of steps: 10002
+Propagation method: etrs
+Exponential evaluation method: taylor
+config.tddft_exp_method: taylor
+
+
+
+100%|██████████| 10002/10002 [27:36<00:00,  6.04it/s]

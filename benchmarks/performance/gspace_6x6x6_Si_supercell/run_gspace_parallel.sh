@@ -20,8 +20,6 @@ for p in "${processors[@]}"
 do
     sleep 10
     echo "Running qtm with $p processors"
-    # time mpirun -n $p python ../../../src/qtm/qe/inp/pw.py $infile -nb $p > $outdir/Si_qtm_nb_$p.scf.out
-    # /usr/bin/time -va -o $outdir/Si_qtm_ng_$p.scf.out mpirun -n $p python ./si_scf_supercell.py $supercell > $outdir/Si_qtm_ng_$p.scf.out
     /usr/bin/time -va -o $outdir/Si_qtm_nt_${p}.scf.out mpirun -n $p python ../../../src/qtm/qe/inp/pw.py $infile -nt $p > $outdir/Si_qtm_nt_${p}.scf.out
 done
 

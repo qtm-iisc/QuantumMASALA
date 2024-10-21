@@ -32,6 +32,7 @@ from qtm.io_utils.dft_printers import print_scf_status
 
 from qtm import qtmconfig
 from qtm.logger import qtmlogger
+qtmconfig.set_gpu(False)
 # qtmconfig.fft_backend = 'mkl_fft'
 
 from qtm.config import MPI4PY_INSTALLED

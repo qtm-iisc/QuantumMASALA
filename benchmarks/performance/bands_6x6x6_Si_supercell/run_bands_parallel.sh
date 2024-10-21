@@ -25,5 +25,5 @@ for p in "${processors[@]}"
 do
     sleep 10
     echo "Running QE with $p processors"
-    time mpirun -n $p /home/agrimsharma/codes/QuantumEspresso_without_scalapack/q-e-qe-7.2/bin/pw.x -nb $p -ni 1 -nk 1 -nt 1 -nd 1 -i $infile > $outdir/Si_qe_lapack_nb_$p.scf.out
+    time mpirun -n $p $QE_bin/pw.x -nb $p -ni 1 -nk 1 -nt 1 -nd 1 -i $infile > $outdir/Si_qe_lapack_nb_$p.scf.out
 done

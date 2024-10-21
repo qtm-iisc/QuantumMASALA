@@ -73,7 +73,7 @@ def dipole_response(
     # Compute the kick field
     # -----------------------
     # Compute the charge center of the ions, in cryst coordinates
-    rcenter_cryst = np.zeros(3, dtype="f8")
+    rcenter_cryst = np.zeros(3, dtype="f8", like=reallat.latvec)
     for typ in crystal.l_atoms:
         rcenter_cryst += typ.valence * np.sum(typ.r_cryst, axis=1)
     rcenter_cryst /= crystal.numel

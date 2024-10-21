@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 from qtm.config import qtmconfig
-from qtm.constants import RYDBERG
+from qtm.constants import ELECTRONVOLT, RYDBERG
 from qtm.containers.wavefun import get_WavefunG
 from qtm.crystal import BasisAtoms, Crystal
 from qtm.dft import DFTCommMod, scf
@@ -15,15 +15,13 @@ from qtm.logger import qtmlogger
 from qtm.mpi import QTMComm
 from qtm.mpi.gspace import DistGSpace
 from qtm.pseudo import UPFv2Data
-from qtm.tddft_gamma.optical import dipole_response
+from qtm.tddft_gamma.optical import dipole_response, dipole_spectrum
 
 # qtmconfig.fft_backend = 'mkl_fft'
 
 DEBUGGING = True
+qtmconfig.set_gpu(False)
 
-
-if qtmconfig.gpu_enabled:
-    qtmconfig.fft_backend = "cupy"
 
 from qtm.config import MPI4PY_INSTALLED
 if MPI4PY_INSTALLED:
@@ -98,9 +96,9 @@ scf_converged, rho, l_wfn_kgrp, en = out
 
 WavefunG = get_WavefunG(l_wfn_kgrp[0][0].gkspc, 1)
 
-
-print("SCF Routine has exited")
-print(qtmlogger)
+if comm_world.rank == 0:
+    print("SCF Routine has exited")
+    print(qtmlogger)
 
 
 from os import path, remove
@@ -119,27 +117,45 @@ time_step = (
     0.1  # Time in Hartree atomic units 1 Hartree a.u. = 2.4188843265864(26)×10−17 s.
 )
 # Reference calculation (ce-tddft) had 2.4 attosecond time step.
-numsteps = 1_002
+numsteps = 10_002
 
 qtmconfig.tddft_prop_method = "etrs"
 qtmconfig.tddft_exp_method = "taylor"
 
 
 # Pretty-print the input parameters for tddft
-print("TDDFT Parameters:")
-print("Electric field kick:", gamma_efield_kick)
-print("Time step:", time_step)
-print("Number of steps:", numsteps)
-print("Propagation method:", qtmconfig.tddft_prop_method)
-print("Exponential evaluation method:", qtmconfig.tddft_exp_method)
-print(kpts.k_weights)
+if comm_world.rank == 0:
+    print("TDDFT Parameters:")
+    print("Electric field kick:", gamma_efield_kick)
+    print("Time step:", time_step)
+    print("Number of steps:", numsteps)
+    print("Propagation method:", qtmconfig.tddft_prop_method)
+    print("Exponential evaluation method:", qtmconfig.tddft_exp_method)
 
 dip_z = dipole_response(
     comm_world, crystal, l_wfn_kgrp, time_step, numsteps, gamma_efield_kick, "z"
 )
 
+# Transforming the response to energy spectrum
+
+en_start = 0
+en_end = 40 * ELECTRONVOLT
+en_step = en_end / len(dip_z)
+damp_func = "gauss"
+dip_en = dipole_spectrum(
+    dip_t=dip_z,
+    time_step=time_step,
+    damp_func=damp_func,
+    # damp_fac=5e-3,
+    en_end=en_end,
+    en_step=en_step,
+)
+import matplotlib.pyplot as plt
+plt.plot(dip_en[0] / ELECTRONVOLT, np.imag(dip_en[1])[:, 2])
+plt.savefig("dipz.png")
 
 fname = "dipz.npy"
-if os.path.exists(fname) and os.path.isfile(fname):
-    os.remove(fname)
+if os.path.exists(fname):
+    if os.path.isfile(fname):
+        os.remove(fname)
 np.save(fname, dip_z)
