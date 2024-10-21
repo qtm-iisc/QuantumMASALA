@@ -65,9 +65,11 @@ class FFT3DSticks(FFT3D):
         work_sticks = self.fftx.inp_fwd
         work_full.take(self.sticks2full, axis=0, out=work_sticks)
         work_sticks = self.fftx.fft()
-        work_sticks.take(self.g2sticks, out=arr_out, mode="clip")
+        work_sticks.take(self.g2sticks, out=arr_out)
 
     def g2r(self, arr_inp: NDArray, arr_out: NDArray) -> None:
+        self.fftx.inp_bwd.fill(0.0)
+        self.fftyz.inp_bwd.fill(0.0)
         self.fftx.inp_bwd.reshape(-1)[self.g2sticks] = arr_inp
         work_sticks = self.fftx.ifft(self.normalise_idft)
 

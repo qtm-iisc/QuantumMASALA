@@ -14,7 +14,6 @@ from qtm.config import NDArray
 
 
 class GkSpace(GSpaceBase):
-    FFT3D = FFT3DFull
     _normalise_idft = False
 
     def __init__(

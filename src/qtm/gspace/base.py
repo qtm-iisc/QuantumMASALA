@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
+from qtm.fft.backend.utils import get_fft_driver
+
 if TYPE_CHECKING:
     from typing import Sequence
 __all__ = ["GSpaceBase", "cryst2idxgrid"]
@@ -110,7 +112,6 @@ def _sort_g(grid_shape: tuple[int, int, int], idxgrid: NDArray) -> NDArray:
 
 
 class GSpaceBase:
-    FFT3D = FFT3DFull
     _normalise_idft: bool = True
 
     def __init__(
@@ -153,6 +154,7 @@ class GSpaceBase:
         self.reallat_dv: float = self.reallat_cellvol / np.prod(self.grid_shape)
         """Differential volume used when evaluating integrals across a unit-cell
         of the real-space lattice"""
+        self.FFT3D = get_fft_driver()
         self._fft = self.FFT3D(
             self.grid_shape,
             self.idxgrid,

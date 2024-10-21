@@ -41,8 +41,6 @@ if CUPY_INSTALLED:
 
     seterr(linalg="raise")
 
-fft_use_sticks = False
-
 
 class QTMConfig:
     """QuantumMASALA's configuration Manager.
@@ -217,13 +215,14 @@ class QTMConfig:
 
             self._rng_seed = COMM_WORLD.bcast(self._rng_seed)
 
-    def __init__(self, gpu_enabled=True):
+    def __init__(self, gpu_enabled=True, fft_use_sticks=True):
         self.NDArray = np.ndarray
         self.set_gpu(gpu_enabled=gpu_enabled)
+        self.fft_use_sticks = fft_use_sticks
 
     def set_gpu(self, gpu_enabled):
         global NDArray
-        if self.check_cupy() and gpu_enabled:
+        if gpu_enabled and self.check_cupy():
             self.gpu_enabled = True
             self.fft_backend = "cupy"
             NDArray = cp.ndarray
@@ -231,6 +230,9 @@ class QTMConfig:
             self.gpu_enabled = False
             self.fft_backend = self.fft_available_backends[0]
             NDArray = np.ndarray
+        
+    def __repr__(self):
+        return f"QTMConfig(gpu_enabled={self.gpu_enabled}, fft_backend={self.fft_backend}, fft_use_sticks={self.fft_use_sticks})"
 
 
 if CUPY_INSTALLED:
