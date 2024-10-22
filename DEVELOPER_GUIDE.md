@@ -21,7 +21,7 @@ Please follow the instructions in the [INSTALL_BUILD.md](INSTALL_BUILD.md) and t
 ## Working on a new feature or bug fix
 
 <!-- Credit for the instructions: Octopus code documentation. -->
-Before starting to implement some new feature, we recommend you create a new issue on gitlab explaining what you intent to do. The next step is to create a branch where to implement some new feature.
+Before starting to implement some new feature, we recommend you create a new issue on github explaining what you intent to do. The next step is to create a branch where to implement some new feature.
 
 ```bash
 git checkout main
