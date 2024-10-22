@@ -611,42 +611,26 @@ class RealLattice(Lattice):
             return self.cryst2alat(r_cryst)
 
     def __repr__(self, indent="        ") -> str:
-        # latvec = "\n".join(f"{indent}  {vec}" for vec in self.latvec)
         latvec = f"{indent}    " + str(self.latvec).replace("\n", f"\n{indent}    ")
-        return f"RealLattice(\n{indent}  alat={self.alat}, \n{indent}  latvec=\n{latvec},\n{indent})"
+        return f"RealLattice(\n{indent}  alat={self.alat:.5f}, \n{indent}  latvec=\n{latvec},\n{indent})"
 
     def __str__(self) -> str:
-        alat_str = f"Lattice parameter 'alat' :   {self.alat:.5f}  a.u."
-        cellvol_str = f"Unit cell volume         :  {self.cellvol:.5f}  (a.u.)^3"
-        num_atoms_str = "Number of atoms/cell     : 1"
-        num_types_str = "Number of atomic types   : 1"
-        num_electrons_str = "Number of electrons      : 16"
 
-        crystal_axes_str = (
-            "Crystal Axes: coordinates in units of 'alat' ({:.5f} a.u.)".format(
-                self.alat
-            )
-        )
+        crystal_axes_str = f"Crystal Axes: coordinates in units of 'alat' ({self.alat:.5f} a.u.)"
+        
         crystal_axes = "\n".join(
             f"    a({i+1}) = ({vec[0]:8.5f}, {vec[1]:8.5f}, {vec[2]:8.5f})"
             for i, vec in enumerate(self.latvec.T / self.alat)
         )
 
         reci_lattice = ReciLattice.from_reallat(self)
-        tpiba_str = "Reciprocal Axes: coordinates in units of 'tpiba' ({:.5f} (a.u.)^-1)".format(
-            reci_lattice.tpiba
-        )
+        tpiba_str = f"Reciprocal Axes: coordinates in units of 'tpiba' ({reci_lattice.tpiba:.5f} (a.u.)^-1)"
         reci_axes = "\n".join(
             f"    b({i+1}) = ({vec[0]:8.5f}, {vec[1]:8.5f}, {vec[2]:8.5f})"
             for i, vec in enumerate(reci_lattice.recvec.T / reci_lattice.tpiba)
         )
 
         return (
-            f"{alat_str}\n"
-            f"{cellvol_str}\n"
-            f"{num_atoms_str}\n"
-            f"{num_types_str}\n"
-            f"{num_electrons_str}\n\n"
             f"{crystal_axes_str}\n"
             f"{crystal_axes}\n\n"
             f"{tpiba_str}\n"

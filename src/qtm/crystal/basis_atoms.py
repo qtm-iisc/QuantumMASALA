@@ -250,9 +250,18 @@ class BasisAtoms:
         r_cryst_str = ""
         for i in range(self.numatoms):
             r_cryst_str += (
-                f"\n{indent}    {np.array2string(self.r_cryst[:, i], separator=', ')},"
+                f"\n{indent}      {np.array2string(self.r_cryst[:, i], separator=', ')},"
             )
-        res = f"{indent}BasisAtoms(\n{indent}  label='{self.label}', \n{indent}  ppdata.filename={self.ppdata.filename}, \n{indent}  ppdata.md5_checksum={self.ppdata.md5_checksum}, \n{indent}  mass={self.mass}, \n{indent}  r_cryst={r_cryst_str}\n{indent}  )"
+        res = (
+            f"    BasisAtoms(\n"
+            f"{indent}    label='{self.label}', \n"
+            f"{indent}    ppdata.filename={self.ppdata.filename}, \n"
+            f"{indent}    ppdata.md5_checksum={self.ppdata.md5_checksum}, \n"
+            f"{indent}    ppdata.valence={self.ppdata.valence}, \n"
+            f"{indent}    mass={self.mass}, \n"
+            f"{indent}    r_cryst={r_cryst_str}\n"
+            f"{indent}    )"
+        )
         return res
 
     def __str__(self) -> str:

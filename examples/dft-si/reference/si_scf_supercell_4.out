@@ -1,185 +1,179 @@
 Quantum MASALA
  - Project Git Info:
-    - Commit hash:          829e78595e098e79b86ebe8dd2af64b456c339b8
-    - Commit date and time: Saturday, 19 October, 2024 23:06:48
+    - Commit hash:          da45fd9cd14721aa9d7d4fdd92bbde38480b3a7d
+    - Commit date and time: Monday, 21 October, 2024 20:06:30
+Started calculation on 2024-10-22 at 08:21:35.
 =========================================
 SCF Parameters:
 
-dftcomm         = DFTCommMod(image_comm.size=32, n_kgrp=1, n_bgrp=1, pwgrp_size=32)
-crystal         = Crystal(
-    reallat=Lattice parameter 'alat' :   40.80000  a.u.
-Unit cell volume         :  16979.32800  (a.u.)^3
-Number of atoms/cell     : 1
-Number of atomic types   : 1
-Number of electrons      : 16
-
-Crystal Axes: coordinates in units of 'alat' (40.80000 a.u.)
-    a(1) = (-0.50000,  0.00000,  0.50000)
-    a(2) = ( 0.00000,  0.50000,  0.50000)
-    a(3) = (-0.50000,  0.50000,  0.00000)
-
-Reciprocal Axes: coordinates in units of 'tpiba' (0.15400 (a.u.)^-1)
-    b(1) = (-1.00000, -1.00000,  1.00000)
-    b(2) = ( 1.00000,  1.00000,  1.00000)
-    b(3) = (-1.00000,  1.00000, -1.00000), 
-    l_atoms=[
-    	BasisAtoms(
-    	  label='si', 
-    	  ppdata.filename=Si_ONCV_PBE-1.2.upf, 
-    	  ppdata.md5_checksum=7f029a58b69e3aa87b46a36c608bf45e, 
-    	  mass=28.086, 
-    	  r_cryst=
-    	    [0.21875, 0.21875, 0.21875],
-    	    [0.03125, 0.03125, 0.03125],
-    	    [0.21875, 0.21875, 0.46875],
-    	    [0.03125, 0.03125, 0.28125],
-    	    [0.21875, 0.21875, 0.71875],
-    	    [0.03125, 0.03125, 0.53125],
-    	    [0.21875, 0.21875, 0.96875],
-    	    [0.03125, 0.03125, 0.78125],
-    	    [0.21875, 0.46875, 0.21875],
-    	    [0.03125, 0.28125, 0.03125],
-    	    [0.21875, 0.46875, 0.46875],
-    	    [0.03125, 0.28125, 0.28125],
-    	    [0.21875, 0.46875, 0.71875],
-    	    [0.03125, 0.28125, 0.53125],
-    	    [0.21875, 0.46875, 0.96875],
-    	    [0.03125, 0.28125, 0.78125],
-    	    [0.21875, 0.71875, 0.21875],
-    	    [0.03125, 0.53125, 0.03125],
-    	    [0.21875, 0.71875, 0.46875],
-    	    [0.03125, 0.53125, 0.28125],
-    	    [0.21875, 0.71875, 0.71875],
-    	    [0.03125, 0.53125, 0.53125],
-    	    [0.21875, 0.71875, 0.96875],
-    	    [0.03125, 0.53125, 0.78125],
-    	    [0.21875, 0.96875, 0.21875],
-    	    [0.03125, 0.78125, 0.03125],
-    	    [0.21875, 0.96875, 0.46875],
-    	    [0.03125, 0.78125, 0.28125],
-    	    [0.21875, 0.96875, 0.71875],
-    	    [0.03125, 0.78125, 0.53125],
-    	    [0.21875, 0.96875, 0.96875],
-    	    [0.03125, 0.78125, 0.78125],
-    	    [0.46875, 0.21875, 0.21875],
-    	    [0.28125, 0.03125, 0.03125],
-    	    [0.46875, 0.21875, 0.46875],
-    	    [0.28125, 0.03125, 0.28125],
-    	    [0.46875, 0.21875, 0.71875],
-    	    [0.28125, 0.03125, 0.53125],
-    	    [0.46875, 0.21875, 0.96875],
-    	    [0.28125, 0.03125, 0.78125],
-    	    [0.46875, 0.46875, 0.21875],
-    	    [0.28125, 0.28125, 0.03125],
-    	    [0.46875, 0.46875, 0.46875],
-    	    [0.28125, 0.28125, 0.28125],
-    	    [0.46875, 0.46875, 0.71875],
-    	    [0.28125, 0.28125, 0.53125],
-    	    [0.46875, 0.46875, 0.96875],
-    	    [0.28125, 0.28125, 0.78125],
-    	    [0.46875, 0.71875, 0.21875],
-    	    [0.28125, 0.53125, 0.03125],
-    	    [0.46875, 0.71875, 0.46875],
-    	    [0.28125, 0.53125, 0.28125],
-    	    [0.46875, 0.71875, 0.71875],
-    	    [0.28125, 0.53125, 0.53125],
-    	    [0.46875, 0.71875, 0.96875],
-    	    [0.28125, 0.53125, 0.78125],
-    	    [0.46875, 0.96875, 0.21875],
-    	    [0.28125, 0.78125, 0.03125],
-    	    [0.46875, 0.96875, 0.46875],
-    	    [0.28125, 0.78125, 0.28125],
-    	    [0.46875, 0.96875, 0.71875],
-    	    [0.28125, 0.78125, 0.53125],
-    	    [0.46875, 0.96875, 0.96875],
-    	    [0.28125, 0.78125, 0.78125],
-    	    [0.71875, 0.21875, 0.21875],
-    	    [0.53125, 0.03125, 0.03125],
-    	    [0.71875, 0.21875, 0.46875],
-    	    [0.53125, 0.03125, 0.28125],
-    	    [0.71875, 0.21875, 0.71875],
-    	    [0.53125, 0.03125, 0.53125],
-    	    [0.71875, 0.21875, 0.96875],
-    	    [0.53125, 0.03125, 0.78125],
-    	    [0.71875, 0.46875, 0.21875],
-    	    [0.53125, 0.28125, 0.03125],
-    	    [0.71875, 0.46875, 0.46875],
-    	    [0.53125, 0.28125, 0.28125],
-    	    [0.71875, 0.46875, 0.71875],
-    	    [0.53125, 0.28125, 0.53125],
-    	    [0.71875, 0.46875, 0.96875],
-    	    [0.53125, 0.28125, 0.78125],
-    	    [0.71875, 0.71875, 0.21875],
-    	    [0.53125, 0.53125, 0.03125],
-    	    [0.71875, 0.71875, 0.46875],
-    	    [0.53125, 0.53125, 0.28125],
-    	    [0.71875, 0.71875, 0.71875],
-    	    [0.53125, 0.53125, 0.53125],
-    	    [0.71875, 0.71875, 0.96875],
-    	    [0.53125, 0.53125, 0.78125],
-    	    [0.71875, 0.96875, 0.21875],
-    	    [0.53125, 0.78125, 0.03125],
-    	    [0.71875, 0.96875, 0.46875],
-    	    [0.53125, 0.78125, 0.28125],
-    	    [0.71875, 0.96875, 0.71875],
-    	    [0.53125, 0.78125, 0.53125],
-    	    [0.71875, 0.96875, 0.96875],
-    	    [0.53125, 0.78125, 0.78125],
-    	    [0.96875, 0.21875, 0.21875],
-    	    [0.78125, 0.03125, 0.03125],
-    	    [0.96875, 0.21875, 0.46875],
-    	    [0.78125, 0.03125, 0.28125],
-    	    [0.96875, 0.21875, 0.71875],
-    	    [0.78125, 0.03125, 0.53125],
-    	    [0.96875, 0.21875, 0.96875],
-    	    [0.78125, 0.03125, 0.78125],
-    	    [0.96875, 0.46875, 0.21875],
-    	    [0.78125, 0.28125, 0.03125],
-    	    [0.96875, 0.46875, 0.46875],
-    	    [0.78125, 0.28125, 0.28125],
-    	    [0.96875, 0.46875, 0.71875],
-    	    [0.78125, 0.28125, 0.53125],
-    	    [0.96875, 0.46875, 0.96875],
-    	    [0.78125, 0.28125, 0.78125],
-    	    [0.96875, 0.71875, 0.21875],
-    	    [0.78125, 0.53125, 0.03125],
-    	    [0.96875, 0.71875, 0.46875],
-    	    [0.78125, 0.53125, 0.28125],
-    	    [0.96875, 0.71875, 0.71875],
-    	    [0.78125, 0.53125, 0.53125],
-    	    [0.96875, 0.71875, 0.96875],
-    	    [0.78125, 0.53125, 0.78125],
-    	    [0.96875, 0.96875, 0.21875],
-    	    [0.78125, 0.78125, 0.03125],
-    	    [0.96875, 0.96875, 0.46875],
-    	    [0.78125, 0.78125, 0.28125],
-    	    [0.96875, 0.96875, 0.71875],
-    	    [0.78125, 0.78125, 0.53125],
-    	    [0.96875, 0.96875, 0.96875],
-    	    [0.78125, 0.78125, 0.78125],
-    	  )
-    	])
-grho            = GSpace(crystal.recilat, ecut_rho=50.0, grid_shape=(96, 96, 96))
-grho.num_g      = 10868
-gwfn            = GSpace(crystal.recilat, ecut_wfn=50.0, grid_shape=(96, 96, 96))
-gwfn.num_g      = 10868
-numbnd          = 256
-is_spin         = False
-is_noncolin     = False
-symm_rho        = True
-rho_start       = <qtm.mpi.containers.get_DistFieldG.<locals>.DistFieldG object at 0x7f50df7f6bd0>
-wfn_init        = None
-libxc_func      = None
-occ_typ         = fixed
-smear_typ       = gauss
-e_temp          = 0.001 # Ha
-conv_thr        = 5e-09 # Ha
-maxiter         = 100
-diago_thr_init  = 0.005
-mix_beta        = 0.7
-mix_dim         = 8
-ret_vxc         = False
-dftconfig       = DFTConfig(
+dftcomm        = DFTCommMod(image_comm.size=32, n_kgrp=1, n_bgrp=1, pwgrp_size=32)
+crystal        = Crystal(
+                  reallat=RealLattice(
+                    alat=40.80000, 
+                    latvec=
+                      [[-20.4   0.  -20.4]
+                       [  0.   20.4  20.4]
+                       [ 20.4  20.4   0. ]],
+                  ), 
+                  l_atoms=[
+                    BasisAtoms(
+                      label='si', 
+                      ppdata.filename=Si_ONCV_PBE-1.2.upf, 
+                      ppdata.md5_checksum=7f029a58b69e3aa87b46a36c608bf45e, 
+                      ppdata.valence=4, 
+                      mass=28.086, 
+                      r_cryst=
+                        [0.21875, 0.21875, 0.21875],
+                        [0.03125, 0.03125, 0.03125],
+                        [0.21875, 0.21875, 0.46875],
+                        [0.03125, 0.03125, 0.28125],
+                        [0.21875, 0.21875, 0.71875],
+                        [0.03125, 0.03125, 0.53125],
+                        [0.21875, 0.21875, 0.96875],
+                        [0.03125, 0.03125, 0.78125],
+                        [0.21875, 0.46875, 0.21875],
+                        [0.03125, 0.28125, 0.03125],
+                        [0.21875, 0.46875, 0.46875],
+                        [0.03125, 0.28125, 0.28125],
+                        [0.21875, 0.46875, 0.71875],
+                        [0.03125, 0.28125, 0.53125],
+                        [0.21875, 0.46875, 0.96875],
+                        [0.03125, 0.28125, 0.78125],
+                        [0.21875, 0.71875, 0.21875],
+                        [0.03125, 0.53125, 0.03125],
+                        [0.21875, 0.71875, 0.46875],
+                        [0.03125, 0.53125, 0.28125],
+                        [0.21875, 0.71875, 0.71875],
+                        [0.03125, 0.53125, 0.53125],
+                        [0.21875, 0.71875, 0.96875],
+                        [0.03125, 0.53125, 0.78125],
+                        [0.21875, 0.96875, 0.21875],
+                        [0.03125, 0.78125, 0.03125],
+                        [0.21875, 0.96875, 0.46875],
+                        [0.03125, 0.78125, 0.28125],
+                        [0.21875, 0.96875, 0.71875],
+                        [0.03125, 0.78125, 0.53125],
+                        [0.21875, 0.96875, 0.96875],
+                        [0.03125, 0.78125, 0.78125],
+                        [0.46875, 0.21875, 0.21875],
+                        [0.28125, 0.03125, 0.03125],
+                        [0.46875, 0.21875, 0.46875],
+                        [0.28125, 0.03125, 0.28125],
+                        [0.46875, 0.21875, 0.71875],
+                        [0.28125, 0.03125, 0.53125],
+                        [0.46875, 0.21875, 0.96875],
+                        [0.28125, 0.03125, 0.78125],
+                        [0.46875, 0.46875, 0.21875],
+                        [0.28125, 0.28125, 0.03125],
+                        [0.46875, 0.46875, 0.46875],
+                        [0.28125, 0.28125, 0.28125],
+                        [0.46875, 0.46875, 0.71875],
+                        [0.28125, 0.28125, 0.53125],
+                        [0.46875, 0.46875, 0.96875],
+                        [0.28125, 0.28125, 0.78125],
+                        [0.46875, 0.71875, 0.21875],
+                        [0.28125, 0.53125, 0.03125],
+                        [0.46875, 0.71875, 0.46875],
+                        [0.28125, 0.53125, 0.28125],
+                        [0.46875, 0.71875, 0.71875],
+                        [0.28125, 0.53125, 0.53125],
+                        [0.46875, 0.71875, 0.96875],
+                        [0.28125, 0.53125, 0.78125],
+                        [0.46875, 0.96875, 0.21875],
+                        [0.28125, 0.78125, 0.03125],
+                        [0.46875, 0.96875, 0.46875],
+                        [0.28125, 0.78125, 0.28125],
+                        [0.46875, 0.96875, 0.71875],
+                        [0.28125, 0.78125, 0.53125],
+                        [0.46875, 0.96875, 0.96875],
+                        [0.28125, 0.78125, 0.78125],
+                        [0.71875, 0.21875, 0.21875],
+                        [0.53125, 0.03125, 0.03125],
+                        [0.71875, 0.21875, 0.46875],
+                        [0.53125, 0.03125, 0.28125],
+                        [0.71875, 0.21875, 0.71875],
+                        [0.53125, 0.03125, 0.53125],
+                        [0.71875, 0.21875, 0.96875],
+                        [0.53125, 0.03125, 0.78125],
+                        [0.71875, 0.46875, 0.21875],
+                        [0.53125, 0.28125, 0.03125],
+                        [0.71875, 0.46875, 0.46875],
+                        [0.53125, 0.28125, 0.28125],
+                        [0.71875, 0.46875, 0.71875],
+                        [0.53125, 0.28125, 0.53125],
+                        [0.71875, 0.46875, 0.96875],
+                        [0.53125, 0.28125, 0.78125],
+                        [0.71875, 0.71875, 0.21875],
+                        [0.53125, 0.53125, 0.03125],
+                        [0.71875, 0.71875, 0.46875],
+                        [0.53125, 0.53125, 0.28125],
+                        [0.71875, 0.71875, 0.71875],
+                        [0.53125, 0.53125, 0.53125],
+                        [0.71875, 0.71875, 0.96875],
+                        [0.53125, 0.53125, 0.78125],
+                        [0.71875, 0.96875, 0.21875],
+                        [0.53125, 0.78125, 0.03125],
+                        [0.71875, 0.96875, 0.46875],
+                        [0.53125, 0.78125, 0.28125],
+                        [0.71875, 0.96875, 0.71875],
+                        [0.53125, 0.78125, 0.53125],
+                        [0.71875, 0.96875, 0.96875],
+                        [0.53125, 0.78125, 0.78125],
+                        [0.96875, 0.21875, 0.21875],
+                        [0.78125, 0.03125, 0.03125],
+                        [0.96875, 0.21875, 0.46875],
+                        [0.78125, 0.03125, 0.28125],
+                        [0.96875, 0.21875, 0.71875],
+                        [0.78125, 0.03125, 0.53125],
+                        [0.96875, 0.21875, 0.96875],
+                        [0.78125, 0.03125, 0.78125],
+                        [0.96875, 0.46875, 0.21875],
+                        [0.78125, 0.28125, 0.03125],
+                        [0.96875, 0.46875, 0.46875],
+                        [0.78125, 0.28125, 0.28125],
+                        [0.96875, 0.46875, 0.71875],
+                        [0.78125, 0.28125, 0.53125],
+                        [0.96875, 0.46875, 0.96875],
+                        [0.78125, 0.28125, 0.78125],
+                        [0.96875, 0.71875, 0.21875],
+                        [0.78125, 0.53125, 0.03125],
+                        [0.96875, 0.71875, 0.46875],
+                        [0.78125, 0.53125, 0.28125],
+                        [0.96875, 0.71875, 0.71875],
+                        [0.78125, 0.53125, 0.53125],
+                        [0.96875, 0.71875, 0.96875],
+                        [0.78125, 0.53125, 0.78125],
+                        [0.96875, 0.96875, 0.21875],
+                        [0.78125, 0.78125, 0.03125],
+                        [0.96875, 0.96875, 0.46875],
+                        [0.78125, 0.78125, 0.28125],
+                        [0.96875, 0.96875, 0.71875],
+                        [0.78125, 0.78125, 0.53125],
+                        [0.96875, 0.96875, 0.96875],
+                        [0.78125, 0.78125, 0.78125],
+                      )
+                    ])
+grho           = GSpace(crystal.recilat, ecut_rho=50.0, grid_shape=(96, 96, 96))
+grho.num_g     = 10868
+gwfn           = GSpace(crystal.recilat, ecut_wfn=50.0, grid_shape=(96, 96, 96))
+gwfn.num_g     = 10868
+numbnd         = 256
+is_spin        = False
+is_noncolin    = False
+symm_rho       = True
+rho_start      = <qtm.mpi.containers.get_DistFieldG.<locals>.DistFieldG object at 0x7f7ccd8eaad0>
+wfn_init       = None
+libxc_func     = None
+occ_typ        = fixed
+smear_typ      = gauss
+e_temp         = 0.001 # Ha
+conv_thr       = 5e-09 # Ha
+maxiter        = 100
+diago_thr_init = 0.005
+mix_beta       = 0.7
+mix_dim        = 8
+ret_vxc        = False
+dftconfig      = DFTConfig(
                       symm_check_supercell = True,
                       symm_use_all_frac = False,
                       spglib_symprec = 1e-05,
@@ -187,266 +181,266 @@ dftconfig       = DFTConfig(
                       davidson_maxiter = 20,
                       davidson_numwork = 2,
                       mixing_method = 'modbroyden')
-iter_printer    = print_scf_status
-kpts            =
+iter_printer   = print_scf_status
+kpts           =
     kpt[0]  kpt[1]  kpt[2];  weight
      0.0000  0.0000  0.0000; 1.000000
 
 =========================================
-Iteration # 1, Run Time:   9.4 sec
+Iteration # 1, Run Time:   9.0 sec
 Convergence Status   : NOT Converged
 SCF Error           : 3.6600e+00 Ry
 Avg Diago Iterations: 12.0
 Diago Threshold     : 7.15e-04 Ry
 
-Total Energy:        -1020.67904491 Ry
+Total Energy:        -1020.67904493 Ry
 
-      one-el:          310.86656522 Ry
+      one-el:          310.86656520 Ry
      Hartree:           51.63014368 Ry
           XC:         -301.59120534 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            6.01402185 eV
+    HO Level:            6.01402184 eV
 ----------------------------------------
 
-Iteration # 2, Run Time:  11.9 sec
+Iteration # 2, Run Time:  11.5 sec
 Convergence Status   : NOT Converged
 SCF Error           : 3.8558e+00 Ry
 Avg Diago Iterations: 5.0
 Diago Threshold     : 7.15e-04 Ry
 
-Total Energy:        -1021.77866492 Ry
+Total Energy:        -1021.77866510 Ry
 
-      one-el:          309.76694522 Ry
+      one-el:          309.76694503 Ry
      Hartree:           51.63014368 Ry
           XC:         -301.59120534 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            5.90179275 eV
+    HO Level:            5.90179278 eV
 ----------------------------------------
 
-Iteration # 3, Run Time:  13.5 sec
+Iteration # 3, Run Time:  13.1 sec
 Convergence Status   : NOT Converged
 SCF Error           : 1.6705e-01 Ry
 Avg Diago Iterations: 1.0
 Diago Threshold     : 3.26e-05 Ry
 
-Total Energy:        -1009.56042275 Ry
+Total Energy:        -1009.56042304 Ry
 
-      one-el:          312.27047807 Ry
-     Hartree:           68.27008224 Ry
+      one-el:          312.27047772 Ry
+     Hartree:           68.27008231 Ry
           XC:         -308.51643460 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            6.40831177 eV
+    HO Level:            6.40831175 eV
 ----------------------------------------
 
-Iteration # 4, Run Time:  16.1 sec
+Iteration # 4, Run Time:  15.8 sec
 Convergence Status   : NOT Converged
 SCF Error           : 3.2398e-03 Ry
 Avg Diago Iterations: 4.0
 Diago Threshold     : 6.33e-07 Ry
 
-Total Energy:        -1007.54792032 Ry
+Total Energy:        -1007.54792023 Ry
 
-      one-el:          312.83992529 Ry
-     Hartree:           71.41496962 Ry
-          XC:         -310.21826676 Ry
+      one-el:          312.83992520 Ry
+     Hartree:           71.41496994 Ry
+          XC:         -310.21826690 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            6.48983322 eV
+    HO Level:            6.48983316 eV
 ----------------------------------------
 
-Iteration # 5, Run Time:  20.4 sec
+Iteration # 5, Run Time:  20.2 sec
 Convergence Status   : NOT Converged
-SCF Error           : 3.3624e-03 Ry
+SCF Error           : 3.3623e-03 Ry
 Avg Diago Iterations: 9.0
 Diago Threshold     : 6.33e-07 Ry
 
-Total Energy:        -1007.92429856 Ry
+Total Energy:        -1007.92429862 Ry
 
-      one-el:          312.81041090 Ry
-     Hartree:           70.93272537 Ry
-          XC:         -310.08288637 Ry
+      one-el:          312.81041088 Ry
+     Hartree:           70.93272533 Ry
+          XC:         -310.08288635 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            6.47354465 eV
+    HO Level:            6.47354467 eV
 ----------------------------------------
 
-Iteration # 6, Run Time:  22.6 sec
+Iteration # 6, Run Time:  22.4 sec
 Convergence Status   : NOT Converged
 SCF Error           : 3.6326e-05 Ry
 Avg Diago Iterations: 3.0
 Diago Threshold     : 7.09e-09 Ry
 
-Total Energy:        -1007.92510592 Ry
+Total Energy:        -1007.92510600 Ry
 
-      one-el:          312.81237680 Ry
-     Hartree:           70.93211502 Ry
-          XC:         -310.08504926 Ry
+      one-el:          312.81237676 Ry
+     Hartree:           70.93211493 Ry
+          XC:         -310.08504922 Ry
        Ewald:        -1081.58454847 Ry
 
     HO Level:            6.47312798 eV
 ----------------------------------------
 
-Iteration # 7, Run Time:  26.7 sec
+Iteration # 7, Run Time:  26.5 sec
 Convergence Status   : NOT Converged
-SCF Error           : 1.2611e-04 Ry
+SCF Error           : 1.2610e-04 Ry
 Avg Diago Iterations: 7.0
 Diago Threshold     : 7.09e-09 Ry
 
-Total Energy:        -1007.92466683 Ry
+Total Energy:        -1007.92466727 Ry
 
-      one-el:          312.81036744 Ry
-     Hartree:           70.94370854 Ry
-          XC:         -310.09419434 Ry
+      one-el:          312.81036700 Ry
+     Hartree:           70.94370855 Ry
+          XC:         -310.09419435 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            6.47327521 eV
+    HO Level:            6.47327523 eV
 ----------------------------------------
 
-Iteration # 8, Run Time:  29.0 sec
+Iteration # 8, Run Time:  28.9 sec
 Convergence Status   : NOT Converged
-SCF Error           : 4.0055e-05 Ry
+SCF Error           : 4.0051e-05 Ry
 Avg Diago Iterations: 3.0
 Diago Threshold     : 7.09e-09 Ry
 
-Total Energy:        -1007.92107547 Ry
+Total Energy:        -1007.92107565 Ry
 
-      one-el:          312.81006240 Ry
-     Hartree:           70.95273377 Ry
-          XC:         -310.09932318 Ry
+      one-el:          312.81006187 Ry
+     Hartree:           70.95273419 Ry
+          XC:         -310.09932323 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            6.47351225 eV
+    HO Level:            6.47351222 eV
 ----------------------------------------
 
-Iteration # 9, Run Time:  30.9 sec
+Iteration # 9, Run Time:  30.8 sec
 Convergence Status   : NOT Converged
-SCF Error           : 6.2705e-06 Ry
+SCF Error           : 6.2835e-06 Ry
 Avg Diago Iterations: 2.0
-Diago Threshold     : 1.22e-09 Ry
+Diago Threshold     : 1.23e-09 Ry
 
-Total Energy:        -1007.91823542 Ry
+Total Energy:        -1007.91823719 Ry
 
-      one-el:          312.81052426 Ry
-     Hartree:           70.95630721 Ry
-          XC:         -310.10051843 Ry
+      one-el:          312.81052338 Ry
+     Hartree:           70.95630582 Ry
+          XC:         -310.10051792 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            6.47360343 eV
+    HO Level:            6.47360336 eV
 ----------------------------------------
 
 Iteration # 10, Run Time:  33.3 sec
 Convergence Status   : NOT Converged
-SCF Error           : 4.2652e-07 Ry
+SCF Error           : 4.2852e-07 Ry
 Avg Diago Iterations: 4.0
-Diago Threshold     : 8.33e-11 Ry
+Diago Threshold     : 8.37e-11 Ry
 
-Total Energy:        -1007.91731993 Ry
+Total Energy:        -1007.91732025 Ry
 
-      one-el:          312.81065277 Ry
-     Hartree:           70.95734819 Ry
+      one-el:          312.81065320 Ry
+     Hartree:           70.95734745 Ry
           XC:         -310.10077242 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            6.47362986 eV
+    HO Level:            6.47362985 eV
 ----------------------------------------
 
-Iteration # 11, Run Time:  36.1 sec
+Iteration # 11, Run Time:  36.2 sec
 Convergence Status   : NOT Converged
-SCF Error           : 5.1943e-07 Ry
+SCF Error           : 5.1702e-07 Ry
 Avg Diago Iterations: 5.0
-Diago Threshold     : 8.33e-11 Ry
+Diago Threshold     : 8.37e-11 Ry
 
-Total Energy:        -1007.91681077 Ry
+Total Energy:        -1007.91681157 Ry
 
-      one-el:          312.81072011 Ry
-     Hartree:           70.95780579 Ry
-          XC:         -310.10078820 Ry
+      one-el:          312.81071998 Ry
+     Hartree:           70.95780536 Ry
+          XC:         -310.10078843 Ry
        Ewald:        -1081.58454847 Ry
 
     HO Level:            6.47364127 eV
 ----------------------------------------
 
-Iteration # 12, Run Time:  37.9 sec
+Iteration # 12, Run Time:  38.0 sec
 Convergence Status   : NOT Converged
-SCF Error           : 2.5027e-07 Ry
+SCF Error           : 2.4982e-07 Ry
 Avg Diago Iterations: 2.0
-Diago Threshold     : 4.89e-11 Ry
+Diago Threshold     : 4.88e-11 Ry
 
-Total Energy:        -1007.91674465 Ry
+Total Energy:        -1007.91674462 Ry
 
-      one-el:          312.81070997 Ry
-     Hartree:           70.95774766 Ry
-          XC:         -310.10065381 Ry
+      one-el:          312.81071018 Ry
+     Hartree:           70.95774751 Ry
+          XC:         -310.10065383 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            6.47363974 eV
+    HO Level:            6.47363975 eV
 ----------------------------------------
 
-Iteration # 13, Run Time:  40.1 sec
+Iteration # 13, Run Time:  40.3 sec
 Convergence Status   : NOT Converged
-SCF Error           : 1.2408e-08 Ry
+SCF Error           : 1.2357e-08 Ry
 Avg Diago Iterations: 3.0
-Diago Threshold     : 2.42e-12 Ry
+Diago Threshold     : 2.41e-12 Ry
 
-Total Energy:        -1007.91700063 Ry
+Total Energy:        -1007.91700061 Ry
 
-      one-el:          312.81065223 Ry
-     Hartree:           70.95742834 Ry
-          XC:         -310.10053272 Ry
+      one-el:          312.81065238 Ry
+     Hartree:           70.95742818 Ry
+          XC:         -310.10053270 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            6.47363021 eV
+    HO Level:            6.47363020 eV
 ----------------------------------------
 
-Iteration # 14, Run Time:  43.3 sec
+Iteration # 14, Run Time:  43.5 sec
 Convergence Status   : NOT Converged
-SCF Error           : 2.8367e-08 Ry
+SCF Error           : 2.8288e-08 Ry
 Avg Diago Iterations: 7.0
-Diago Threshold     : 2.42e-12 Ry
+Diago Threshold     : 2.41e-12 Ry
 
-Total Energy:        -1007.91695801 Ry
+Total Energy:        -1007.91695813 Ry
 
-      one-el:          312.81065219 Ry
-     Hartree:           70.95749089 Ry
-          XC:         -310.10055261 Ry
+      one-el:          312.81065212 Ry
+     Hartree:           70.95749080 Ry
+          XC:         -310.10055258 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            6.47363204 eV
+    HO Level:            6.47363202 eV
 ----------------------------------------
 
-Iteration # 15, Run Time:  45.1 sec
+Iteration # 15, Run Time:  45.4 sec
 Convergence Status   : NOT Converged
-SCF Error           : 1.0325e-08 Ry
+SCF Error           : 1.0321e-08 Ry
 Avg Diago Iterations: 2.0
 Diago Threshold     : 2.02e-12 Ry
 
-Total Energy:        -1007.91693559 Ry
+Total Energy:        -1007.91693565 Ry
 
-      one-el:          312.81065424 Ry
-     Hartree:           70.95752418 Ry
-          XC:         -310.10056555 Ry
+      one-el:          312.81065428 Ry
+     Hartree:           70.95752401 Ry
+          XC:         -310.10056547 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            6.47363301 eV
+    HO Level:            6.47363299 eV
 ----------------------------------------
 
-Iteration # 16, Run Time:  47.0 sec
+Iteration # 16, Run Time:  47.3 sec
 Convergence Status   :  Converged
-SCF Error           : 1.7498e-09 Ry
+SCF Error           : 1.7489e-09 Ry
 Avg Diago Iterations: 2.0
 Diago Threshold     : 2.02e-12 Ry
 
-Total Energy:        -1007.91693477 Ry
+Total Energy:        -1007.91693458 Ry
 
-      one-el:          312.81065096 Ry
-     Hartree:           70.95753198 Ry
-          XC:         -310.10056923 Ry
+      one-el:          312.81065116 Ry
+     Hartree:           70.95753193 Ry
+          XC:         -310.10056921 Ry
        Ewald:        -1081.58454847 Ry
 
-    HO Level:            6.47363318 eV
+    HO Level:            6.47363321 eV
 ----------------------------------------
 
 SCF Converged.
@@ -455,18 +449,18 @@ SCF Routine has exited
 -----------------------------------------------------------
 |            LABEL             |  CALL  |  TIME  | STATUS  |
 -----------------------------------------------------------
-|           scf:scf            |       1|   47.21| STOPPED |
-|     rho_generate_atomic      |       1|    0.21| STOPPED |
-|         loc_generate         |       1|    0.21| STOPPED |
-|          nloc:init           |       1|    0.17| STOPPED |
-|          xc_compute          |      16|    0.36| STOPPED |
+|           scf:scf            |       1|   47.53| STOPPED |
+|     rho_generate_atomic      |       1|    0.18| STOPPED |
+|         loc_generate         |       1|    0.18| STOPPED |
+|          nloc:init           |       1|    0.15| STOPPED |
+|          xc_compute          |      16|    0.39| STOPPED |
 |       nloc:gen_vkb_dij       |       1|    0.03| STOPPED |
-|           davidson           |      16|   40.96| STOPPED |
-|    davidson:compute_hpsi     |      87|   22.05| STOPPED |
-|         KSHam:h_psi          |      87|   22.03| STOPPED |
-|     davidson:update_red      |      87|    3.30| STOPPED |
-|     davidson:expand_psi      |      71|   17.78| STOPPED |
-|     davidson:apply_g_psi     |      71|    1.15| STOPPED |
+|           davidson           |      16|   41.27| STOPPED |
+|    davidson:compute_hpsi     |      87|   22.93| STOPPED |
+|         KSHam:h_psi          |      87|   22.91| STOPPED |
+|     davidson:update_red      |      87|    3.38| STOPPED |
+|     davidson:expand_psi      |      71|   18.42| STOPPED |
+|     davidson:apply_g_psi     |      71|    1.07| STOPPED |
 -----------------------------------------------------------
 
 

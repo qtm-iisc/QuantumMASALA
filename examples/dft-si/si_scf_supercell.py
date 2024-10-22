@@ -44,7 +44,8 @@ import argparse
 from qtm import qtmconfig
 from qtm.logger import qtmlogger
 
-qtmconfig.fft_backend = "pyfftw"
+# qtmconfig.fft_backend = "pyfftw"
+qtmconfig.set_gpu(False)
 
 from qtm.config import MPI4PY_INSTALLED
 if MPI4PY_INSTALLED:

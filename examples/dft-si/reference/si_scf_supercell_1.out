@@ -1,59 +1,53 @@
 Quantum MASALA
  - Project Git Info:
-    - Commit hash:          829e78595e098e79b86ebe8dd2af64b456c339b8
-    - Commit date and time: Saturday, 19 October, 2024 23:06:48
+    - Commit hash:          da45fd9cd14721aa9d7d4fdd92bbde38480b3a7d
+    - Commit date and time: Monday, 21 October, 2024 20:06:30
+Started calculation on 2024-10-22 at 08:21:16.
 =========================================
 SCF Parameters:
 
-dftcomm         = DFTCommMod(image_comm.size=2, n_kgrp=1, n_bgrp=1, pwgrp_size=2)
-crystal         = Crystal(
-    reallat=Lattice parameter 'alat' :   10.20000  a.u.
-Unit cell volume         :  265.30200  (a.u.)^3
-Number of atoms/cell     : 1
-Number of atomic types   : 1
-Number of electrons      : 16
-
-Crystal Axes: coordinates in units of 'alat' (10.20000 a.u.)
-    a(1) = (-0.50000,  0.00000,  0.50000)
-    a(2) = ( 0.00000,  0.50000,  0.50000)
-    a(3) = (-0.50000,  0.50000,  0.00000)
-
-Reciprocal Axes: coordinates in units of 'tpiba' (0.61600 (a.u.)^-1)
-    b(1) = (-1.00000, -1.00000,  1.00000)
-    b(2) = ( 1.00000,  1.00000,  1.00000)
-    b(3) = (-1.00000,  1.00000, -1.00000), 
-    l_atoms=[
-    	BasisAtoms(
-    	  label='si', 
-    	  ppdata.filename=Si_ONCV_PBE-1.2.upf, 
-    	  ppdata.md5_checksum=7f029a58b69e3aa87b46a36c608bf45e, 
-    	  mass=28.086, 
-    	  r_cryst=
-    	    [0.875, 0.875, 0.875],
-    	    [0.125, 0.125, 0.125],
-    	  )
-    	])
-grho            = GSpace(crystal.recilat, ecut_rho=50.0, grid_shape=(24, 24, 24))
-grho.num_g      = 2336
-gwfn            = GSpace(crystal.recilat, ecut_wfn=50.0, grid_shape=(24, 24, 24))
-gwfn.num_g      = 2336
-numbnd          = 4
-is_spin         = False
-is_noncolin     = False
-symm_rho        = True
-rho_start       = <qtm.mpi.containers.get_DistFieldG.<locals>.DistFieldG object at 0x7f3f6109a950>
-wfn_init        = None
-libxc_func      = None
-occ_typ         = fixed
-smear_typ       = gauss
-e_temp          = 0.001 # Ha
-conv_thr        = 5e-09 # Ha
-maxiter         = 100
-diago_thr_init  = 0.005
-mix_beta        = 0.7
-mix_dim         = 8
-ret_vxc         = False
-dftconfig       = DFTConfig(
+dftcomm        = DFTCommMod(image_comm.size=2, n_kgrp=1, n_bgrp=1, pwgrp_size=2)
+crystal        = Crystal(
+                  reallat=RealLattice(
+                    alat=10.20000, 
+                    latvec=
+                      [[-5.1  0.  -5.1]
+                       [ 0.   5.1  5.1]
+                       [ 5.1  5.1  0. ]],
+                  ), 
+                  l_atoms=[
+                    BasisAtoms(
+                      label='si', 
+                      ppdata.filename=Si_ONCV_PBE-1.2.upf, 
+                      ppdata.md5_checksum=7f029a58b69e3aa87b46a36c608bf45e, 
+                      ppdata.valence=4, 
+                      mass=28.086, 
+                      r_cryst=
+                        [0.875, 0.875, 0.875],
+                        [0.125, 0.125, 0.125],
+                      )
+                    ])
+grho           = GSpace(crystal.recilat, ecut_rho=50.0, grid_shape=(24, 24, 24))
+grho.num_g     = 2336
+gwfn           = GSpace(crystal.recilat, ecut_wfn=50.0, grid_shape=(24, 24, 24))
+gwfn.num_g     = 2336
+numbnd         = 4
+is_spin        = False
+is_noncolin    = False
+symm_rho       = True
+rho_start      = <qtm.mpi.containers.get_DistFieldG.<locals>.DistFieldG object at 0x7ff5aff24ad0>
+wfn_init       = None
+libxc_func     = None
+occ_typ        = fixed
+smear_typ      = gauss
+e_temp         = 0.001 # Ha
+conv_thr       = 5e-09 # Ha
+maxiter        = 100
+diago_thr_init = 0.005
+mix_beta       = 0.7
+mix_dim        = 8
+ret_vxc        = False
+dftconfig      = DFTConfig(
                       symm_check_supercell = True,
                       symm_use_all_frac = False,
                       spglib_symprec = 1e-05,
@@ -61,8 +55,8 @@ dftconfig       = DFTConfig(
                       davidson_maxiter = 20,
                       davidson_numwork = 2,
                       mixing_method = 'modbroyden')
-iter_printer    = print_scf_status
-kpts            =
+iter_printer   = print_scf_status
+kpts           =
     kpt[0]  kpt[1]  kpt[2];  weight
      0.0000  0.0000  0.0000; 1.000000
 
@@ -131,7 +125,7 @@ Total Energy:          -14.49737238 Ry
     HO Level:            7.42707266 eV
 ----------------------------------------
 
-Iteration # 5, Run Time:   0.4 sec
+Iteration # 5, Run Time:   0.3 sec
 Convergence Status   : NOT Converged
 SCF Error           : 1.1067e-07 Ry
 Avg Diago Iterations: 9.0

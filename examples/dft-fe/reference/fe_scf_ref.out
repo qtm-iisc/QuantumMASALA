@@ -9,59 +9,53 @@ ecut_wfn : 20.0
 ecut_rho : 80.0
 Quantum MASALA
  - Project Git Info:
-    - Commit hash:          6cf3f410909f331c1b9748a0262561d5dc1b194e
-    - Commit date and time: Monday, 21 October, 2024 12:06:29
+    - Commit hash:          da45fd9cd14721aa9d7d4fdd92bbde38480b3a7d
+    - Commit date and time: Monday, 21 October, 2024 20:06:30
+Started calculation on 2024-10-22 at 10:02:38.
 =========================================
 SCF Parameters:
 
-dftcomm         = DFTCommMod(image_comm.size=1, n_kgrp=1, n_bgrp=1, pwgrp_size=None)
-crystal         = Crystal(
-    reallat=Lattice parameter 'alat' :   5.10700  a.u.
-Unit cell volume         :  66.59898  (a.u.)^3
-Number of atoms/cell     : 1
-Number of atomic types   : 1
-Number of electrons      : 16
-
-Crystal Axes: coordinates in units of 'alat' (5.10700 a.u.)
-    a(1) = ( 0.50000,  0.50000,  0.50000)
-    a(2) = (-0.50000,  0.50000,  0.50000)
-    a(3) = (-0.50000, -0.50000,  0.50000)
-
-Reciprocal Axes: coordinates in units of 'tpiba' (1.23031 (a.u.)^-1)
-    b(1) = ( 1.00000,  0.00000,  1.00000)
-    b(2) = (-1.00000,  1.00000,  0.00000)
-    b(3) = (-0.00000, -1.00000,  1.00000), 
-    l_atoms=[
-    	BasisAtoms(
-    	  label='fe', 
-    	  ppdata.filename=Fe_ONCV_PBE-1.2.upf, 
-    	  ppdata.md5_checksum=0a0a3b4237ca738a29386c4fd1f8ac5e, 
-    	  mass=55.487, 
-    	  r_cryst=
-    	    [0., 0., 0.],
-    	  )
-    	])
-grho            = GSpace(crystal.recilat, ecut_rho=80.0, grid_shape=(18, 18, 18))
-grho.num_g      = 2243
-gwfn            = GSpace(crystal.recilat, ecut_wfn=80.0, grid_shape=(18, 18, 18))
-gwfn.num_g      = 2243
-numbnd          = 12
-is_spin         = True
-is_noncolin     = False
-symm_rho        = True
-rho_start       = <qtm.containers.field.get_FieldG.<locals>.FieldG object at 0x7f826c569350>
-wfn_init        = None
-libxc_func      = None
-occ_typ         = smear
-smear_typ       = gauss
-e_temp          = 0.005 # Ha
-conv_thr        = 5e-09 # Ha
-maxiter         = 100
-diago_thr_init  = 0.005
-mix_beta        = 0.7
-mix_dim         = 8
-ret_vxc         = False
-dftconfig       = DFTConfig(
+dftcomm        = DFTCommMod(image_comm.size=1, n_kgrp=1, n_bgrp=1, pwgrp_size=None)
+crystal        = Crystal(
+                  reallat=RealLattice(
+                    alat=5.10700, 
+                    latvec=
+                      [[ 2.5535 -2.5535 -2.5535]
+                       [ 2.5535  2.5535 -2.5535]
+                       [ 2.5535  2.5535  2.5535]],
+                  ), 
+                  l_atoms=[
+                    BasisAtoms(
+                      label='fe', 
+                      ppdata.filename=Fe_ONCV_PBE-1.2.upf, 
+                      ppdata.md5_checksum=0a0a3b4237ca738a29386c4fd1f8ac5e, 
+                      ppdata.valence=16, 
+                      mass=55.487, 
+                      r_cryst=
+                        [0., 0., 0.],
+                      )
+                    ])
+grho           = GSpace(crystal.recilat, ecut_rho=80.0, grid_shape=(18, 18, 18))
+grho.num_g     = 2243
+gwfn           = GSpace(crystal.recilat, ecut_wfn=80.0, grid_shape=(18, 18, 18))
+gwfn.num_g     = 2243
+numbnd         = 12
+is_spin        = True
+is_noncolin    = False
+symm_rho       = True
+rho_start      = <qtm.containers.field.get_FieldG.<locals>.FieldG object at 0x7fcbe12002d0>
+wfn_init       = None
+libxc_func     = None
+occ_typ        = smear
+smear_typ      = gauss
+e_temp         = 0.005 # Ha
+conv_thr       = 5e-09 # Ha
+maxiter        = 100
+diago_thr_init = 0.005
+mix_beta       = 0.7
+mix_dim        = 8
+ret_vxc        = False
+dftconfig      = DFTConfig(
                       symm_check_supercell = True,
                       symm_use_all_frac = False,
                       spglib_symprec = 1e-05,
@@ -69,8 +63,8 @@ dftconfig       = DFTConfig(
                       davidson_maxiter = 20,
                       davidson_numwork = 2,
                       mixing_method = 'modbroyden')
-iter_printer    = print_scf_status
-kpts            =
+iter_printer   = print_scf_status
+kpts           =
     kpt[0]  kpt[1]  kpt[2];  weight
      0.0625  0.0625  0.0625; 0.011719
      0.1875  0.0625  0.0625; 0.046875
@@ -100,7 +94,7 @@ kpts            =
      0.4375  0.4375  0.4375; 0.011719
 
 =========================================
-Iteration # 1, Run Time:  14.8 sec
+Iteration # 1, Run Time:  22.3 sec
 Convergence Status   : NOT Converged
 SCF Error           : 6.0859e-01 Ry
 Avg Diago Iterations: 9.8
@@ -118,7 +112,7 @@ Total Energy:         -229.88027614 Ry
  Fermi Level:           24.77103061 eV
 ----------------------------------------
 
-Iteration # 2, Run Time:  17.1 sec
+Iteration # 2, Run Time:  25.3 sec
 Convergence Status   : NOT Converged
 SCF Error           : 3.2241e-01 Ry
 Avg Diago Iterations: 2.1
@@ -136,7 +130,7 @@ Total Energy:         -241.08074396 Ry
  Fermi Level:           21.28091953 eV
 ----------------------------------------
 
-Iteration # 3, Run Time:  18.9 sec
+Iteration # 3, Run Time:  27.7 sec
 Convergence Status   : NOT Converged
 SCF Error           : 4.2765e-02 Ry
 Avg Diago Iterations: 1.3
@@ -154,7 +148,7 @@ Total Energy:         -235.68847476 Ry
  Fermi Level:           23.12802537 eV
 ----------------------------------------
 
-Iteration # 4, Run Time:  20.7 sec
+Iteration # 4, Run Time:  30.1 sec
 Convergence Status   : NOT Converged
 SCF Error           : 3.8118e-03 Ry
 Avg Diago Iterations: 1.7
@@ -172,7 +166,7 @@ Total Energy:         -236.45791828 Ry
  Fermi Level:           22.89839151 eV
 ----------------------------------------
 
-Iteration # 5, Run Time:  22.7 sec
+Iteration # 5, Run Time:  32.8 sec
 Convergence Status   : NOT Converged
 SCF Error           : 5.0704e-04 Ry
 Avg Diago Iterations: 2.1
@@ -190,7 +184,7 @@ Total Energy:         -236.27813073 Ry
  Fermi Level:           22.96660047 eV
 ----------------------------------------
 
-Iteration # 6, Run Time:  25.1 sec
+Iteration # 6, Run Time:  36.0 sec
 Convergence Status   : NOT Converged
 SCF Error           : 8.0880e-06 Ry
 Avg Diago Iterations: 3.1
@@ -208,7 +202,7 @@ Total Energy:         -236.19912109 Ry
  Fermi Level:           22.99977520 eV
 ----------------------------------------
 
-Iteration # 7, Run Time:  28.1 sec
+Iteration # 7, Run Time:  40.0 sec
 Convergence Status   : NOT Converged
 SCF Error           : 2.9502e-07 Ry
 Avg Diago Iterations: 4.1
@@ -226,7 +220,7 @@ Total Energy:         -236.19075853 Ry
  Fermi Level:           23.00188667 eV
 ----------------------------------------
 
-Iteration # 8, Run Time:  30.4 sec
+Iteration # 8, Run Time:  43.0 sec
 Convergence Status   : NOT Converged
 SCF Error           : 1.3471e-08 Ry
 Avg Diago Iterations: 2.9
@@ -244,7 +238,7 @@ Total Energy:         -236.19408172 Ry
  Fermi Level:           23.00078973 eV
 ----------------------------------------
 
-Iteration # 9, Run Time:  32.9 sec
+Iteration # 9, Run Time:  46.2 sec
 Convergence Status   :  Converged
 SCF Error           : 8.1030e-10 Ry
 Avg Diago Iterations: 3.6
@@ -270,18 +264,18 @@ SCF Routine has exited
 -----------------------------------------------------------
 |            LABEL             |  CALL  |  TIME  | STATUS  |
 -----------------------------------------------------------
-|           scf:scf            |       1|   33.13| STOPPED |
-|     rho_generate_atomic      |       1|    0.21| STOPPED |
-|         loc_generate         |       1|    0.12| STOPPED |
-|          nloc:init           |       1|    3.86| STOPPED |
-|          xc_compute          |       9|    0.11| STOPPED |
-|       nloc:gen_vkb_dij       |      52|    1.32| STOPPED |
-|           davidson           |     468|   22.13| STOPPED |
-|    davidson:compute_hpsi     |    2069|    7.73| STOPPED |
-|         KSHam:h_psi          |    2069|    7.53| STOPPED |
-|     davidson:update_red      |    2069|    0.54| STOPPED |
-|     davidson:expand_psi      |    1601|   11.38| STOPPED |
-|     davidson:apply_g_psi     |    1601|    4.13| STOPPED |
+|           scf:scf            |       1|   46.56| STOPPED |
+|     rho_generate_atomic      |       1|    0.31| STOPPED |
+|         loc_generate         |       1|    0.16| STOPPED |
+|          nloc:init           |       1|    5.42| STOPPED |
+|          xc_compute          |       9|    0.16| STOPPED |
+|       nloc:gen_vkb_dij       |      52|    1.87| STOPPED |
+|           davidson           |     468|   29.31| STOPPED |
+|    davidson:compute_hpsi     |    2069|   10.75| STOPPED |
+|         KSHam:h_psi          |    2069|   10.47| STOPPED |
+|     davidson:update_red      |    2069|    0.75| STOPPED |
+|     davidson:expand_psi      |    1601|   15.94| STOPPED |
+|     davidson:apply_g_psi     |    1601|    5.86| STOPPED |
 -----------------------------------------------------------
 
 

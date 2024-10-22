@@ -1,4 +1,5 @@
 from __future__ import annotations
+import datetime
 import subprocess
 
 __all__ = ["print_scf_status"]
@@ -172,38 +173,40 @@ def print_scf_parameters(
 ):
     print("Quantum MASALA")
     print_project_git_info()
+    now = datetime.datetime.now()
+    print(f"Started calculation on {now.strftime('%Y-%m-%d')} at {now.strftime('%H:%M:%S')}.")
     print("=========================================")
     print("SCF Parameters:")
     print()
-    print(f"dftcomm         = {dftcomm}")
-    print(f"crystal         = {crystal.__repr__()}")
+    print(f"dftcomm        = {dftcomm}")
+    print(f"crystal        = {crystal.__repr__(indent=14*' ')}")
     print(
-        f"grho            = GSpace(crystal.recilat, ecut_rho={grho.ecut}, grid_shape={grho.grid_shape})"
+        f"grho           = GSpace(crystal.recilat, ecut_rho={grho.ecut}, grid_shape={grho.grid_shape})"
     )
-    print(f"grho.num_g      = {grho.size_g}")
+    print(f"grho.num_g     = {grho.size_g}")
     print(
-        f"gwfn            = GSpace(crystal.recilat, ecut_wfn={gwfn.ecut}, grid_shape={gwfn.grid_shape})"
+        f"gwfn           = GSpace(crystal.recilat, ecut_wfn={gwfn.ecut}, grid_shape={gwfn.grid_shape})"
     )
-    print(f"gwfn.num_g      = {gwfn.size_g}")
-    print(f"numbnd          = {numbnd}")
-    print(f"is_spin         = {is_spin}")
-    print(f"is_noncolin     = {is_noncolin}")
-    print(f"symm_rho        = {symm_rho}")
-    print(f"rho_start       = {rho_start}")
-    print(f"wfn_init        = {wfn_init}")
-    print(f"libxc_func      = {libxc_func}")
-    print(f"occ_typ         = {occ_typ}")
-    print(f"smear_typ       = {smear_typ}")
-    print(f"e_temp          = {e_temp} # Ha")
-    print(f"conv_thr        = {conv_thr} # Ha")
-    print(f"maxiter         = {maxiter}")
-    print(f"diago_thr_init  = {diago_thr_init}")
-    print(f"mix_beta        = {mix_beta}")
-    print(f"mix_dim         = {mix_dim}")
-    print(f"ret_vxc         = {ret_vxc}")
-    print(f"dftconfig       = {dftconfig}")
-    print(f"iter_printer    = {iter_printer.__name__}")
-    print(f"kpts            =")
+    print(f"gwfn.num_g     = {gwfn.size_g}")
+    print(f"numbnd         = {numbnd}")
+    print(f"is_spin        = {is_spin}")
+    print(f"is_noncolin    = {is_noncolin}")
+    print(f"symm_rho       = {symm_rho}")
+    print(f"rho_start      = {rho_start}")
+    print(f"wfn_init       = {wfn_init}")
+    print(f"libxc_func     = {libxc_func}")
+    print(f"occ_typ        = {occ_typ}")
+    print(f"smear_typ      = {smear_typ}")
+    print(f"e_temp         = {e_temp} # Ha")
+    print(f"conv_thr       = {conv_thr} # Ha")
+    print(f"maxiter        = {maxiter}")
+    print(f"diago_thr_init = {diago_thr_init}")
+    print(f"mix_beta       = {mix_beta}")
+    print(f"mix_dim        = {mix_dim}")
+    print(f"ret_vxc        = {ret_vxc}")
+    print(f"dftconfig      = {dftconfig}")
+    print(f"iter_printer   = {iter_printer.__name__}")
+    print(f"kpts           =")
     print("    kpt[0]  kpt[1]  kpt[2];  weight")
     for row in kpts:
         print(f"    {row[0][0]:7.4f} {row[0][1]:7.4f} {row[0][2]:7.4f}; {row[1]:8.6f}")

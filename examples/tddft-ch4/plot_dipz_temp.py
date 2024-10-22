@@ -1,3 +1,6 @@
+
+from qtm.config import qtmconfig
+qtmconfig.set_gpu(False)
 import matplotlib.pyplot as plt
 from scipy.constants import eV, c
 import numpy as np
