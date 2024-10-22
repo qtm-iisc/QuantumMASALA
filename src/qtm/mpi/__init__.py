@@ -1,3 +1,7 @@
+"""
+MPI (Message Passing Interface) components.
+"""
+
 from .comm import *
 from .utils import *
 from qtm.config import MPI4PY_INSTALLED
