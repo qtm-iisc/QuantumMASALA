@@ -7,7 +7,7 @@ import os
 import sys
 
 # Add to path, the source code dir relative to this file
-sys.path.insert(0, os.path.abspath('../../src/'))  # Adjust the path as needed
+sys.path.insert(0, os.path.abspath('../src/'))  # Adjust the path as needed
 
 
 

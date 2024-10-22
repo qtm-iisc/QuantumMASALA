@@ -1,15 +1,20 @@
+name: qtm
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.11
-  - pylibxc
-  - mpi4py
-  - pyfftw
-  - h5py
+  - python=3.12
   - numpy
   - scipy
   - tqdm
   - spglib
+  - h5py
+  - pylibxc
+  - mpi4py
+  - pyfftw
+  - sphinx
+  - sphinx-rtd-theme
+  - sphinx-math-dollar
+  - numpydoc
 variables:
   OMP_NUM_THREADS: '1'

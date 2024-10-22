@@ -1,6 +1,8 @@
 **/*.save/
 *.hdf5
 docs/source/rst_files/
+docs/qtm*.rst
+docs/modules.rst
 
  # Byte-compiled / optimized / DLL files
 __pycache__/

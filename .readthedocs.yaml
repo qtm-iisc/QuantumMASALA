@@ -1,0 +1,30 @@
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
+
+# Set the OS, Python version, and other tools you might need
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "miniconda3-3.12-24.1"
+  jobs:
+    pre_build: 
+    - sphinx-apidoc -e -E --ext-autodoc --ext-mathjax -o docs/ -d 4 src/qtm/
+
+# Add conda environment
+conda:
+   environment: env_linux.yml
+
+# Build documentation in the "docs/" directory with Sphinx
+sphinx:
+   configuration: docs/conf.py
+
+# Optionally, but recommended,
+# declare the Python requirements required to build your documentation
+# See https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html
+python:
+   install:
+   - requirements: docs/requirements.txt
+        
