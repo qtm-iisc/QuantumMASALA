@@ -1,0 +1,103 @@
+# packages in environment at /home/sanmitc/miniconda3/envs/qtmsanz:
+#
+# Name                    Version                   Build  Channel
+# Name                    Version                   Build  Channel
+_libgcc_mutex             0.1                 conda_forge    conda-forge
+_openmp_mutex             4.5                  2_kmp_llvm    conda-forge
+asttokens                 2.4.1              pyhd8ed1ab_0    conda-forge
+blas                      1.1                    openblas    conda-forge
+bzip2                     1.0.8                h5eee18b_6  
+ca-certificates           2024.12.14           hbcca054_0    conda-forge
+comm                      0.2.2              pyhd8ed1ab_0    conda-forge
+contourpy                 1.2.1                    pypi_0    pypi
+cycler                    0.12.1                   pypi_0    pypi
+debugpy                   1.6.7           py311h6a678d5_0  
+decorator                 5.1.1              pyhd8ed1ab_0    conda-forge
+exceptiongroup            1.2.0              pyhd8ed1ab_2    conda-forge
+executing                 2.0.1              pyhd8ed1ab_0    conda-forge
+fonttools                 4.51.0                   pypi_0    pypi
+fortls                    3.0.0                    pypi_0    pypi
+h5py                      3.11.0                   pypi_0    pypi
+impi_rt                   2021.12.0          ha770c72_535    conda-forge
+importlib-metadata        7.1.0              pyha770c72_0    conda-forge
+importlib_metadata        7.1.0                hd8ed1ab_0    conda-forge
+ipi                       2.6.3                    pypi_0    pypi
+ipykernel                 6.29.3             pyhd33586a_0    conda-forge
+ipython                   8.24.0             pyh707e725_0    conda-forge
+jedi                      0.19.1             pyhd8ed1ab_0    conda-forge
+json5                     0.9.25                   pypi_0    pypi
+jupyter_client            8.6.2              pyhd8ed1ab_0    conda-forge
+jupyter_core              5.7.2           py311h38be061_0    conda-forge
+kiwisolver                1.4.5                    pypi_0    pypi
+ld_impl_linux-64          2.38                 h1181459_1  
+libffi                    3.4.4                h6a678d5_1  
+libgcc                    14.2.0               h77fa898_1    conda-forge
+libgcc-ng                 14.2.0               h69a702a_1    conda-forge
+libgfortran-ng            13.2.0               h69a702a_7    conda-forge
+libgfortran5              13.2.0               hca663fb_7    conda-forge
+libgomp                   14.2.0               h77fa898_1    conda-forge
+libopenblas               0.3.27          pthreads_h413a1c8_0    conda-forge
+libsodium                 1.0.18               h36c2ea0_1    conda-forge
+libstdcxx-ng              11.2.0               h1234567_1  
+libuuid                   1.41.5               h5eee18b_0  
+libxc-c                   6.2.2            cpu_h1b64f48_4    conda-forge
+libzlib                   1.2.13               hd590300_5    conda-forge
+llvm-openmp               19.1.5               h024ca30_0    conda-forge
+lz4-c                     1.9.4                h6a678d5_1  
+matplotlib                3.9.0                    pypi_0    pypi
+matplotlib-inline         0.1.7              pyhd8ed1ab_0    conda-forge
+mkl                       2024.2.2            ha957f24_16    conda-forge
+mkl-service               2.4.2           py311h200a580_0    conda-forge
+mkl_fft                   1.3.11          py311h94489f8_0    conda-forge
+mpi                       1.0                        impi    conda-forge
+mpi4py                    3.1.6           py311he9ffdee_0    conda-forge
+ncurses                   6.4                  h6a678d5_0  
+nest-asyncio              1.6.0              pyhd8ed1ab_0    conda-forge
+numpy                     1.26.4          py311h24aa872_0  
+numpy-base                1.26.4          py311hbfb1bba_0  
+openblas                  0.3.27          pthreads_h7a3da1a_0    conda-forge
+openssl                   3.4.0                hb9d3cd8_0    conda-forge
+packaging                 24.0               pyhd8ed1ab_0    conda-forge
+parso                     0.8.4              pyhd8ed1ab_0    conda-forge
+pexpect                   4.9.0              pyhd8ed1ab_0    conda-forge
+pickleshare               0.7.5                   py_1003    conda-forge
+pillow                    10.3.0                   pypi_0    pypi
+pip                       24.0            py311h06a4308_0  
+platformdirs              4.2.2              pyhd8ed1ab_0    conda-forge
+prompt-toolkit            3.0.44                   pypi_0    pypi
+psutil                    5.9.8           py311h459d7ec_0    conda-forge
+ptyprocess                0.7.0              pyhd3deb0d_0    conda-forge
+pure_eval                 0.2.2              pyhd8ed1ab_0    conda-forge
+pyfftw                    0.13.1          py311hcb2cf0a_0    conda-forge
+pygments                  2.18.0             pyhd8ed1ab_0    conda-forge
+pylibxc                   6.2.2           cpu_py311h4b67847_4    conda-forge
+pyparsing                 3.1.2                    pypi_0    pypi
+python                    3.11.9               h955ad1f_0  
+python-dateutil           2.9.0.post0              pypi_0    pypi
+python_abi                3.11                    2_cp311    conda-forge
+pyzmq                     25.1.2          py311h6a678d5_0  
+qtm                       1.0.0                    pypi_0    pypi
+quantum-masala            0.9.0                    pypi_0    pypi
+readline                  8.2                  h5eee18b_0  
+scipy                     1.13.0                   pypi_0    pypi
+setuptools                69.5.1          py311h06a4308_0  
+six                       1.16.0             pyh6c4a22f_0    conda-forge
+spglib                    2.4.0                    pypi_0    pypi
+sqlite                    3.45.3               h5eee18b_0  
+stack-data                0.6.3                    pypi_0    pypi
+stack_data                0.6.2              pyhd8ed1ab_0    conda-forge
+tbb                       2021.5.0             h924138e_1    conda-forge
+tk                        8.6.14               h39e8969_0  
+tornado                   6.4             py311h459d7ec_0    conda-forge
+tqdm                      4.66.4                   pypi_0    pypi
+traitlets                 5.14.3             pyhd8ed1ab_0    conda-forge
+typing-extensions         4.12.0                   pypi_0    pypi
+typing_extensions         4.11.0             pyha770c72_0    conda-forge
+tzdata                    2024a                h04d1e81_0  
+wcwidth                   0.2.13             pyhd8ed1ab_0    conda-forge
+wheel                     0.43.0          py311h06a4308_0  
+xz                        5.4.6                h5eee18b_1  
+zeromq                    4.3.5                h6a678d5_0  
+zipp                      3.17.0             pyhd8ed1ab_0    conda-forge
+zlib                      1.2.13               hd590300_5    conda-forge
+zstd                      1.5.5                hc292b87_2 

@@ -1,5 +1,6 @@
 from __future__ import annotations
-__all__ = ['compute']
+
+__all__ = ["compute"]
 
 import numpy as np
 from qtm.containers import FieldGType, FieldRType
@@ -26,7 +27,7 @@ def compute(rho: FieldGType) -> tuple[FieldRType, float]:
     gspc = rho.gspc
     rho: FieldGType = sum(rho)
     v_g = FPI * rho
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         v_g /= gspc.g_norm2
     if gspc.has_g0:
         v_g.data[..., 0] = 0

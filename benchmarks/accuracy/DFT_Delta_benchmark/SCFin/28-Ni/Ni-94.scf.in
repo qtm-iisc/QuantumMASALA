@@ -1,0 +1,43 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Ni-94'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 2
+   starting_magnetization(1) = 0.05555555555555555
+   ntyp             = 1
+   nat              = 4
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Ni  58.6934 Ni_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+28 28 28  1 1 1
+
+CELL_PARAMETERS angstrom
+3.45219858916886 0.00000000000000 0.00000000000000
+0.00000000000000 3.45219858916886 0.00000000000000
+0.00000000000000 0.00000000000000 3.45219858916886
+
+ATOMIC_POSITIONS angstrom
+Ni  0.8630496473 0.8630496473 0.8630496473
+Ni  0.8630496473 2.5891489419 2.5891489419
+Ni  2.5891489419 0.8630496473 2.5891489419
+Ni  2.5891489419 2.5891489419 0.8630496473
+

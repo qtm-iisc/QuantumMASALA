@@ -1,0 +1,2241 @@
+Si basis [[ 0.          0.10870733 -0.64640584 -0.87505641  0.26314167 -0.71562136
+   0.11261791  0.94051478 -0.32999799 -0.4963811   0.27748687 -0.6953621
+  -0.8824035  -0.414694   -0.45741739 -0.64385244  0.12325112  0.48423378
+  -0.43992009  0.32581007 -0.09430374 -0.79117782  0.19186799  0.53573798
+   0.42211756  0.31614343  0.3085381   0.75912924 -0.86063054 -0.30882853
+   0.6291832   0.09824704 -0.99832561 -0.60105804  0.70317425 -0.34111412
+   0.27767353  0.81031667 -0.55233444 -0.06769605 -0.7988515  -0.70601909
+   0.16014273  0.96468466  0.11544395 -0.0079106   0.07147583 -0.82280052
+   0.30247378 -0.90966609 -0.47723592 -0.40248187 -0.56992203  0.03197407]
+ [ 0.         -0.73540007  0.92178116 -0.92129526 -0.61339171 -0.68994427
+  -0.12676083 -0.82593028  0.74196526  0.67988337 -0.35887832 -0.9876901
+  -0.55311041 -0.86206016 -0.41062919  0.09913796 -0.84098476 -0.18851715
+   0.51492582 -0.46549213  0.56172545 -0.41281357  0.23836426  0.61254862
+  -0.80545527  0.32510685 -0.76598366  0.91086565 -0.83168073 -0.12782008
+   0.44627849  0.85700048 -0.33548549 -0.94605229 -0.07258288 -0.56511765
+   0.2881251   0.63661997  0.505697   -0.49739791 -0.63085804 -0.30239566
+   0.06066424  0.72434149 -0.36904945 -0.82318301 -0.55099934  0.91482879
+  -0.33243451  0.19191954 -0.77403431  0.64261474 -0.90172053 -0.87368477]
+ [ 0.          0.88183139  0.4725685  -0.71828353  0.44365043 -0.29580506
+   0.90235871  0.83014803 -0.21020763 -0.228891   -0.93425713 -0.11841798
+   0.62228149 -0.04982132  0.62692607 -0.22226264  0.19341876  0.7214005
+   0.39627024  0.26091745  0.09131189 -0.48648314 -0.30774208  0.46249615
+   0.08243011  0.25704468  0.63860807  0.63176738 -0.00868168  0.58150324
+   0.91804141 -0.93847633 -0.17398489  0.02102797 -0.10208253 -0.59604871
+  -0.51361263 -0.76242785  0.54462717 -0.0365141   0.66176538  0.13979242
+  -0.73189649 -0.514121   -0.24183102 -0.58227317  0.95099357  0.87518962
+  -0.26711418 -0.27145409 -0.25078541  0.21467132  0.62900696 -0.30568563]]
+new coordinates [[  0.           3.3264443  -19.7800187  -26.77672615   8.0521351
+  -21.89801362   3.44610805  28.77975227 -10.09793849 -15.18926166
+    8.49109822 -21.27808026 -27.0015471  -12.6896364  -13.99697213
+  -19.70188466   3.77148427  14.81755367 -13.46155475   9.96978814
+   -2.88569444 -24.21004129   5.87116049  16.39358219  12.91679734
+    9.67398896   9.44126586  23.22935474 -26.33529452  -9.45015302
+   19.25300592   3.00635942 -30.54876367 -18.39237602  21.51713205
+  -10.43809207   8.49681002  24.7956901  -16.90143386  -2.07149913
+  -24.4448559  -21.60418415   4.90036754  29.5193506    3.53258487
+   -0.24206436   2.1871604  -25.17769591   9.25569767 -27.83578235
+  -14.60341915 -12.31594522 -17.43961412   0.97840654]
+ [  0.         -22.50324214  28.2065035  -28.19163496 -18.76978633
+  -21.11229466  -3.8788814  -25.27346657  22.70413696  20.80443112
+  -10.98167659 -30.22331706 -16.92517855 -26.3790409  -12.56525321
+    3.03362158 -25.73413366  -5.76862479  15.75673009 -14.24405918
+   17.18879877 -12.63209524   7.29394636  18.74398777 -24.64693126
+    9.94826961 -23.4391      27.87248889 -25.44943034  -3.91129445
+   13.65612179  26.22421469 -10.26585599 -28.94920007  -2.22103613
+  -17.29260009   8.81662806  19.48057108  15.4743282  -15.22037605
+  -19.30425602  -9.2533072    1.85632574  22.16484959 -11.29291317
+  -25.18940011 -16.8605798   27.99376097 -10.17249601   5.87273792
+  -23.68544989  19.66401104 -27.59264822 -26.73475396]
+ [  0.          26.98404053  14.4605961  -21.97947602  13.57570316
+   -9.05163484  27.61217653  25.40252972  -6.43235348  -7.0040646
+  -28.58826818  -3.62359019  19.04181359  -1.52453239  19.18393774
+   -6.80123678   5.91861406  22.0748553   12.12586934   7.98407397
+    2.79414383 -14.88638408  -9.41690765  14.15238219   2.52236137
+    7.86556721  19.54140694  19.33208183  -0.26565941  17.79399914
+   28.09206715 -28.7173757   -5.32393763   0.64345588  -3.12372542
+  -18.23909053 -15.71654648 -23.33029221  16.6655914   -1.11733146
+   20.25002063   4.27764805 -22.39603259 -15.7321026   -7.40002921
+  -17.817559    29.10040324  26.78080237  -8.17369391  -8.30649515
+   -7.67403355   6.56894239  19.24761298  -9.35398028]]
+N_pwgrp 1
+Image_comm_size 1
+Quantum MASALA
+ - Project Git Info:
+    - Commit hash:          2c4bc5d76d9951d17543d9e119304862acd4c9d4
+    - Commit date and time: Sunday, 22 December, 2024 12:32:51
+Started calculation on 2024-12-24 at 19:07:26.
+=========================================
+SCF Parameters:
+
+dftcomm        = DFTCommMod(image_comm.size=1, n_kgrp=1, n_bgrp=1, pwgrp_size=None)
+crystal        = Crystal(
+                  reallat=RealLattice(
+                    alat=30.60000, 
+                    latvec=
+                      [[-15.3   0.  -15.3]
+                       [  0.   15.3  15.3]
+                       [ 15.3  15.3   0. ]],
+                  ), 
+                  l_atoms=[
+                    BasisAtoms(
+                      label='si', 
+                      ppdata.filename=Si_ONCV_PBE-1.2.upf, 
+                      ppdata.md5_checksum=7f029a58b69e3aa87b46a36c608bf45e, 
+                      ppdata.valence=4, 
+                      mass=28.086, 
+                      r_cryst=
+                        [0., 0., 0.],
+                        [ 1.50852413,  0.25513865, -1.72593879],
+                        [0.19719318, 0.74794382, 1.0956185 ],
+                        [ 1.07806814, -2.5146352 ,  0.67204468],
+                        [ 0.79390047,  0.09340039, -1.32018381],
+                        [ 1.10976057, -1.70137069,  0.32148215],
+                        [ 0.91650163,  0.88821579, -1.14173745],
+                        [ 0.71556353,  0.94473253, -2.59659309],
+                        [-0.6221749 ,  0.20175964,  1.28217088],
+                        [-0.41239327, -0.04538873,  1.40515547],
+                        [-0.85286568, -1.01564858,  0.29789194],
+                        [ 1.56463422, -1.80147018, -0.17391002],
+                        [ 2.0577954 , -0.81323242, -0.2929884 ],
+                        [ 1.22693284, -1.32657548, -0.39754484],
+                        [ 1.49497265, -0.24112051, -0.58013787],
+                        [ 0.32245184, -0.76697712,  0.96525304],
+                        [ 0.9111524 , -0.52431488, -1.15765464],
+                        [ 0.42568387,  1.01711713, -1.39415143],
+                        [0.32126451, 0.47127597, 0.55857567],
+                        [ 0.40059951,  0.12123539, -1.05221965],
+                        [-0.37610982,  0.5587336 ,  0.5647173 ],
+                        [ 0.71750825, -1.69047453,  0.86484739],
+                        [-0.73797433,  0.12249017,  0.35423835],
+                        [-0.68579045,  1.61078275, -0.38568551],
+                        [ 0.46576782, -0.3009076 , -1.31000294],
+                        [-0.3842056 ,  0.89829496, -0.24808126],
+                        [ 1.09605363,  0.18116251, -1.71312983],
+                        [-1.03822751,  2.30176227, -0.48003097],
+                        [ 1.68362959, -1.70099295,  0.03763149],
+                        [ 1.01815185,  0.14485463, -0.40049479],
+                        [-0.15742028,  1.9935031 , -1.10094612],
+                        [-1.89372385,  0.01677119,  1.69722977],
+                        [ 1.15982621, -1.50779599,  0.83682501],
+                        [ 1.5681383 , -1.52608236, -0.36602222],
+                        [-0.7326739 ,  0.52850884, -0.6736746 ],
+                        [ 0.31018306, -1.50228048,  0.37204518],
+                        [-1.07941126,  0.052186  ,  0.5240642 ],
+                        [-2.20936449,  0.68450879,  0.58873115],
+                        [0.59126461, 0.49798973, 0.51340427],
+                        [ 0.52857986, -0.60160806, -0.39318776],
+                        [ 2.09147492, -0.76794416, -0.49377192],
+                        [ 1.14820717, -0.86862233,  0.26383101],
+                        [-0.95270346, -0.51108952,  0.632418  ],
+                        [-2.20314715,  1.17490515,  0.27377783],
+                        [ 0.01177448, -0.49543652, -0.24266238],
+                        [ 0.24882044, -1.41336678, -0.23299924],
+                        [ 1.43051708,  0.47147006, -1.57346874],
+                        [0.78316135, 0.96721789, 0.86243969],
+                        [-0.23715345, -0.29707491, -0.36779411],
+                        [ 0.44629246, -0.98920064,  1.37303972],
+                        [ 1.00048482, -1.50205564, -0.04601298],
+                        [-0.02546155,  0.45480419,  0.83042529],
+                        [ 2.10064952, -0.8426356 , -0.96080546],
+                        [ 0.53602507, -1.14739633, -0.59997321],
+                      )
+                    ])
+grho           = GSpace(crystal.recilat, ecut_rho=50.0, grid_shape=(72, 72, 72))
+grho.num_g     = 120837
+gwfn           = GSpace(crystal.recilat, ecut_wfn=50.0, grid_shape=(72, 72, 72))
+gwfn.num_g     = 120837
+numbnd         = 108
+is_spin        = False
+is_noncolin    = False
+symm_rho       = True
+rho_start      = <qtm.containers.field.get_FieldG.<locals>.FieldG object at 0x73b400687fd0>
+wfn_init       = None
+libxc_func     = None
+occ_typ        = fixed
+smear_typ      = gauss
+e_temp         = 0.001 # Ha
+conv_thr       = 5e-09 # Ha
+maxiter        = 100
+diago_thr_init = 0.005
+mix_beta       = 0.7
+mix_dim        = 8
+ret_vxc        = False
+dftconfig      = DFTConfig(
+                      symm_check_supercell = True,
+                      symm_use_all_frac = False,
+                      spglib_symprec = 1e-05,
+                      eigsolve_method = 'davidson',
+                      davidson_maxiter = 20,
+                      davidson_numwork = 2,
+                      mixing_method = 'modbroyden')
+iter_printer   = print_scf_status
+kpts           =
+    kpt[0]  kpt[1]  kpt[2];  weight
+     0.0000  0.0000  0.0000; 1.000000
+
+=========================================
+Iteration # 1, Run Time:  23.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.3014e+02 Ry
+Avg Diago Iterations: 13.0
+Diago Threshold     : 1.00e-02 Ry
+
+Total Energy:         -549.90408038 Ry
+
+      one-el:         -582.27790307 Ry
+     Hartree:          237.49961661 Ry
+          XC:         -140.63089986 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            3.70602015 eV
+----------------------------------------
+
+Iteration # 2, Run Time:  43.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.0932e+03 Ry
+Avg Diago Iterations: 12.0
+Diago Threshold     : 1.00e-02 Ry
+
+Total Energy:          475.55234667 Ry
+
+      one-el:          240.81499215 Ry
+     Hartree:          459.78466520 Ry
+          XC:         -160.55241662 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.06931181 eV
+----------------------------------------
+
+Iteration # 3, Run Time:  63.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.6316e+02 Ry
+Avg Diago Iterations: 12.0
+Diago Threshold     : 1.00e-02 Ry
+
+Total Energy:         -312.28077621 Ry
+
+      one-el:         -410.68222618 Ry
+     Hartree:          315.65917168 Ry
+          XC:         -152.76282764 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.40072648 eV
+----------------------------------------
+
+Iteration # 4, Run Time:  76.4 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.3993e+01 Ry
+Avg Diago Iterations: 8.0
+Diago Threshold     : 1.00e-02 Ry
+
+Total Energy:         -247.38952912 Ry
+
+      one-el:         -337.21081998 Ry
+     Hartree:          305.00198268 Ry
+          XC:         -150.68579776 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            6.08885282 eV
+----------------------------------------
+
+Iteration # 5, Run Time:  84.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 9.3189e+00 Ry
+Avg Diago Iterations: 6.0
+Diago Threshold     : 4.31e-03 Ry
+
+Total Energy:         -295.23209263 Ry
+
+      one-el:         -374.72865351 Ry
+     Hartree:          293.32522575 Ry
+          XC:         -149.33377081 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            6.26731818 eV
+----------------------------------------
+
+Iteration # 6, Run Time:  92.0 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.3891e+00 Ry
+Avg Diago Iterations: 8.0
+Diago Threshold     : 2.49e-03 Ry
+
+Total Energy:         -290.29098613 Ry
+
+      one-el:         -369.81560250 Ry
+     Hartree:          293.09276585 Ry
+          XC:         -149.07325542 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.89908377 eV
+----------------------------------------
+
+Iteration # 7, Run Time:  98.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.6824e+00 Ry
+Avg Diago Iterations: 8.0
+Diago Threshold     : 7.79e-04 Ry
+
+Total Energy:         -318.16957322 Ry
+
+      one-el:         -393.70559146 Ry
+     Hartree:          288.86973062 Ry
+          XC:         -148.83881832 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.77078082 eV
+----------------------------------------
+
+Iteration # 8, Run Time: 106.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 7.3366e-01 Ry
+Avg Diago Iterations: 7.0
+Diago Threshold     : 3.40e-04 Ry
+
+Total Energy:         -326.00205965 Ry
+
+      one-el:         -401.49168795 Ry
+     Hartree:          288.84881685 Ry
+          XC:         -148.86429449 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.78432922 eV
+----------------------------------------
+
+Iteration # 9, Run Time: 114.8 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.8051e-01 Ry
+Avg Diago Iterations: 13.0
+Diago Threshold     : 2.69e-04 Ry
+
+Total Energy:         -328.07461173 Ry
+
+      one-el:         -403.60539290 Ry
+     Hartree:          289.00576441 Ry
+          XC:         -148.98008918 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.67489584 eV
+----------------------------------------
+
+Iteration # 10, Run Time: 121.8 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.1421e-01 Ry
+Avg Diago Iterations: 9.0
+Diago Threshold     : 9.92e-05 Ry
+
+Total Energy:         -325.33830750 Ry
+
+      one-el:         -401.34664530 Ry
+     Hartree:          289.63992221 Ry
+          XC:         -149.13669036 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.62972044 eV
+----------------------------------------
+
+Iteration # 11, Run Time: 130.0 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.8995e-01 Ry
+Avg Diago Iterations: 10.0
+Diago Threshold     : 8.79e-05 Ry
+
+Total Energy:         -318.33787480 Ry
+
+      one-el:         -395.17327379 Ry
+     Hartree:          290.66553980 Ry
+          XC:         -149.33524674 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.70114464 eV
+----------------------------------------
+
+Iteration # 12, Run Time: 138.2 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.7410e-01 Ry
+Avg Diago Iterations: 12.0
+Diago Threshold     : 8.79e-05 Ry
+
+Total Energy:         -318.15332691 Ry
+
+      one-el:         -395.24800447 Ry
+     Hartree:          290.96683290 Ry
+          XC:         -149.37726127 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.64830441 eV
+----------------------------------------
+
+Iteration # 13, Run Time: 145.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.8884e-02 Ry
+Avg Diago Iterations: 11.0
+Diago Threshold     : 2.73e-05 Ry
+
+Total Energy:         -321.43212220 Ry
+
+      one-el:         -398.12659888 Ry
+     Hartree:          290.60830805 Ry
+          XC:         -149.41893731 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.71713750 eV
+----------------------------------------
+
+Iteration # 14, Run Time: 153.1 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.1559e-02 Ry
+Avg Diago Iterations: 10.0
+Diago Threshold     : 9.98e-06 Ry
+
+Total Energy:         -319.62206304 Ry
+
+      one-el:         -396.35302190 Ry
+     Hartree:          290.63563034 Ry
+          XC:         -149.40977742 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.67105854 eV
+----------------------------------------
+
+Iteration # 15, Run Time: 160.2 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.4734e-03 Ry
+Avg Diago Iterations: 8.0
+Diago Threshold     : 2.53e-06 Ry
+
+Total Energy:         -320.85532571 Ry
+
+      one-el:         -397.44182131 Ry
+     Hartree:          290.50105616 Ry
+          XC:         -149.41966650 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68515351 eV
+----------------------------------------
+
+Iteration # 16, Run Time: 168.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 9.6050e-03 Ry
+Avg Diago Iterations: 12.0
+Diago Threshold     : 2.53e-06 Ry
+
+Total Energy:         -320.52041329 Ry
+
+      one-el:         -397.20059035 Ry
+     Hartree:          290.60218175 Ry
+          XC:         -149.42711064 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68871934 eV
+----------------------------------------
+
+Iteration # 17, Run Time: 176.9 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.4043e-02 Ry
+Avg Diago Iterations: 9.0
+Diago Threshold     : 2.53e-06 Ry
+
+Total Energy:         -319.87354633 Ry
+
+      one-el:         -396.58212021 Ry
+     Hartree:          290.62470095 Ry
+          XC:         -149.42123301 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.67553222 eV
+----------------------------------------
+
+Iteration # 18, Run Time: 184.0 sec
+Convergence Status   : NOT Converged
+SCF Error           : 9.6828e-04 Ry
+Avg Diago Iterations: 8.0
+Diago Threshold     : 4.48e-07 Ry
+
+Total Energy:         -320.75025042 Ry
+
+      one-el:         -397.36136296 Ry
+     Hartree:          290.52982363 Ry
+          XC:         -149.42381703 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68240996 eV
+----------------------------------------
+
+Iteration # 19, Run Time: 192.1 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.8525e-04 Ry
+Avg Diago Iterations: 8.0
+Diago Threshold     : 1.32e-07 Ry
+
+Total Energy:         -320.53992975 Ry
+
+      one-el:         -397.19027307 Ry
+     Hartree:          290.57472158 Ry
+          XC:         -149.42948419 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.67964880 eV
+----------------------------------------
+
+Iteration # 20, Run Time: 200.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.9759e-04 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 1.32e-07 Ry
+
+Total Energy:         -320.49978517 Ry
+
+      one-el:         -397.17336751 Ry
+     Hartree:          290.60140091 Ry
+          XC:         -149.43292451 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68201745 eV
+----------------------------------------
+
+Iteration # 21, Run Time: 207.9 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.8045e-04 Ry
+Avg Diago Iterations: 9.0
+Diago Threshold     : 8.35e-08 Ry
+
+Total Energy:         -320.63454139 Ry
+
+      one-el:         -397.28523070 Ry
+     Hartree:          290.57708779 Ry
+          XC:         -149.43150442 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.67993742 eV
+----------------------------------------
+
+Iteration # 22, Run Time: 215.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 7.1960e-05 Ry
+Avg Diago Iterations: 18.0
+Diago Threshold     : 3.33e-08 Ry
+
+Total Energy:         -320.41874127 Ry
+
+      one-el:         -397.09242152 Ry
+     Hartree:          290.60227835 Ry
+          XC:         -149.43370404 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68027753 eV
+----------------------------------------
+
+Iteration # 23, Run Time: 223.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.4813e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 1.15e-08 Ry
+
+Total Energy:         -320.45628536 Ry
+
+      one-el:         -397.11965369 Ry
+     Hartree:          290.59189037 Ry
+          XC:         -149.43362799 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68045792 eV
+----------------------------------------
+
+Iteration # 24, Run Time: 232.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.3008e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 6.02e-09 Ry
+
+Total Energy:         -320.50177142 Ry
+
+      one-el:         -397.16530439 Ry
+     Hartree:          290.59223080 Ry
+          XC:         -149.43380378 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68073336 eV
+----------------------------------------
+
+Iteration # 25, Run Time: 241.2 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.9367e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 6.02e-09 Ry
+
+Total Energy:         -320.49909082 Ry
+
+      one-el:         -397.16129314 Ry
+     Hartree:          290.59080997 Ry
+          XC:         -149.43371358 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68011994 eV
+----------------------------------------
+
+Iteration # 26, Run Time: 249.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.0016e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 4.64e-09 Ry
+
+Total Energy:         -320.50500338 Ry
+
+      one-el:         -397.16662996 Ry
+     Hartree:          290.59029920 Ry
+          XC:         -149.43377855 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68049876 eV
+----------------------------------------
+
+Iteration # 27, Run Time: 257.8 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.3114e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.50256083 Ry
+
+      one-el:         -397.16470919 Ry
+     Hartree:          290.59092786 Ry
+          XC:         -149.43388544 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68075698 eV
+----------------------------------------
+
+Iteration # 28, Run Time: 267.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.4606e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.47266878 Ry
+
+      one-el:         -397.13668504 Ry
+     Hartree:          290.59299007 Ry
+          XC:         -149.43407975 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68072245 eV
+----------------------------------------
+
+Iteration # 29, Run Time: 274.8 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.0429e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.47376005 Ry
+
+      one-el:         -397.13734300 Ry
+     Hartree:          290.59250535 Ry
+          XC:         -149.43402834 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68054863 eV
+----------------------------------------
+
+Iteration # 30, Run Time: 283.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.0188e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.44044998 Ry
+
+      one-el:         -397.10311574 Ry
+     Hartree:          290.59148834 Ry
+          XC:         -149.43392853 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68024661 eV
+----------------------------------------
+
+Iteration # 31, Run Time: 290.4 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.3030e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.44656341 Ry
+
+      one-el:         -397.10816443 Ry
+     Hartree:          290.59041400 Ry
+          XC:         -149.43391892 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68039807 eV
+----------------------------------------
+
+Iteration # 32, Run Time: 297.9 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.0379e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.45312573 Ry
+
+      one-el:         -397.11360669 Ry
+     Hartree:          290.58922822 Ry
+          XC:         -149.43385320 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68030441 eV
+----------------------------------------
+
+Iteration # 33, Run Time: 304.8 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.9134e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.45258016 Ry
+
+      one-el:         -397.11385010 Ry
+     Hartree:          290.59012423 Ry
+          XC:         -149.43396023 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68031714 eV
+----------------------------------------
+
+Iteration # 34, Run Time: 311.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.9360e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.45299633 Ry
+
+      one-el:         -397.11445134 Ry
+     Hartree:          290.59029641 Ry
+          XC:         -149.43394734 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68033416 eV
+----------------------------------------
+
+Iteration # 35, Run Time: 318.2 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.0451e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.44799553 Ry
+
+      one-el:         -397.11046544 Ry
+     Hartree:          290.59137964 Ry
+          XC:         -149.43401568 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68032194 eV
+----------------------------------------
+
+Iteration # 36, Run Time: 324.9 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.9297e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.44957068 Ry
+
+      one-el:         -397.11133262 Ry
+     Hartree:          290.59065947 Ry
+          XC:         -149.43400347 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68039051 eV
+----------------------------------------
+
+Iteration # 37, Run Time: 331.8 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.8497e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.46123186 Ry
+
+      one-el:         -397.12093832 Ry
+     Hartree:          290.58854797 Ry
+          XC:         -149.43394745 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68047179 eV
+----------------------------------------
+
+Iteration # 38, Run Time: 338.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.6283e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.45648677 Ry
+
+      one-el:         -397.11779365 Ry
+     Hartree:          290.59023286 Ry
+          XC:         -149.43403192 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68046690 eV
+----------------------------------------
+
+Iteration # 39, Run Time: 351.1 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.4842e-04 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.56016010 Ry
+
+      one-el:         -397.21514226 Ry
+     Hartree:          290.58385558 Ry
+          XC:         -149.43397937 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68157281 eV
+----------------------------------------
+
+Iteration # 40, Run Time: 362.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.3246e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.54130205 Ry
+
+      one-el:         -397.19675861 Ry
+     Hartree:          290.58422744 Ry
+          XC:         -149.43387682 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68122042 eV
+----------------------------------------
+
+Iteration # 41, Run Time: 371.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 8.6456e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.50044726 Ry
+
+      one-el:         -397.16007593 Ry
+     Hartree:          290.58856368 Ry
+          XC:         -149.43404096 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68103689 eV
+----------------------------------------
+
+Iteration # 42, Run Time: 378.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.2747e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.00e-09 Ry
+
+Total Energy:         -320.49584408 Ry
+
+      one-el:         -397.15584925 Ry
+     Hartree:          290.58896028 Ry
+          XC:         -149.43406104 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68088474 eV
+----------------------------------------
+
+Iteration # 43, Run Time: 385.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.5452e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 1.64e-09 Ry
+
+Total Energy:         -320.49571235 Ry
+
+      one-el:         -397.15562150 Ry
+     Hartree:          290.58882689 Ry
+          XC:         -149.43402367 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68082896 eV
+----------------------------------------
+
+Iteration # 44, Run Time: 392.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.2942e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 1.06e-09 Ry
+
+Total Energy:         -320.49510411 Ry
+
+      one-el:         -397.15498991 Ry
+     Hartree:          290.58879335 Ry
+          XC:         -149.43401350 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68078389 eV
+----------------------------------------
+
+Iteration # 45, Run Time: 401.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 7.5364e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 1.06e-09 Ry
+
+Total Energy:         -320.46904347 Ry
+
+      one-el:         -397.12910383 Ry
+     Hartree:          290.58892523 Ry
+          XC:         -149.43397081 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68061874 eV
+----------------------------------------
+
+Iteration # 46, Run Time: 408.2 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.5169e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 1.06e-09 Ry
+
+Total Energy:         -320.46687031 Ry
+
+      one-el:         -397.12742020 Ry
+     Hartree:          290.58949705 Ry
+          XC:         -149.43405309 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68071807 eV
+----------------------------------------
+
+Iteration # 47, Run Time: 414.9 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.7442e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 1.06e-09 Ry
+
+Total Energy:         -320.46971781 Ry
+
+      one-el:         -397.12947040 Ry
+     Hartree:          290.58867486 Ry
+          XC:         -149.43402821 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68077455 eV
+----------------------------------------
+
+Iteration # 48, Run Time: 421.8 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.4370e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 1.06e-09 Ry
+
+Total Energy:         -320.47310407 Ry
+
+      one-el:         -397.13237163 Ry
+     Hartree:          290.58819612 Ry
+          XC:         -149.43403450 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68086722 eV
+----------------------------------------
+
+Iteration # 49, Run Time: 429.1 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.2740e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 5.90e-10 Ry
+
+Total Energy:         -320.47800117 Ry
+
+      one-el:         -397.13653746 Ry
+     Hartree:          290.58746344 Ry
+          XC:         -149.43403309 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68097037 eV
+----------------------------------------
+
+Iteration # 50, Run Time: 437.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.1971e-07 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.41e-10 Ry
+
+Total Energy:         -320.48305149 Ry
+
+      one-el:         -397.14088639 Ry
+     Hartree:          290.58674639 Ry
+          XC:         -149.43401743 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68100630 eV
+----------------------------------------
+
+Iteration # 51, Run Time: 446.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.0041e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.41e-10 Ry
+
+Total Energy:         -320.49787776 Ry
+
+      one-el:         -397.15598307 Ry
+     Hartree:          290.58704016 Ry
+          XC:         -149.43404079 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68103920 eV
+----------------------------------------
+
+Iteration # 52, Run Time: 453.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.9720e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.41e-10 Ry
+
+Total Energy:         -320.49764015 Ry
+
+      one-el:         -397.15579343 Ry
+     Hartree:          290.58708596 Ry
+          XC:         -149.43403862 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68101248 eV
+----------------------------------------
+
+Iteration # 53, Run Time: 460.4 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.7946e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.41e-10 Ry
+
+Total Energy:         -320.49706179 Ry
+
+      one-el:         -397.15532877 Ry
+     Hartree:          290.58719985 Ry
+          XC:         -149.43403881 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68101759 eV
+----------------------------------------
+
+Iteration # 54, Run Time: 467.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.1880e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.41e-10 Ry
+
+Total Energy:         -320.49748020 Ry
+
+      one-el:         -397.15554970 Ry
+     Hartree:          290.58701005 Ry
+          XC:         -149.43404648 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68106030 eV
+----------------------------------------
+
+Iteration # 55, Run Time: 474.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.8930e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.41e-10 Ry
+
+Total Energy:         -320.49506909 Ry
+
+      one-el:         -397.15369840 Ry
+     Hartree:          290.58758292 Ry
+          XC:         -149.43405955 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68104888 eV
+----------------------------------------
+
+Iteration # 56, Run Time: 481.2 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.6925e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.41e-10 Ry
+
+Total Energy:         -320.49583313 Ry
+
+      one-el:         -397.15413809 Ry
+     Hartree:          290.58724409 Ry
+          XC:         -149.43404507 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68103532 eV
+----------------------------------------
+
+Iteration # 57, Run Time: 487.9 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.4300e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.41e-10 Ry
+
+Total Energy:         -320.49566053 Ry
+
+      one-el:         -397.15402634 Ry
+     Hartree:          290.58730222 Ry
+          XC:         -149.43404234 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68101060 eV
+----------------------------------------
+
+Iteration # 58, Run Time: 494.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.3770e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.41e-10 Ry
+
+Total Energy:         -320.49516563 Ry
+
+      one-el:         -397.15364630 Ry
+     Hartree:          290.58742276 Ry
+          XC:         -149.43404802 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68100564 eV
+----------------------------------------
+
+Iteration # 59, Run Time: 501.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.0461e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.41e-10 Ry
+
+Total Energy:         -320.48896474 Ry
+
+      one-el:         -397.14832676 Ry
+     Hartree:          290.58833027 Ry
+          XC:         -149.43407419 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68100012 eV
+----------------------------------------
+
+Iteration # 60, Run Time: 511.8 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.0165e-07 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 1.86e-10 Ry
+
+Total Energy:         -320.47610050 Ry
+
+      one-el:         -397.13638772 Ry
+     Hartree:          290.58922049 Ry
+          XC:         -149.43403921 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68077364 eV
+----------------------------------------
+
+Iteration # 61, Run Time: 520.2 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.1003e-07 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 1.86e-10 Ry
+
+Total Energy:         -320.47724050 Ry
+
+      one-el:         -397.13699235 Ry
+     Hartree:          290.58866866 Ry
+          XC:         -149.43402275 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68080823 eV
+----------------------------------------
+
+Iteration # 62, Run Time: 528.1 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.9744e-07 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 1.38e-10 Ry
+
+Total Energy:         -320.48088542 Ry
+
+      one-el:         -397.13984605 Ry
+     Hartree:          290.58786010 Ry
+          XC:         -149.43400540 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68085488 eV
+----------------------------------------
+
+Iteration # 63, Run Time: 535.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.9222e-07 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 8.90e-11 Ry
+
+Total Energy:         -320.48311227 Ry
+
+      one-el:         -397.14179957 Ry
+     Hartree:          290.58758191 Ry
+          XC:         -149.43400055 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68090737 eV
+----------------------------------------
+
+Iteration # 64, Run Time: 543.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.0685e-07 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 4.95e-11 Ry
+
+Total Energy:         -320.48444276 Ry
+
+      one-el:         -397.14307158 Ry
+     Hartree:          290.58752513 Ry
+          XC:         -149.43400225 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68092742 eV
+----------------------------------------
+
+Iteration # 65, Run Time: 551.0 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.6539e-08 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.48416824 Ry
+
+      one-el:         -397.14307058 Ry
+     Hartree:          290.58780514 Ry
+          XC:         -149.43400874 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68092317 eV
+----------------------------------------
+
+Iteration # 66, Run Time: 559.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.5680e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.49525495 Ry
+
+      one-el:         -397.15419571 Ry
+     Hartree:          290.58784488 Ry
+          XC:         -149.43401007 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68092083 eV
+----------------------------------------
+
+Iteration # 67, Run Time: 566.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.7421e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.49525580 Ry
+
+      one-el:         -397.15420741 Ry
+     Hartree:          290.58785601 Ry
+          XC:         -149.43401034 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68092176 eV
+----------------------------------------
+
+Iteration # 68, Run Time: 573.1 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.9584e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.49565214 Ry
+
+      one-el:         -397.15452719 Ry
+     Hartree:          290.58777647 Ry
+          XC:         -149.43400737 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68091988 eV
+----------------------------------------
+
+Iteration # 69, Run Time: 581.9 sec
+Convergence Status   : NOT Converged
+SCF Error           : 6.1800e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.49515835 Ry
+
+      one-el:         -397.15422506 Ry
+     Hartree:          290.58798032 Ry
+          XC:         -149.43401955 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68093737 eV
+----------------------------------------
+
+Iteration # 70, Run Time: 590.1 sec
+Convergence Status   : NOT Converged
+SCF Error           : 6.1805e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.49666718 Ry
+
+      one-el:         -397.15548533 Ry
+     Hartree:          290.58772185 Ry
+          XC:         -149.43400964 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68093684 eV
+----------------------------------------
+
+Iteration # 71, Run Time: 597.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 6.1236e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.49661688 Ry
+
+      one-el:         -397.15548346 Ry
+     Hartree:          290.58777222 Ry
+          XC:         -149.43401158 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68093305 eV
+----------------------------------------
+
+Iteration # 72, Run Time: 604.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 6.1338e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.49671202 Ry
+
+      one-el:         -397.15557553 Ry
+     Hartree:          290.58776861 Ry
+          XC:         -149.43401104 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68093676 eV
+----------------------------------------
+
+Iteration # 73, Run Time: 614.4 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.5066e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.49815908 Ry
+
+      one-el:         -397.15686638 Ry
+     Hartree:          290.58760305 Ry
+          XC:         -149.43400170 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68092542 eV
+----------------------------------------
+
+Iteration # 74, Run Time: 621.8 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.4981e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.49801071 Ry
+
+      one-el:         -397.15678157 Ry
+     Hartree:          290.58766995 Ry
+          XC:         -149.43400503 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68092359 eV
+----------------------------------------
+
+Iteration # 75, Run Time: 642.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.4674e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.52656890 Ry
+
+      one-el:         -397.18371805 Ry
+     Hartree:          290.58595206 Ry
+          XC:         -149.43390884 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68144031 eV
+----------------------------------------
+
+Iteration # 76, Run Time: 663.4 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.5218e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.50767614 Ry
+
+      one-el:         -397.16702791 Ry
+     Hartree:          290.58829554 Ry
+          XC:         -149.43404970 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68122321 eV
+----------------------------------------
+
+Iteration # 77, Run Time: 678.2 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.7126e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.48896900 Ry
+
+      one-el:         -397.14946104 Ry
+     Hartree:          290.58944921 Ry
+          XC:         -149.43406311 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68118416 eV
+----------------------------------------
+
+Iteration # 78, Run Time: 701.4 sec
+Convergence Status   : NOT Converged
+SCF Error           : 6.9339e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.37478201 Ry
+
+      one-el:         -397.04352227 Ry
+     Hartree:          290.59809065 Ry
+          XC:         -149.43445632 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68059275 eV
+----------------------------------------
+
+Iteration # 79, Run Time: 723.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 7.9440e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.49929809 Ry
+
+      one-el:         -397.15703428 Ry
+     Hartree:          290.58660280 Ry
+          XC:         -149.43397255 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68108530 eV
+----------------------------------------
+
+Iteration # 80, Run Time: 740.1 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.6572e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.49302803 Ry
+
+      one-el:         -397.15136888 Ry
+     Hartree:          290.58717839 Ry
+          XC:         -149.43394348 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68095070 eV
+----------------------------------------
+
+Iteration # 81, Run Time: 754.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.8827e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.48356927 Ry
+
+      one-el:         -397.14270605 Ry
+     Hartree:          290.58795941 Ry
+          XC:         -149.43392857 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68087591 eV
+----------------------------------------
+
+Iteration # 82, Run Time: 770.0 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.3418e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.48687930 Ry
+
+      one-el:         -397.14516133 Ry
+     Hartree:          290.58704084 Ry
+          XC:         -149.43386476 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68085442 eV
+----------------------------------------
+
+Iteration # 83, Run Time: 783.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.4154e-07 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.48471069 Ry
+
+      one-el:         -397.14313033 Ry
+     Hartree:          290.58721912 Ry
+          XC:         -149.43390542 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68095351 eV
+----------------------------------------
+
+Iteration # 84, Run Time: 795.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 4.8851e-07 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.48617261 Ry
+
+      one-el:         -397.14455346 Ry
+     Hartree:          290.58719341 Ry
+          XC:         -149.43391850 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68094633 eV
+----------------------------------------
+
+Iteration # 85, Run Time: 808.4 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.4480e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.47777222 Ry
+
+      one-el:         -397.13691588 Ry
+     Hartree:          290.58801270 Ry
+          XC:         -149.43397498 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68084321 eV
+----------------------------------------
+
+Iteration # 86, Run Time: 820.3 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.1748e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.47086287 Ry
+
+      one-el:         -397.12979693 Ry
+     Hartree:          290.58778765 Ry
+          XC:         -149.43395952 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68094888 eV
+----------------------------------------
+
+Iteration # 87, Run Time: 831.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.6340e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.46258710 Ry
+
+      one-el:         -397.12221755 Ry
+     Hartree:          290.58849450 Ry
+          XC:         -149.43396999 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68092713 eV
+----------------------------------------
+
+Iteration # 88, Run Time: 842.8 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.3740e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.46525768 Ry
+
+      one-el:         -397.12469422 Ry
+     Hartree:          290.58830708 Ry
+          XC:         -149.43397648 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68091478 eV
+----------------------------------------
+
+Iteration # 89, Run Time: 852.9 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.4883e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.46858132 Ry
+
+      one-el:         -397.12756766 Ry
+     Hartree:          290.58784012 Ry
+          XC:         -149.43395972 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68094206 eV
+----------------------------------------
+
+Iteration # 90, Run Time: 863.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.6350e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.46818281 Ry
+
+      one-el:         -397.12741127 Ry
+     Hartree:          290.58809223 Ry
+          XC:         -149.43396970 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68093709 eV
+----------------------------------------
+
+Iteration # 91, Run Time: 876.4 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.1680e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.46822117 Ry
+
+      one-el:         -397.12781204 Ry
+     Hartree:          290.58848084 Ry
+          XC:         -149.43399591 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68090591 eV
+----------------------------------------
+
+Iteration # 92, Run Time: 889.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.3943e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.46657576 Ry
+
+      one-el:         -397.12581684 Ry
+     Hartree:          290.58809360 Ry
+          XC:         -149.43395845 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68091424 eV
+----------------------------------------
+
+Iteration # 93, Run Time: 904.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 5.7529e-06 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.48350097 Ry
+
+      one-el:         -397.14136277 Ry
+     Hartree:          290.58670027 Ry
+          XC:         -149.43394440 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68115172 eV
+----------------------------------------
+
+Iteration # 94, Run Time: 922.5 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.0310e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.49775235 Ry
+
+      one-el:         -397.15458063 Ry
+     Hartree:          290.58570389 Ry
+          XC:         -149.43398155 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68118543 eV
+----------------------------------------
+
+Iteration # 95, Run Time: 941.2 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.6775e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.47275783 Ry
+
+      one-el:         -397.13242770 Ry
+     Hartree:          290.58872502 Ry
+          XC:         -149.43416109 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68077155 eV
+----------------------------------------
+
+Iteration # 96, Run Time: 961.6 sec
+Convergence Status   : NOT Converged
+SCF Error           : 3.1843e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.52569056 Ry
+
+      one-el:         -397.17953979 Ry
+     Hartree:          290.58245597 Ry
+          XC:         -149.43371268 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68137124 eV
+----------------------------------------
+
+Iteration # 97, Run Time: 981.0 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.3460e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.50967304 Ry
+
+      one-el:         -397.16759991 Ry
+     Hartree:          290.58674529 Ry
+          XC:         -149.43392436 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68106119 eV
+----------------------------------------
+
+Iteration # 98, Run Time: 995.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.8458e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.50604596 Ry
+
+      one-el:         -397.16428853 Ry
+     Hartree:          290.58710314 Ry
+          XC:         -149.43396651 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68101082 eV
+----------------------------------------
+
+Iteration # 99, Run Time: 1009.9 sec
+Convergence Status   : NOT Converged
+SCF Error           : 1.8644e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.51418142 Ry
+
+      one-el:         -397.17134743 Ry
+     Hartree:          290.58598303 Ry
+          XC:         -149.43392296 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68105167 eV
+----------------------------------------
+
+Iteration # 100, Run Time: 1025.7 sec
+Convergence Status   : NOT Converged
+SCF Error           : 2.2081e-05 Ry
+Avg Diago Iterations: 20.0
+Diago Threshold     : 2.15e-11 Ry
+
+Total Energy:         -320.49341833 Ry
+
+      one-el:         -397.15207240 Ry
+     Hartree:          290.58750745 Ry
+          XC:         -149.43395932 Ry
+       Ewald:          -64.49489406 Ry
+
+    HO Level:            5.68105706 eV
+----------------------------------------
+
+force ewald [[-3.12294538e+00  5.47567453e-01 -1.34773180e+00]
+ [-4.06999540e-01  4.71272939e-01  4.13696348e+00]
+ [ 3.03929052e-02 -6.17037367e-01  5.23333801e-01]
+ [-6.13373554e+00 -5.70286960e+00  9.12846410e+00]
+ [ 3.23383132e+00 -1.82853783e-01 -2.09476301e+00]
+ [ 6.22872684e+00  2.61170760e+00  6.34038528e+00]
+ [-7.31245100e+00 -6.46090597e+00 -3.18616861e+00]
+ [-3.52205096e+00 -1.61081276e+00  5.20450685e+00]
+ [ 2.39144205e+00 -3.57641305e-01  5.57982262e+00]
+ [-1.65957300e+00 -5.11083162e-01  3.14042324e+00]
+ [ 3.34547349e-02 -6.45503436e+00 -4.85510070e+00]
+ [-1.41487328e+00  2.17135577e-01 -1.17895102e+00]
+ [-4.90967787e+00  4.46107849e+00  8.93709432e-01]
+ [ 1.20196944e+01  5.52711835e+00  9.21177913e-01]
+ [ 3.59015140e+00 -5.35226815e+00 -1.64813620e+00]
+ [ 7.56974308e-01  4.28141424e+00  5.21891341e-01]
+ [ 1.02734834e+01  1.26514874e+01 -1.77347660e+01]
+ [-2.88145705e+00  3.28368594e+00 -5.02445084e-01]
+ [-5.69743486e-01 -1.62889568e+00 -2.58603588e+00]
+ [-3.44780468e+00 -6.63069820e+00 -4.15754914e+00]
+ [-3.20478418e+00  1.61374993e+00  1.04295248e+01]
+ [ 4.20347489e-01  1.55890387e+00 -3.95621878e-01]
+ [-1.08388948e+00 -2.57151523e+00 -1.71042835e-01]
+ [-4.26607286e+00 -3.10138604e+00  5.15087118e+00]
+ [-2.86904860e+00  5.42154280e+00 -5.29981440e-01]
+ [-1.00714539e+00  1.82241748e+00 -1.96895453e+00]
+ [ 9.59444973e+00  9.73892949e+00 -1.36011371e+00]
+ [ 8.92872398e+00  6.28122089e+00  7.50755018e-01]
+ [-8.98079201e-01  2.76587051e+00  9.47231154e-02]
+ [-1.77119361e-02 -7.13001828e-01 -6.17838800e+00]
+ [-5.63588947e+00  8.50844302e+00  9.20410401e-01]
+ [-7.36624621e+00 -2.10232126e+00 -2.58051014e+00]
+ [-4.24822289e+00  2.49916810e+00 -1.53155723e+00]
+ [-7.95292227e+00  4.85299656e+00 -3.93321893e+00]
+ [ 1.51973691e+01 -3.53564114e+00  6.89685715e-01]
+ [-5.55272629e+00 -1.24033289e+00  3.06363426e+00]
+ [ 2.60573134e+00 -3.36854719e+00 -2.57616921e+00]
+ [ 4.28154259e+00 -1.24853050e+01  2.73668805e+00]
+ [ 6.11926917e+00 -9.80873454e+00  6.18536961e+00]
+ [-9.20107624e-01 -5.82111082e+00 -6.88644878e+00]
+ [-2.54548377e+00 -2.75709226e-01  7.62189554e+00]
+ [-1.34150391e+00 -1.33943035e+01  1.04708995e+00]
+ [ 1.56470765e+01 -1.12149490e+01 -2.41086630e+00]
+ [ 4.90311712e-01  1.59623154e-01  6.55947848e-01]
+ [ 1.88900506e+00  7.11200014e+00  9.22102831e+00]
+ [-5.72261260e+00  7.90151814e+00  7.50045900e-01]
+ [-7.39900919e-02 -6.59996158e+00  5.85705800e+00]
+ [ 4.30369205e+00  2.39589737e-01 -9.60236792e+00]
+ [-2.57798820e+00  1.39606719e+01 -1.84511085e+00]
+ [ 1.96679181e+00 -7.58109398e-01  7.59271176e-01]
+ [-2.89814628e+00  8.79258806e+00 -2.89841325e+00]
+ [-1.34030814e+01  1.12887113e+00 -8.39368716e+00]
+ [-6.58789915e-02 -1.77164609e+00 -2.38963275e+00]
+ [-1.50808788e+00 -4.31217224e+00  1.95282523e+00]]
+Time taken for ewald force:  0.6357886791229248
+
+/home/sanmitc/qtm_Sanz_dec24/src/qtm/force/local_force.py:48: ComplexWarning: Casting complex values to real discards the imaginary part
+  v_loc[labels==isp]=vloc[isp].data
+coords_cart_all_shape (3, 54)
+cart_g_shape (3, 120837)
+force_local [[ 3.10849784e+00 -5.58517002e-01  1.23456606e+00]
+ [ 4.47928833e-01 -4.68676095e-01 -4.37394401e+00]
+ [-7.35537008e-02  5.01048684e-01 -4.41886533e-01]
+ [ 8.10931169e-01  6.76837373e+00 -5.58216769e+00]
+ [-3.25674642e+00 -1.13158183e-01  1.94457993e+00]
+ [-6.27727117e+00 -2.78295463e+00 -6.65064221e+00]
+ [ 7.39147959e+00  6.31041908e+00  3.01203222e+00]
+ [ 3.68595307e+00  1.63170816e+00 -5.21660955e+00]
+ [-2.61125813e+00  2.87381621e-01 -5.70265710e+00]
+ [ 1.81418488e+00  3.29927383e-01 -3.41716289e+00]
+ [ 2.64437301e-02  6.68141076e+00  5.20185080e+00]
+ [ 1.31615169e+00 -2.75655155e-01  1.17029196e+00]
+ [ 4.90655658e+00 -4.83099077e+00 -1.06410068e+00]
+ [-8.65957126e+00 -3.59172892e+00 -1.76066397e+00]
+ [-3.62601989e+00  4.94442638e+00  1.15087128e+00]
+ [-3.32790614e-01 -3.34732472e+00 -2.27975212e-01]
+ [-3.67464313e+00 -8.92891357e+00  1.39139813e+01]
+ [ 2.95639653e+00 -3.16569477e+00  5.41682362e-01]
+ [ 6.30117579e-01  1.59864000e+00  2.71162658e+00]
+ [ 2.97912366e+00  5.67131184e+00  3.99662811e+00]
+ [ 3.68691574e+00 -1.74577177e+00 -9.73630795e+00]
+ [-6.18402479e-01 -1.25633943e+00  2.78010693e-01]
+ [ 1.07752361e+00  2.54919424e+00  4.50829241e-01]
+ [ 5.46941839e-01  1.48989586e+00 -4.50717772e+00]
+ [ 2.77908237e+00 -5.34183509e+00  4.89043267e-01]
+ [ 9.00291071e-01 -1.75654124e+00  1.92381740e+00]
+ [-6.33264272e+00 -1.31924320e+00  1.68602940e+00]
+ [-8.71511513e+00 -6.15147581e+00 -1.15217736e+00]
+ [ 1.16187132e+00 -3.12240332e+00 -6.29578190e-03]
+ [-2.48512463e-02  9.10482894e-01  6.08998309e+00]
+ [ 4.93929520e+00 -7.94839224e+00 -4.78090616e-01]
+ [ 7.59496181e+00  2.29157458e+00  2.69996178e+00]
+ [ 4.11907218e+00 -2.13479105e+00  1.58308225e+00]
+ [ 7.69038971e+00 -4.84016027e+00  2.63843939e+00]
+ [-8.51218554e+00  2.40158803e+00 -1.60874153e+00]
+ [-1.46285240e+00  2.50129576e+00 -1.96361938e+00]
+ [-2.58546419e+00  3.65043388e+00  2.45457439e+00]
+ [-2.02740173e+00  2.89218471e+00 -1.19228192e+00]
+ [-5.93395339e+00  9.70068299e+00 -5.90300293e+00]
+ [ 7.55713938e-01  6.02952450e+00  7.23649878e+00]
+ [ 2.45386997e+00 -6.81174091e-02 -7.20332162e+00]
+ [-2.04288674e+00  4.88312887e+00 -1.29843688e+00]
+ [-9.17504026e+00  8.27681914e+00  2.45516490e-01]
+ [-4.65812392e-01 -2.16271726e-02 -5.51622605e-01]
+ [ 5.57511018e-01 -5.41725551e+00 -6.55940897e+00]
+ [ 6.07854084e+00 -8.17537631e+00 -9.01283318e-01]
+ [ 3.32248294e-01  6.56651746e+00 -6.04535970e+00]
+ [-3.62178457e+00 -9.20721573e-01  9.18035740e+00]
+ [-7.63026608e-02 -4.37062137e+00  4.75009347e-01]
+ [-2.04871456e+00  7.20514457e-01 -5.57543852e-01]
+ [ 2.83827852e+00 -9.07566250e+00  3.12504341e+00]
+ [ 6.74653277e+00 -3.31046624e+00  9.40798567e+00]
+ [ 1.02458283e-01  1.74613515e+00  2.45179802e+00]
+ [ 9.45255152e-01  4.68927325e+00 -1.77362741e+00]]
+force local [[ 3.10849784e+00 -5.58517002e-01  1.23456606e+00]
+ [ 4.47928833e-01 -4.68676095e-01 -4.37394401e+00]
+ [-7.35537008e-02  5.01048684e-01 -4.41886533e-01]
+ [ 8.10931169e-01  6.76837373e+00 -5.58216769e+00]
+ [-3.25674642e+00 -1.13158183e-01  1.94457993e+00]
+ [-6.27727117e+00 -2.78295463e+00 -6.65064221e+00]
+ [ 7.39147959e+00  6.31041908e+00  3.01203222e+00]
+ [ 3.68595307e+00  1.63170816e+00 -5.21660955e+00]
+ [-2.61125813e+00  2.87381621e-01 -5.70265710e+00]
+ [ 1.81418488e+00  3.29927383e-01 -3.41716289e+00]
+ [ 2.64437301e-02  6.68141076e+00  5.20185080e+00]
+ [ 1.31615169e+00 -2.75655155e-01  1.17029196e+00]
+ [ 4.90655658e+00 -4.83099077e+00 -1.06410068e+00]
+ [-8.65957126e+00 -3.59172892e+00 -1.76066397e+00]
+ [-3.62601989e+00  4.94442638e+00  1.15087128e+00]
+ [-3.32790614e-01 -3.34732472e+00 -2.27975212e-01]
+ [-3.67464313e+00 -8.92891357e+00  1.39139813e+01]
+ [ 2.95639653e+00 -3.16569477e+00  5.41682362e-01]
+ [ 6.30117579e-01  1.59864000e+00  2.71162658e+00]
+ [ 2.97912366e+00  5.67131184e+00  3.99662811e+00]
+ [ 3.68691574e+00 -1.74577177e+00 -9.73630795e+00]
+ [-6.18402479e-01 -1.25633943e+00  2.78010693e-01]
+ [ 1.07752361e+00  2.54919424e+00  4.50829241e-01]
+ [ 5.46941839e-01  1.48989586e+00 -4.50717772e+00]
+ [ 2.77908237e+00 -5.34183509e+00  4.89043267e-01]
+ [ 9.00291071e-01 -1.75654124e+00  1.92381740e+00]
+ [-6.33264272e+00 -1.31924320e+00  1.68602940e+00]
+ [-8.71511513e+00 -6.15147581e+00 -1.15217736e+00]
+ [ 1.16187132e+00 -3.12240332e+00 -6.29578190e-03]
+ [-2.48512463e-02  9.10482894e-01  6.08998309e+00]
+ [ 4.93929520e+00 -7.94839224e+00 -4.78090616e-01]
+ [ 7.59496181e+00  2.29157458e+00  2.69996178e+00]
+ [ 4.11907218e+00 -2.13479105e+00  1.58308225e+00]
+ [ 7.69038971e+00 -4.84016027e+00  2.63843939e+00]
+ [-8.51218554e+00  2.40158803e+00 -1.60874153e+00]
+ [-1.46285240e+00  2.50129576e+00 -1.96361938e+00]
+ [-2.58546419e+00  3.65043388e+00  2.45457439e+00]
+ [-2.02740173e+00  2.89218471e+00 -1.19228192e+00]
+ [-5.93395339e+00  9.70068299e+00 -5.90300293e+00]
+ [ 7.55713938e-01  6.02952450e+00  7.23649878e+00]
+ [ 2.45386997e+00 -6.81174091e-02 -7.20332162e+00]
+ [-2.04288674e+00  4.88312887e+00 -1.29843688e+00]
+ [-9.17504026e+00  8.27681914e+00  2.45516490e-01]
+ [-4.65812392e-01 -2.16271726e-02 -5.51622605e-01]
+ [ 5.57511018e-01 -5.41725551e+00 -6.55940897e+00]
+ [ 6.07854084e+00 -8.17537631e+00 -9.01283318e-01]
+ [ 3.32248294e-01  6.56651746e+00 -6.04535970e+00]
+ [-3.62178457e+00 -9.20721573e-01  9.18035740e+00]
+ [-7.63026608e-02 -4.37062137e+00  4.75009347e-01]
+ [-2.04871456e+00  7.20514457e-01 -5.57543852e-01]
+ [ 2.83827852e+00 -9.07566250e+00  3.12504341e+00]
+ [ 6.74653277e+00 -3.31046624e+00  9.40798567e+00]
+ [ 1.02458283e-01  1.74613515e+00  2.45179802e+00]
+ [ 9.45255152e-01  4.68927325e+00 -1.77362741e+00]]
+Time taken for local force:  0.4176764488220215
+
+force non local [[-0.01495509  0.0126768   0.11698913]
+ [-0.32769484  0.07868503  0.64145887]
+ [ 0.06901169  0.12477464 -0.06771967]
+ [-1.76246383 -2.5089155   2.08154105]
+ [ 0.35224934  0.71367461  0.15423457]
+ [ 0.5352487   0.5576775   1.14953762]
+ [-3.02779368 -4.49128812  0.39387594]
+ [-1.76927896 -0.1404952   1.50402054]
+ [ 0.57659337  0.20247971  0.98798774]
+ [ 0.11410538  0.76207729  0.18017392]
+ [-0.28417943 -1.04480028 -1.49184288]
+ [ 0.06081592  0.04050156  0.21491952]
+ [-0.33763234  1.22089004  0.5264779 ]
+ [ 2.81908499  0.88516948 -0.43265539]
+ [ 0.54487809 -1.14008811 -2.30046195]
+ [ 1.18898482  2.45240718  0.54066607]
+ [-0.06404217  1.73332724 -4.64070647]
+ [-0.1359599  -0.07280769 -0.03633479]
+ [-0.33320841  1.46319295 -1.67610563]
+ [-1.11152704 -2.39923047 -0.84311484]
+ [-1.37853128  2.09797646  4.74163338]
+ [ 0.56615735 -0.74888788  0.2028474 ]
+ [ 0.03879828 -0.09903082 -1.2407244 ]
+ [-1.14370897 -2.31171169  1.7965517 ]
+ [ 0.09018422  0.04108906  0.02853122]
+ [ 0.13673888 -0.06655976  0.0458813 ]
+ [ 0.77015478  0.33590204 -1.35726093]
+ [ 3.19203615  2.29293744 -0.08445013]
+ [-0.64906948  0.79277686 -0.19290461]
+ [ 0.11623398 -0.74295262 -3.23054986]
+ [-1.31330068  4.43366639  2.64263679]
+ [-1.55575433 -0.83471457 -0.64547107]
+ [ 0.01774154 -1.17919344 -0.81902689]
+ [-3.56690991  3.45485169 -2.33684608]
+ [ 2.72481006 -0.43620467 -0.32270327]
+ [-1.34230145  0.07137673 -0.29952633]
+ [ 0.1159573  -0.84970328  0.34159509]
+ [ 0.44060369 -1.09359821  0.05899299]
+ [ 3.92725204 -3.84950793  2.06109966]
+ [ 0.57836938 -1.81700666 -4.5155669 ]
+ [-2.17968508 -1.2033768   3.28442051]
+ [ 0.04240703 -0.14817303  1.78470608]
+ [ 2.3472742  -2.43562166 -0.76928683]
+ [-0.01654058 -0.15610222 -0.12366686]
+ [-1.87827589  1.92611217  4.470279  ]
+ [-1.81157026  1.941468    0.72830167]
+ [-0.85351374 -1.53250104  2.01985653]
+ [ 3.83795418  0.43618066 -3.16081132]
+ [-0.02649786  1.10910062 -0.23384553]
+ [ 1.37218836  0.7932202  -0.37809331]
+ [ 0.12985597  1.08672095 -1.00521208]
+ [-2.05806241 -0.23028325 -2.43815016]
+ [-0.02681339  0.05242172 -0.11982663]
+ [-0.96485586 -0.56799395  0.64052339]]
+Time taken for non local force:  5.9819865226745605
+
+coords_cart_all_shape (3, 54)
+cart_g_shape (3, 120837)
+force_local [[ 3.10849784e+00 -5.58517002e-01  1.23456606e+00]
+ [ 4.47928833e-01 -4.68676095e-01 -4.37394401e+00]
+ [-7.35537008e-02  5.01048684e-01 -4.41886533e-01]
+ [ 8.10931169e-01  6.76837373e+00 -5.58216769e+00]
+ [-3.25674642e+00 -1.13158183e-01  1.94457993e+00]
+ [-6.27727117e+00 -2.78295463e+00 -6.65064221e+00]
+ [ 7.39147959e+00  6.31041908e+00  3.01203222e+00]
+ [ 3.68595307e+00  1.63170816e+00 -5.21660955e+00]
+ [-2.61125813e+00  2.87381621e-01 -5.70265710e+00]
+ [ 1.81418488e+00  3.29927383e-01 -3.41716289e+00]
+ [ 2.64437301e-02  6.68141076e+00  5.20185080e+00]
+ [ 1.31615169e+00 -2.75655155e-01  1.17029196e+00]
+ [ 4.90655658e+00 -4.83099077e+00 -1.06410068e+00]
+ [-8.65957126e+00 -3.59172892e+00 -1.76066397e+00]
+ [-3.62601989e+00  4.94442638e+00  1.15087128e+00]
+ [-3.32790614e-01 -3.34732472e+00 -2.27975212e-01]
+ [-3.67464313e+00 -8.92891357e+00  1.39139813e+01]
+ [ 2.95639653e+00 -3.16569477e+00  5.41682362e-01]
+ [ 6.30117579e-01  1.59864000e+00  2.71162658e+00]
+ [ 2.97912366e+00  5.67131184e+00  3.99662811e+00]
+ [ 3.68691574e+00 -1.74577177e+00 -9.73630795e+00]
+ [-6.18402479e-01 -1.25633943e+00  2.78010693e-01]
+ [ 1.07752361e+00  2.54919424e+00  4.50829241e-01]
+ [ 5.46941839e-01  1.48989586e+00 -4.50717772e+00]
+ [ 2.77908237e+00 -5.34183509e+00  4.89043267e-01]
+ [ 9.00291071e-01 -1.75654124e+00  1.92381740e+00]
+ [-6.33264272e+00 -1.31924320e+00  1.68602940e+00]
+ [-8.71511513e+00 -6.15147581e+00 -1.15217736e+00]
+ [ 1.16187132e+00 -3.12240332e+00 -6.29578190e-03]
+ [-2.48512463e-02  9.10482894e-01  6.08998309e+00]
+ [ 4.93929520e+00 -7.94839224e+00 -4.78090616e-01]
+ [ 7.59496181e+00  2.29157458e+00  2.69996178e+00]
+ [ 4.11907218e+00 -2.13479105e+00  1.58308225e+00]
+ [ 7.69038971e+00 -4.84016027e+00  2.63843939e+00]
+ [-8.51218554e+00  2.40158803e+00 -1.60874153e+00]
+ [-1.46285240e+00  2.50129576e+00 -1.96361938e+00]
+ [-2.58546419e+00  3.65043388e+00  2.45457439e+00]
+ [-2.02740173e+00  2.89218471e+00 -1.19228192e+00]
+ [-5.93395339e+00  9.70068299e+00 -5.90300293e+00]
+ [ 7.55713938e-01  6.02952450e+00  7.23649878e+00]
+ [ 2.45386997e+00 -6.81174091e-02 -7.20332162e+00]
+ [-2.04288674e+00  4.88312887e+00 -1.29843688e+00]
+ [-9.17504026e+00  8.27681914e+00  2.45516490e-01]
+ [-4.65812392e-01 -2.16271726e-02 -5.51622605e-01]
+ [ 5.57511018e-01 -5.41725551e+00 -6.55940897e+00]
+ [ 6.07854084e+00 -8.17537631e+00 -9.01283318e-01]
+ [ 3.32248294e-01  6.56651746e+00 -6.04535970e+00]
+ [-3.62178457e+00 -9.20721573e-01  9.18035740e+00]
+ [-7.63026608e-02 -4.37062137e+00  4.75009347e-01]
+ [-2.04871456e+00  7.20514457e-01 -5.57543852e-01]
+ [ 2.83827852e+00 -9.07566250e+00  3.12504341e+00]
+ [ 6.74653277e+00 -3.31046624e+00  9.40798567e+00]
+ [ 1.02458283e-01  1.74613515e+00  2.45179802e+00]
+ [ 9.45255152e-01  4.68927325e+00 -1.77362741e+00]]
+Ewald forces are [[-3.12294538e+00  5.47567453e-01 -1.34773180e+00]
+ [-4.06999540e-01  4.71272939e-01  4.13696348e+00]
+ [ 3.03929052e-02 -6.17037367e-01  5.23333801e-01]
+ [-6.13373554e+00 -5.70286960e+00  9.12846410e+00]
+ [ 3.23383132e+00 -1.82853783e-01 -2.09476301e+00]
+ [ 6.22872684e+00  2.61170760e+00  6.34038528e+00]
+ [-7.31245100e+00 -6.46090597e+00 -3.18616861e+00]
+ [-3.52205096e+00 -1.61081276e+00  5.20450685e+00]
+ [ 2.39144205e+00 -3.57641305e-01  5.57982262e+00]
+ [-1.65957300e+00 -5.11083162e-01  3.14042324e+00]
+ [ 3.34547349e-02 -6.45503436e+00 -4.85510070e+00]
+ [-1.41487328e+00  2.17135577e-01 -1.17895102e+00]
+ [-4.90967787e+00  4.46107849e+00  8.93709432e-01]
+ [ 1.20196944e+01  5.52711835e+00  9.21177913e-01]
+ [ 3.59015140e+00 -5.35226815e+00 -1.64813620e+00]
+ [ 7.56974308e-01  4.28141424e+00  5.21891341e-01]
+ [ 1.02734834e+01  1.26514874e+01 -1.77347660e+01]
+ [-2.88145705e+00  3.28368594e+00 -5.02445084e-01]
+ [-5.69743486e-01 -1.62889568e+00 -2.58603588e+00]
+ [-3.44780468e+00 -6.63069820e+00 -4.15754914e+00]
+ [-3.20478418e+00  1.61374993e+00  1.04295248e+01]
+ [ 4.20347489e-01  1.55890387e+00 -3.95621878e-01]
+ [-1.08388948e+00 -2.57151523e+00 -1.71042835e-01]
+ [-4.26607286e+00 -3.10138604e+00  5.15087118e+00]
+ [-2.86904860e+00  5.42154280e+00 -5.29981440e-01]
+ [-1.00714539e+00  1.82241748e+00 -1.96895453e+00]
+ [ 9.59444973e+00  9.73892949e+00 -1.36011371e+00]
+ [ 8.92872398e+00  6.28122089e+00  7.50755018e-01]
+ [-8.98079201e-01  2.76587051e+00  9.47231154e-02]
+ [-1.77119361e-02 -7.13001828e-01 -6.17838800e+00]
+ [-5.63588947e+00  8.50844302e+00  9.20410401e-01]
+ [-7.36624621e+00 -2.10232126e+00 -2.58051014e+00]
+ [-4.24822289e+00  2.49916810e+00 -1.53155723e+00]
+ [-7.95292227e+00  4.85299656e+00 -3.93321893e+00]
+ [ 1.51973691e+01 -3.53564114e+00  6.89685715e-01]
+ [-5.55272629e+00 -1.24033289e+00  3.06363426e+00]
+ [ 2.60573134e+00 -3.36854719e+00 -2.57616921e+00]
+ [ 4.28154259e+00 -1.24853050e+01  2.73668805e+00]
+ [ 6.11926917e+00 -9.80873454e+00  6.18536961e+00]
+ [-9.20107624e-01 -5.82111082e+00 -6.88644878e+00]
+ [-2.54548377e+00 -2.75709226e-01  7.62189554e+00]
+ [-1.34150391e+00 -1.33943035e+01  1.04708995e+00]
+ [ 1.56470765e+01 -1.12149490e+01 -2.41086630e+00]
+ [ 4.90311712e-01  1.59623154e-01  6.55947848e-01]
+ [ 1.88900506e+00  7.11200014e+00  9.22102831e+00]
+ [-5.72261260e+00  7.90151814e+00  7.50045900e-01]
+ [-7.39900919e-02 -6.59996158e+00  5.85705800e+00]
+ [ 4.30369205e+00  2.39589737e-01 -9.60236792e+00]
+ [-2.57798820e+00  1.39606719e+01 -1.84511085e+00]
+ [ 1.96679181e+00 -7.58109398e-01  7.59271176e-01]
+ [-2.89814628e+00  8.79258806e+00 -2.89841325e+00]
+ [-1.34030814e+01  1.12887113e+00 -8.39368716e+00]
+ [-6.58789915e-02 -1.77164609e+00 -2.38963275e+00]
+ [-1.50808788e+00 -4.31217224e+00  1.95282523e+00]]
+Local forces are [[ 3.10849784e+00 -5.58517002e-01  1.23456606e+00]
+ [ 4.47928833e-01 -4.68676095e-01 -4.37394401e+00]
+ [-7.35537008e-02  5.01048684e-01 -4.41886533e-01]
+ [ 8.10931169e-01  6.76837373e+00 -5.58216769e+00]
+ [-3.25674642e+00 -1.13158183e-01  1.94457993e+00]
+ [-6.27727117e+00 -2.78295463e+00 -6.65064221e+00]
+ [ 7.39147959e+00  6.31041908e+00  3.01203222e+00]
+ [ 3.68595307e+00  1.63170816e+00 -5.21660955e+00]
+ [-2.61125813e+00  2.87381621e-01 -5.70265710e+00]
+ [ 1.81418488e+00  3.29927383e-01 -3.41716289e+00]
+ [ 2.64437301e-02  6.68141076e+00  5.20185080e+00]
+ [ 1.31615169e+00 -2.75655155e-01  1.17029196e+00]
+ [ 4.90655658e+00 -4.83099077e+00 -1.06410068e+00]
+ [-8.65957126e+00 -3.59172892e+00 -1.76066397e+00]
+ [-3.62601989e+00  4.94442638e+00  1.15087128e+00]
+ [-3.32790614e-01 -3.34732472e+00 -2.27975212e-01]
+ [-3.67464313e+00 -8.92891357e+00  1.39139813e+01]
+ [ 2.95639653e+00 -3.16569477e+00  5.41682362e-01]
+ [ 6.30117579e-01  1.59864000e+00  2.71162658e+00]
+ [ 2.97912366e+00  5.67131184e+00  3.99662811e+00]
+ [ 3.68691574e+00 -1.74577177e+00 -9.73630795e+00]
+ [-6.18402479e-01 -1.25633943e+00  2.78010693e-01]
+ [ 1.07752361e+00  2.54919424e+00  4.50829241e-01]
+ [ 5.46941839e-01  1.48989586e+00 -4.50717772e+00]
+ [ 2.77908237e+00 -5.34183509e+00  4.89043267e-01]
+ [ 9.00291071e-01 -1.75654124e+00  1.92381740e+00]
+ [-6.33264272e+00 -1.31924320e+00  1.68602940e+00]
+ [-8.71511513e+00 -6.15147581e+00 -1.15217736e+00]
+ [ 1.16187132e+00 -3.12240332e+00 -6.29578190e-03]
+ [-2.48512463e-02  9.10482894e-01  6.08998309e+00]
+ [ 4.93929520e+00 -7.94839224e+00 -4.78090616e-01]
+ [ 7.59496181e+00  2.29157458e+00  2.69996178e+00]
+ [ 4.11907218e+00 -2.13479105e+00  1.58308225e+00]
+ [ 7.69038971e+00 -4.84016027e+00  2.63843939e+00]
+ [-8.51218554e+00  2.40158803e+00 -1.60874153e+00]
+ [-1.46285240e+00  2.50129576e+00 -1.96361938e+00]
+ [-2.58546419e+00  3.65043388e+00  2.45457439e+00]
+ [-2.02740173e+00  2.89218471e+00 -1.19228192e+00]
+ [-5.93395339e+00  9.70068299e+00 -5.90300293e+00]
+ [ 7.55713938e-01  6.02952450e+00  7.23649878e+00]
+ [ 2.45386997e+00 -6.81174091e-02 -7.20332162e+00]
+ [-2.04288674e+00  4.88312887e+00 -1.29843688e+00]
+ [-9.17504026e+00  8.27681914e+00  2.45516490e-01]
+ [-4.65812392e-01 -2.16271726e-02 -5.51622605e-01]
+ [ 5.57511018e-01 -5.41725551e+00 -6.55940897e+00]
+ [ 6.07854084e+00 -8.17537631e+00 -9.01283318e-01]
+ [ 3.32248294e-01  6.56651746e+00 -6.04535970e+00]
+ [-3.62178457e+00 -9.20721573e-01  9.18035740e+00]
+ [-7.63026608e-02 -4.37062137e+00  4.75009347e-01]
+ [-2.04871456e+00  7.20514457e-01 -5.57543852e-01]
+ [ 2.83827852e+00 -9.07566250e+00  3.12504341e+00]
+ [ 6.74653277e+00 -3.31046624e+00  9.40798567e+00]
+ [ 1.02458283e-01  1.74613515e+00  2.45179802e+00]
+ [ 9.45255152e-01  4.68927325e+00 -1.77362741e+00]]
+Non-Local forces are [[-0.01495509  0.0126768   0.11698913]
+ [-0.32769484  0.07868503  0.64145887]
+ [ 0.06901169  0.12477464 -0.06771967]
+ [-1.76246383 -2.5089155   2.08154105]
+ [ 0.35224934  0.71367461  0.15423457]
+ [ 0.5352487   0.5576775   1.14953762]
+ [-3.02779368 -4.49128812  0.39387594]
+ [-1.76927896 -0.1404952   1.50402054]
+ [ 0.57659337  0.20247971  0.98798774]
+ [ 0.11410538  0.76207729  0.18017392]
+ [-0.28417943 -1.04480028 -1.49184288]
+ [ 0.06081592  0.04050156  0.21491952]
+ [-0.33763234  1.22089004  0.5264779 ]
+ [ 2.81908499  0.88516948 -0.43265539]
+ [ 0.54487809 -1.14008811 -2.30046195]
+ [ 1.18898482  2.45240718  0.54066607]
+ [-0.06404217  1.73332724 -4.64070647]
+ [-0.1359599  -0.07280769 -0.03633479]
+ [-0.33320841  1.46319295 -1.67610563]
+ [-1.11152704 -2.39923047 -0.84311484]
+ [-1.37853128  2.09797646  4.74163338]
+ [ 0.56615735 -0.74888788  0.2028474 ]
+ [ 0.03879828 -0.09903082 -1.2407244 ]
+ [-1.14370897 -2.31171169  1.7965517 ]
+ [ 0.09018422  0.04108906  0.02853122]
+ [ 0.13673888 -0.06655976  0.0458813 ]
+ [ 0.77015478  0.33590204 -1.35726093]
+ [ 3.19203615  2.29293744 -0.08445013]
+ [-0.64906948  0.79277686 -0.19290461]
+ [ 0.11623398 -0.74295262 -3.23054986]
+ [-1.31330068  4.43366639  2.64263679]
+ [-1.55575433 -0.83471457 -0.64547107]
+ [ 0.01774154 -1.17919344 -0.81902689]
+ [-3.56690991  3.45485169 -2.33684608]
+ [ 2.72481006 -0.43620467 -0.32270327]
+ [-1.34230145  0.07137673 -0.29952633]
+ [ 0.1159573  -0.84970328  0.34159509]
+ [ 0.44060369 -1.09359821  0.05899299]
+ [ 3.92725204 -3.84950793  2.06109966]
+ [ 0.57836938 -1.81700666 -4.5155669 ]
+ [-2.17968508 -1.2033768   3.28442051]
+ [ 0.04240703 -0.14817303  1.78470608]
+ [ 2.3472742  -2.43562166 -0.76928683]
+ [-0.01654058 -0.15610222 -0.12366686]
+ [-1.87827589  1.92611217  4.470279  ]
+ [-1.81157026  1.941468    0.72830167]
+ [-0.85351374 -1.53250104  2.01985653]
+ [ 3.83795418  0.43618066 -3.16081132]
+ [-0.02649786  1.10910062 -0.23384553]
+ [ 1.37218836  0.7932202  -0.37809331]
+ [ 0.12985597  1.08672095 -1.00521208]
+ [-2.05806241 -0.23028325 -2.43815016]
+ [-0.02681339  0.05242172 -0.11982663]
+ [-0.96485586 -0.56799395  0.64052339]]
+SCF Routine has exited
+                          TIMERS                           
+-----------------------------------------------------------
+|            LABEL             |  CALL  |  TIME  | STATUS  |
+-----------------------------------------------------------
+|           scf:scf            |       1| 1027.69| STOPPED |
+|     rho_generate_atomic      |       1|    2.03| STOPPED |
+|         loc_generate         |       1|    1.41| STOPPED |
+|          nloc:init           |       1|    0.09| STOPPED |
+|          xc_compute          |     100|   48.01| STOPPED |
+|       nloc:gen_vkb_dij       |       1|    0.12| STOPPED |
+|           davidson           |     100|  860.86| STOPPED |
+|    davidson:compute_hpsi     |    1891|  741.57| STOPPED |
+|         KSHam:h_psi          |    1891|  741.34| STOPPED |
+|     davidson:update_red      |    1891|   37.60| STOPPED |
+|     davidson:expand_psi      |    1791|  597.77| STOPPED |
+|     davidson:apply_g_psi     |    1791|   14.33| STOPPED |
+-----------------------------------------------------------
+
+

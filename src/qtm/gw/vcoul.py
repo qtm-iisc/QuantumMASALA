@@ -16,10 +16,8 @@ if MPI4PY_INSTALLED:
     from mpi4py import MPI
 
 
-
-
 class Vcoul:
-    """Vcoul Generator Class
+    r"""Vcoul Generator Class
 
     Provides cell-averaging technique whereby the value of the interaction
     for the given q-point (for a q → 0 in particular) can be replaced by the average
@@ -78,7 +76,7 @@ class Vcoul:
         bare_init=True,  # To save time, by default
         parallel=True,
     ) -> None:
-        """Init Vcoul object
+        r"""Init Vcoul object
 
         Parameters
         ----------
@@ -154,7 +152,7 @@ class Vcoul:
         vcoul: float,
         random_sample: bool,
     ):
-        """Modify epsmat to make it compatible with W averaging
+        r"""Modify epsmat to make it compatible with W averaging
 
         Parameters
 
@@ -218,7 +216,9 @@ class Vcoul:
         index_G0 = np.argmin(
             np.linalg.norm(
                 self.l_gspace_q[i_q].g_cryst.T[
-                    sort_cryst_like_BGW(self.l_gspace_q[i_q].gk_cryst, self.l_gspace_q[i_q].gk_norm2)
+                    sort_cryst_like_BGW(
+                        self.l_gspace_q[i_q].gk_cryst, self.l_gspace_q[i_q].gk_norm2
+                    )
                     # self.l_gspace_q[i_q].gk_indices_tosorted
                 ],
                 axis=1,
@@ -279,7 +279,7 @@ class Vcoul:
     # CORE FUNCTIONS :
 
     def v_bare(self, i_q, averaging_func=None):
-        """Calculate Coulomb potential (Reciprocal space), given index of q-point, i.e. 8*pi/\|q+G\|^2"""
+        r"""Calculate Coulomb potential (Reciprocal space), given index of q-point, i.e. 8*pi/\|q+G\|^2"""
 
         # Get sorted \|q+G\|^2
         gqq = self.l_gspace_q[i_q].gk_norm2
@@ -303,7 +303,7 @@ class Vcoul:
         return 3 * 8 * np.pi / q_cutoff**2
 
     def v_minibz_sphere_shifted(self, centre_cryst, q_cutoff=None):
-        """Averaged coulomb potential within a shifted sphere, with same volume as mini-bz
+        r"""Averaged coulomb potential within a shifted sphere, with same volume as mini-bz
 
         Constraint: \|centre_cryst\| > R_minibz_sphere
         Can be used to calculate vcoul averaged over minibz ball for qpt != (0,0,0)
@@ -399,8 +399,15 @@ class Vcoul:
         """Generate a neighbourhood of q=0, that will be used to determine minibz, while sampling points later."""
         # Since qpts are all positive, we copy the qpts 8 times to create (2*n_q-1)^3 sized grid around q=0.
         full_qpts = []
-        l_signs = np.array([(1-2*i,1-2*j,1-2*k) for i in (0,1) for j in (0,1) for k in (0,1)])
-        
+        l_signs = np.array(
+            [
+                (1 - 2 * i, 1 - 2 * j, 1 - 2 * k)
+                for i in (0, 1)
+                for j in (0, 1)
+                for k in (0, 1)
+            ]
+        )
+
         # Equivalent, older version
         # l_signs = np.array([ [1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1], [-1, 1, 1], [-1, 1, -1], [-1, -1, 1], [-1, -1, -1]])
 
@@ -415,7 +422,9 @@ class Vcoul:
         # and hence their wigner-seitz plane can cut the sphere with radius k_cutoff
         # nbhd converted to CARTESIAN coords (a.u.), because we need norm.
         normsq_arr = self.gspace.recilat.norm2(full_qpts.T)
-        q_cutoff = np.sqrt(np.min(normsq_arr[np.where(normsq_arr > self.TOL_SMALL)])) / 2
+        q_cutoff = (
+            np.sqrt(np.min(normsq_arr[np.where(normsq_arr > self.TOL_SMALL)])) / 2
+        )
 
         # 32.0D0 * PI_D**2 * SQRT(q0sph2) / ( 8.0D0 * PI_D**3 / (celvol * dble(nfk)) )
         nbhd_crys = full_qpts[np.where(normsq_arr <= (8 * q_cutoff) ** 2)]
@@ -501,7 +510,6 @@ class Vcoul:
         )
 
     def oneoverq_minibz_montecarlo(self, shift_vec_cryst=None):
-
         # Add G-space shift, useful for non-q0 points.
         if shift_vec_cryst is None:
             shift_vec_cart = self.gspace.recilat.cryst2cart(np.zeros((1, 3), float).T).T
@@ -511,7 +519,7 @@ class Vcoul:
             ).T
 
         # Since qpts are all positive, we copy the qpts 8 times to create (2*n_q-1)^3 sized grid around q=0
-        q_cutoff, nbhd_cart= self.get_gamma_nbhd_qpts()
+        q_cutoff, nbhd_cart = self.get_gamma_nbhd_qpts()
 
         oneoverq_corr = 0
 
@@ -558,10 +566,10 @@ class Vcoul:
         return 12 * np.pi / q_cutoff
 
     def load_vcoul(self, filename):
-        """Read `vcoul` file. 
-        
+        """Read `vcoul` file.
+
         Data format is `q1_cryst  q2_cryst  q3_cryst  G_1  G_2  G_3  vcoul`."""
-        
+
         vcoul_data = np.genfromtxt(filename)
 
         return (
@@ -612,7 +620,7 @@ class Vcoul:
         return
 
     # METHODS :
-    #@pw_logger.time('Vcoul:calculate_vcoul_single_qpt')
+    # @pw_logger.time('Vcoul:calculate_vcoul_single_qpt')
     def calculate_vcoul_single_qpt(
         self, i_q, averaging_func=None, bare=False, random_avg=True
     ):
@@ -647,9 +655,14 @@ class Vcoul:
                 shift_vec_cryst = qvec + self.l_gspace_q[i_q].g_cryst.T[i_g]
 
                 if random_avg:
-                    vqg[i_g], _ = self.v_minibz_montecarlo_hybrid(
+                    res = self.v_minibz_montecarlo_hybrid(
                         shift_vec_cryst=shift_vec_cryst
                     )
+                    if res[0].ndim == 1:
+                        vqg[i_g] = res[0][0]
+                    else:
+                        vqg[i_g] = res[0]
+
                 else:
                     vqg[i_g] = self.v_minibz_sphere_shifted(qvec + gvec)
 
@@ -711,7 +724,9 @@ class Vcoul:
         Use fixwings for q or q'==0
         Sample wcoul as <eps_head(q) * vcoul(q)> over minibz.
         """
-        sort_order = sort_cryst_like_BGW(self.l_gspace_q[i_q].gk_cryst, self.l_gspace_q[i_q].gk_norm2)
+        sort_order = sort_cryst_like_BGW(
+            self.l_gspace_q[i_q].gk_cryst, self.l_gspace_q[i_q].gk_norm2
+        )
         vcoul = self.vcoul[i_q][sort_order][0]
         if wcoul0 is None:
             wcoul0 = epsinv[0, 0] * vcoul

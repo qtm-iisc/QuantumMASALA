@@ -1,5 +1,6 @@
 from __future__ import annotations
-__all__ = ['loc_generate_rhoatomic', 'loc_generate_pot_rhocore']
+
+__all__ = ["loc_generate_rhoatomic", "loc_generate_pot_rhocore"]
 import numpy as np
 from scipy.special import erf
 
@@ -8,14 +9,13 @@ from qtm.gspace import GSpace
 from qtm.containers import get_FieldG, FieldGType
 from .upf import UPFv2Data
 
-from qtm.constants import PI
+from qtm.constants import PI, RYDBERG, ELECTRON_RYD
 
 from qtm.config import NDArray
 from qtm.msg_format import type_mismatch_msg
 from qtm.logger import qtmlogger
 
-EPS6 = 1E-6
-
+EPS6 = 1e-6
 
 # def _simpson(f_r: NDArray, r_ab: NDArray):
 #     f_times_dr = f_r * r_ab
@@ -33,21 +33,23 @@ EPS6 = 1E-6
 
 
 def _simpson_old(f, rab):
-    r12 = 1/3
+    r12 = 1 / 3
     f_r = f * rab
     start, stop, step = 0, rab.shape[0] - 2, 2
-    return r12 * np.sum(f_r[start:stop:step]
-                        + 4*f_r[start+1:stop+1:step]
-                        + f_r[start+2:stop+2:step])
+    return r12 * np.sum(
+        f_r[start:stop:step]
+        + 4 * f_r[start + 1 : stop + 1 : step]
+        + f_r[start + 2 : stop + 2 : step]
+    )
 
-
-def _sph2pw(r: NDArray, r_ab: NDArray, f_times_r2: NDArray, g: NDArray):
+def _sph2pw(r: NDArray, r_ab: NDArray, f_times_r2: NDArray, g: NDArray):  # type: ignore
     numg = g.shape[0]
-    f_g = np.empty((*f_times_r2.shape[:-1], numg), dtype='c16', like=f_times_r2)
+    f_g = np.empty((*f_times_r2.shape[:-1], numg), dtype="c16", like=f_times_r2)
     numr = r.shape[0]
 
     r_ab = r_ab.copy()
-    r_ab *= 1./3
+    # Simpson's integration
+    r_ab *= 1.0 / 3
     r_ab[1:-1:2] *= 4
     r_ab[2:-1:2] *= 2
     f_g[:] = np.sinc(g * r[0] / PI) * f_times_r2[..., 0] * r_ab[0]
@@ -55,23 +57,45 @@ def _sph2pw(r: NDArray, r_ab: NDArray, f_times_r2: NDArray, g: NDArray):
     g = g.reshape(-1, 1)
     f_times_r2 = np.expand_dims(f_times_r2, axis=-2)
     for idxr in range(numr):
-        f_g[:] += np.sum(np.sinc(g * r[idxr] / PI)
-                         * f_times_r2[..., idxr] * r_ab[idxr],
-                         axis=-1)
+        f_g[:] += np.sum(
+            np.sinc(g * r[idxr] / PI) * f_times_r2[..., idxr] * r_ab[idxr], axis=-1
+        )
     return f_g
 
+def _dsph2pw(r: NDArray, r_ab: NDArray, f_times_r2: NDArray, g: NDArray):
+    numg = g.shape[0]
+    f_g = np.empty((*f_times_r2.shape[:-1], numg), dtype='c16')
+    numr = r.shape[0]
+
+    def dspherical(g,r):
+        return np.cos(g*r)/g - np.sin(g*r)/(g**2*r)
+
+    r_ab = r_ab.copy()
+    r_ab *= 1. / 3
+    r_ab[1:-1:2] *= 4
+    r_ab[2:-1:2] *= 2
+    f_g[:] = dspherical(g, r[1]) * f_times_r2[..., 1] * r_ab[1]
+    g = g.reshape(-1, 1)
+    f_times_r2 = np.expand_dims(f_times_r2, axis=-2)
+    for idxr in range(2, numr):
+        f_g[:] += np.sum(dspherical(g, r[idxr])
+                         * f_times_r2[..., idxr] * r_ab[idxr],
+                   axis=-1)
+    return f_g
 
 def _check_args(sp: BasisAtoms, grho: GSpace):
     if sp.ppdata is None:
-        raise ValueError(f"{BasisAtoms} instance 'sp' does not have "
-                         f"pseudopotential data i.e 'sp.ppdata' is None.")
+        raise ValueError(
+            f"{BasisAtoms} instance 'sp' does not have "
+            f"pseudopotential data i.e 'sp.ppdata' is None."
+        )
     if not isinstance(sp.ppdata, UPFv2Data):
         raise NotImplementedError("only 'UPFv2Data' supported")
     if not isinstance(grho, GSpace):
-        raise TypeError(type_mismatch_msg('grho', grho, GSpace))
+        raise TypeError(type_mismatch_msg("grho", grho, GSpace))
 
 
-@qtmlogger.time('rho_generate_atomic')
+@qtmlogger.time("rho_generate_atomic")
 def loc_generate_rhoatomic(sp: BasisAtoms, grho: GSpace) -> FieldGType:
     """Computes the electron density constructed by superposing atomic charges
     of given atomic species in crystal.
@@ -97,9 +121,15 @@ def loc_generate_rhoatomic(sp: BasisAtoms, grho: GSpace) -> FieldGType:
     g_norm = grho.g_norm
     FieldG: type[FieldGType] = get_FieldG(grho)
 
-    struct_fac = FieldG(np.sum(
-        np.exp((-2 * np.pi * 1j) * (sp.r_cryst.T @ g_cryst)), axis=0
-    ))
+    # Vectorized version
+    # struct_fac = FieldG(
+    #     np.sum(np.exp((-2 * np.pi * 1j) * (sp.r_cryst.T @ g_cryst)), axis=0)
+    # )
+
+    # Looped version
+    struct_fac = FieldG(np.zeros(g_cryst.shape[1], dtype=np.complex128))
+    for i in range(sp.r_cryst.shape[1]):
+        struct_fac += np.exp(-2j * np.pi * (sp.r_cryst[:, i] @ g_cryst))
 
     r = np.asarray(upfdata.r, like=g_cryst)
     r_ab = np.asarray(upfdata.r_ab, like=g_cryst)
@@ -107,7 +137,7 @@ def loc_generate_rhoatomic(sp: BasisAtoms, grho: GSpace) -> FieldGType:
 
     rho = FieldG.empty(None)
 
-    f_times_r2 = np.empty((1, len(r)), dtype='f8', like=g_cryst)
+    f_times_r2 = np.empty((1, len(r)), dtype="f8", like=g_cryst)
     f_times_r2[0] = rhoatom
 
     rho.data[:] = _sph2pw(r, r_ab, f_times_r2, g_norm[:])
@@ -118,9 +148,8 @@ def loc_generate_rhoatomic(sp: BasisAtoms, grho: GSpace) -> FieldGType:
     return rho
 
 
-@qtmlogger.time('loc_generate')
-def loc_generate_pot_rhocore(sp: BasisAtoms,
-                             grho: GSpace) -> (FieldGType, FieldGType):
+@qtmlogger.time("loc_generate")
+def loc_generate_pot_rhocore(sp: BasisAtoms, grho: GSpace) -> (FieldGType, FieldGType):
     """Computes the local part of pseudopotential and core electron density
     (for NLCC in XC calculation) generated by given atomic species in crystal.
 
@@ -155,11 +184,17 @@ def loc_generate_pot_rhocore(sp: BasisAtoms,
     valence = upfdata.z_valence
 
     sp_r_cryst = np.asarray(sp.r_cryst, like=g_cryst)
-    struct_fac = FieldG(np.sum(
-        np.exp((-2 * np.pi * 1j) * (sp_r_cryst.T @ g_cryst)), axis=0
-    ))
 
-    # Radial Mesh specified in Pseudopotential Data
+    # Vectorized version
+    # struct_fac = FieldG(
+    #     np.sum(np.exp((-2 * np.pi * 1j) * (sp_r_cryst.T @ g_cryst)), axis=0)
+    # )
+
+    # Looped version
+    struct_fac = FieldG(np.zeros(g_cryst.shape[1], dtype=np.complex128))
+    for i in range(sp_r_cryst.shape[1]):
+        struct_fac += np.exp(-2j * np.pi * (sp_r_cryst[:, i] @ g_cryst))
+
     r = np.asarray(upfdata.r, like=g_cryst)
     r_ab = np.asarray(upfdata.r_ab, like=g_cryst)
 
@@ -172,14 +207,15 @@ def loc_generate_pot_rhocore(sp: BasisAtoms,
     v_ion = FieldG.empty(None)
     rho_core = FieldG.empty(None)
 
-    f_times_r2 = np.empty((1 + upfdata.core_correction, len(r)),
-                          dtype='f8', like=g_cryst)
+    f_times_r2 = np.empty(
+        (1 + upfdata.core_correction, len(r)), dtype="f8", like=g_cryst
+    )
     f_times_r2[0] = (vloc * r + valence * erf(r)) * r
     if upfdata.core_correction:
         f_times_r2[1] = rho_atc * r**2
 
     f_g = _sph2pw(r, r_ab, f_times_r2, g_norm)
-    with np.errstate(divide='ignore'):
+    with np.errstate(divide="ignore"):
         v_ion.data[:] = f_g[0] - valence * np.exp(-g_norm2 / 4) / g_norm2
     if grho.has_g0:
         v_ion.data[0] = _simpson_old(r * (r * vloc + valence), r_ab)
@@ -192,7 +228,48 @@ def loc_generate_pot_rhocore(sp: BasisAtoms,
         rho_core.data[:] = 0
 
     N = np.prod(grho.grid_shape)
-    v_ion *= _4pibv * N * struct_fac
-    rho_core *= _4pibv * N * struct_fac
+    v_ion *= _4pibv 
+    rho_core *= _4pibv 
 
-    return v_ion, rho_core
+    v_ion_mult = v_ion*struct_fac*N
+    rho_core_mult = rho_core*struct_fac*N
+
+    return v_ion_mult, rho_core_mult, v_ion, rho_core
+
+
+def loc_generate_dpot(sp: BasisAtoms, grho: GSpace) -> FieldGType:
+    _check_args(sp, grho)
+
+    upfdata: UPFv2Data = sp.ppdata
+    if upfdata.core_correction:
+        raise NotImplementedError("core correction is not implemented yet")
+    # Radial Mesh specified in Pseudopotential Data
+    r = upfdata.r
+    r_ab = upfdata.r_ab
+
+    # Setting constants and aliases
+    cellvol = grho.reallat_cellvol
+    _4pibv = 4 * np.pi / cellvol
+    _1bv = 1 / cellvol
+
+    g_norm2 = grho.g_norm2[grho.idxsort]
+    g_norm=grho.g_norm[grho.idxsort]
+    FieldG: type[FieldGType] = get_FieldG(grho)
+
+    valence = upfdata.z_valence
+
+    vloc = upfdata.vloc
+    dv_ion = FieldG.empty(None)
+
+    f_times_r2 = np.empty((1, len(r)), dtype='f8')
+    f_times_r2[0] = (vloc * r + valence* erf(r))*r
+    f_times_r2[0]/=RYDBERG
+
+    f_g = _dsph2pw(r, r_ab, f_times_r2, g_norm)
+    with np.errstate(divide='ignore'):
+        dv_ion.data[:] = 0.5*f_g[0]/g_norm + valence * ELECTRON_RYD**2 * np.exp(-g_norm2 / 4) * (1+g_norm2/4)/ g_norm2**2
+    if grho.has_g0:
+        dv_ion.data[0] = 0
+
+    dv_ion.data[:]*=_4pibv
+    return dv_ion

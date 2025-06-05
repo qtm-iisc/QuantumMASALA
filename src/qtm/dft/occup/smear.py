@@ -1,5 +1,6 @@
 from __future__ import annotations
-__all__ = ['compute_occ']
+
+__all__ = ["compute_occ"]
 
 import numpy as np
 from scipy.special import erf, erfc, xlogy
@@ -8,8 +9,9 @@ from qtm.dft.kswfn import KSWfn
 from qtm.dft.config import DFTCommMod
 
 from qtm.constants import TPI, SQRT_PI
+
 SMEAR_THRESHOLD = 50
-EPS = 1E-10
+EPS = 1e-10
 
 
 def gauss_occ(f: np.ndarray):
@@ -17,7 +19,7 @@ def gauss_occ(f: np.ndarray):
 
 
 def gauss_en(f: np.ndarray):
-    return -0.5 * np.exp(-(f ** 2)) / SQRT_PI
+    return -0.5 * np.exp(-(f**2)) / SQRT_PI
 
 
 def fd_occ(f: np.ndarray):
@@ -40,14 +42,13 @@ def mv_en(f: np.ndarray):
 
 
 l_smear_func = {
-    'gauss': (gauss_occ, gauss_en),
-    'fd'   : (fd_occ, fd_en),
-    'mv'   : (mv_occ, mv_en),
+    "gauss": (gauss_occ, gauss_en),
+    "fd": (fd_occ, fd_en),
+    "mv": (mv_occ, mv_en),
 }
 
 
-def _compute_occ(l_evl: np.ndarray, e_fermi: float,
-                 smear_typ: str, degauss: float):
+def _compute_occ(l_evl: np.ndarray, e_fermi: float, smear_typ: str, degauss: float):
     smear_func = l_smear_func[smear_typ][0]
     f = (l_evl - e_fermi) / degauss
     occ = np.zeros_like(f)
@@ -57,16 +58,21 @@ def _compute_occ(l_evl: np.ndarray, e_fermi: float,
     return occ
 
 
-def _compute_en(wfn: KSWfn, e_fermi: float,
-                smear_typ: str, degauss: float):
+def _compute_en(wfn: KSWfn, e_fermi: float, smear_typ: str, degauss: float):
     smear_func = l_smear_func[smear_typ][1]
     f = (wfn.evl - e_fermi) / degauss
     mask = np.abs(f) <= SMEAR_THRESHOLD
     return degauss * np.sum(smear_func(f[mask]))
 
 
-def compute_occ(dftcomm: DFTCommMod, l_wfn: list[list[KSWfn]], numel: int,
-                is_spin: bool, smear_typ: str, degauss: float):
+def compute_occ(
+    dftcomm: DFTCommMod,
+    l_wfn: list[list[KSWfn]],
+    numel: int,
+    is_spin: bool,
+    smear_typ: str,
+    degauss: float,
+):
     # check_args(dftcomm, l_wfn, numel)
     with dftcomm.image_comm as comm:
         assert isinstance(is_spin, bool)
@@ -82,8 +88,9 @@ def compute_occ(dftcomm: DFTCommMod, l_wfn: list[list[KSWfn]], numel: int,
 
         # Aggregating all values to prevent repeated iteration across objects
         l_evl = np.stack(tuple(wfn.evl for wfn_k in l_wfn for wfn in wfn_k))
-        l_weights = np.array([wfn.k_weight for wfn_k in l_wfn for wfn in wfn_k],
-                             like=l_evl)
+        l_weights = np.array(
+            [wfn.k_weight for wfn_k in l_wfn for wfn in wfn_k], like=l_evl
+        )
 
         # Setting bounds for bisection method
         mu_min = comm.allreduce(np.amin(l_evl), comm.MIN)
@@ -110,7 +117,7 @@ def compute_occ(dftcomm: DFTCommMod, l_wfn: list[list[KSWfn]], numel: int,
             mu_guess = (mu_min + mu_max) / 2
             del_numel = numel - compute_numel(mu_guess)
         # Computing occ and e_smear
-        e_fermi, e_smear = mu_guess, 0.
+        e_fermi, e_smear = mu_guess, 0.0
         for wfn_k in l_wfn:
             for wfn in wfn_k:
                 wfn.occ[:] = _compute_occ(wfn.evl, e_fermi, smear_typ, degauss)

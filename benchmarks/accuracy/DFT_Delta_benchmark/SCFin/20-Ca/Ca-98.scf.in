@@ -1,0 +1,42 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Ca-98'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 4
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Ca 40.078 Ca_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+18 18 18  1 1 1
+
+CELL_PARAMETERS angstrom
+5.48798787598265 0.00000000000000 0.00000000000000
+0.00000000000000 5.48798787598265 0.00000000000000
+0.00000000000000 0.00000000000000 5.48798787598265
+
+ATOMIC_POSITIONS angstrom
+Ca 1.3719969690 1.3719969690 1.3719969690 
+Ca 1.3719969690 4.1159909070 4.1159909070 
+Ca 4.1159909070 1.3719969690 4.1159909070 
+Ca 4.1159909070 4.1159909070 1.3719969690 
+

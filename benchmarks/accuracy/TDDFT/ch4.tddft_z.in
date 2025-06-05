@@ -1,0 +1,9 @@
+&inputtddft
+    job = 'optical'
+    prefix = 'ch4'
+    tmp_dir = './scratch/'
+    dt = 2.4188843265864
+    l_tddft_restart = .false.
+    nstep = 10000
+    e_direction = 3
+/

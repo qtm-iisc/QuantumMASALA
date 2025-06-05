@@ -1,0 +1,134 @@
+the type of grho is <class 'qtm.gspace.gspc.GSpace'>
+Quantum MASALA
+ - Project Git Info:
+    - Commit hash:          2c4bc5d76d9951d17543d9e119304862acd4c9d4
+    - Commit date and time: Sunday, 22 December, 2024 12:32:51
+Started calculation on 2024-12-29 at 10:42:07.
+=========================================
+SCF Parameters:
+
+dftcomm        = DFTCommMod(image_comm.size=8, n_kgrp=1, n_bgrp=8, pwgrp_size=None)
+crystal        = Crystal(
+                  reallat=RealLattice(
+                    alat=30.60000, 
+                    latvec=
+                      [[-15.3   0.  -15.3]
+                       [  0.   15.3  15.3]
+                       [ 15.3  15.3   0. ]],
+                  ), 
+                  l_atoms=[
+                    BasisAtoms(
+                      label='si', 
+                      ppdata.filename=Si_ONCV_PBE-1.2.upf, 
+                      ppdata.md5_checksum=7f029a58b69e3aa87b46a36c608bf45e, 
+                      ppdata.valence=4, 
+                      mass=28.086, 
+                      r_cryst=
+                        [0., 0., 0.],
+                        [-0.00458278, -1.21693628,  0.2583308 ],
+                        [-0.58844935,  1.0183293 , -0.30619185],
+                        [-1.61787258,  1.27391274,  0.14735001],
+                        [ 0.32662889,  0.91742558, -1.51698669],
+                        [ 0.7490893 ,  0.12529162, -1.39250031],
+                        [ 0.83265738, -1.08871301,  0.17066778],
+                        [-0.40482854,  0.40627345, -0.51849843],
+                        [ 0.70134309,  0.58571218, -0.33687252],
+                        [-0.6875458 , -0.74292697, -0.5758609 ],
+                        [-0.06020213, -0.73638174,  1.26372214],
+                        [ 0.75714935, -1.19533247,  0.5268976 ],
+                        [-1.59748769,  0.37204551,  0.2455836 ],
+                        [-0.07169602,  0.21288384,  0.16627438],
+                        [-0.25806983,  0.50310374,  0.15983357],
+                        [-0.36503171, -0.22732951,  0.03215243],
+                        [0.11921592, 1.10688111, 0.18765312],
+                        [-1.21454034, -0.16784952, -0.34997993],
+                        [-0.30140805,  0.65258131,  0.11795404],
+                        [-1.45311859,  0.37885278,  0.42047966],
+                        [ 0.31255695,  0.01047268, -0.33720485],
+                        [-0.16646365,  1.43372082, -0.54547376],
+                        [ 1.11236313, -0.10156571,  0.16506216],
+                        [-0.81615696,  1.99099397, -0.4751555 ],
+                        [ 1.13974253, -0.56888513,  0.15763233],
+                        [-0.50635003,  0.40160666,  0.42301579],
+                        [-0.46276634, -0.52355884,  0.53470777],
+                        [ 0.66900107,  0.85446699, -0.13212572],
+                        [ 0.69697002,  0.82766345, -0.42114471],
+                        [-0.38061369,  1.43895967, -0.21043728],
+                        [-0.60631923,  1.95398932, -0.82848443],
+                        [ 0.64439774, -1.1089652 ,  0.88556901],
+                        [ 0.97418093, -1.64502484,  0.09025448],
+                        [-0.54320154, -0.10593355, -0.47480722],
+                        [-0.26806002,  1.6109098 , -1.20128883],
+                        [ 0.60235295,  0.27869741, -1.49287628],
+                        [-0.12257879, -0.07280307, -1.29097464],
+                        [ 0.8452804 ,  0.11099236, -1.21612371],
+                        [-1.02668321,  0.58047802,  0.67215661],
+                        [-0.67071106, -0.67376401, -0.20606187],
+                        [-0.66033728,  0.64864431, -0.17840722],
+                        [-0.59606887,  1.42449356, -0.14481962],
+                        [ 0.14167208, -0.00772007, -1.3632817 ],
+                        [-0.69275845, -0.03558551,  0.90524615],
+                        [ 0.40704241,  0.13245357, -0.64637052],
+                        [ 0.5408315 ,  0.38902028, -0.15970579],
+                        [-0.57665844, -0.17784298, -0.41734469],
+                        [-0.70999569,  1.0683229 , -0.63496685],
+                        [-0.46267008, -0.94467765,  0.35511061],
+                        [ 0.84288104, -0.37485223, -0.84203974],
+                        [-1.46244511,  0.80572738,  0.67481852],
+                        [-0.41431507, -0.1570134 ,  0.5475719 ],
+                        [-0.82151015, -0.08535586, -0.1822036 ],
+                        [-1.53356641,  0.62350401,  0.70016312],
+                      )
+                    ])
+grho           = GSpace(crystal.recilat, ecut_rho=30.0, grid_shape=(54, 54, 54))
+grho.num_g     = 56233
+gwfn           = GSpace(crystal.recilat, ecut_wfn=30.0, grid_shape=(54, 54, 54))
+gwfn.num_g     = 56233
+numbnd         = 108
+is_spin        = False
+is_noncolin    = False
+symm_rho       = True
+rho_start      = <qtm.containers.field.get_FieldG.<locals>.FieldG object at 0x7d4e57bdf650>
+wfn_init       = None
+libxc_func     = None
+occ_typ        = smear
+smear_typ      = gauss
+e_temp         = 0.005 # Ha
+conv_thr       = 5e-09 # Ha
+maxiter        = 100
+diago_thr_init = 0.005
+mix_beta       = 0.7
+mix_dim        = 8
+ret_vxc        = False
+dftconfig      = DFTConfig(
+                      symm_check_supercell = True,
+                      symm_use_all_frac = False,
+                      spglib_symprec = 1e-05,
+                      eigsolve_method = 'davidson',
+                      davidson_maxiter = 20,
+                      davidson_numwork = 2,
+                      mixing_method = 'modbroyden')
+iter_printer   = print_scf_status
+kpts           =
+    kpt[0]  kpt[1]  kpt[2];  weight
+     0.0000  0.0000  0.0000; 1.000000
+
+=========================================
+the type of grho is <class 'qtm.gspace.gspc.GSpace'>
+the type of grho is <class 'qtm.gspace.gspc.GSpace'>
+the type of grho is <class 'qtm.gspace.gspc.GSpace'>
+the type of grho is <class 'qtm.gspace.gspc.GSpace'>
+the type of grho is <class 'qtm.gspace.gspc.GSpace'>
+the type of grho is <class 'qtm.gspace.gspc.GSpace'>
+the type of grho is <class 'qtm.gspace.gspc.GSpace'>
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   PID 2525824 RUNNING AT hrkmjain4
+=   EXIT CODE: 15
+=   CLEANING UP REMAINING PROCESSES
+=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
+===================================================================================
+YOUR APPLICATION TERMINATED WITH THE EXIT STRING: Terminated (signal 15)
+This typically refers to a problem with your application.
+Please see the FAQ page for debugging suggestions

@@ -1,0 +1,40 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Ti-96'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 2
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Ti 47.867 Ti_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+40 40 22  1 1 1
+
+CELL_PARAMETERS angstrom
+2.89695081038473 0.00000000000000 0.00000000000000
+1.44847540519237 2.50883299530709 0.00000000000000
+0.00000000000000 0.00000000000000 4.58905837397606
+
+ATOMIC_POSITIONS angstrom
+Ti 1.4484826476 0.8362818465 1.1472645935 
+Ti 2.8969435680 1.6725511488 3.4417937805 
+

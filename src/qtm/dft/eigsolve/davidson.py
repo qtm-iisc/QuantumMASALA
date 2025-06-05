@@ -1,9 +1,11 @@
-"""Davidson's diagonalization scheme method with overlap
+"""Davidson's diagonalization scheme method with overlap.
 
-Based on the implementation in QuantumESPRESSO
+Based on the implementation in QuantumESPRESSO.
 """
+
 from __future__ import annotations
-__all__ = ['solve']
+
+__all__ = ["solve"]
 from numbers import Number
 import numpy as np
 from scipy.linalg import eigh
@@ -15,31 +17,37 @@ from qtm.logger import qtmlogger
 from qtm.config import NDArray, CUPY_INSTALLED
 
 
-@qtmlogger.time('davidson')
-def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
-          vloc_g0: list[complex], numwork: int, maxiter: int) -> tuple[KSWfn, int]:
+@qtmlogger.time("davidson")
+def solve(
+    dftcomm: DFTCommMod,
+    ksham: KSHam,
+    kswfn: KSWfn,
+    diago_thr: float,
+    vloc_g0: list[complex],
+    numwork: int,
+    maxiter: int,
+) -> tuple[KSWfn, int]:
     assert isinstance(dftcomm, DFTCommMod)
 
     kgrp_intra = dftcomm.kgrp_intra
     bgrp_inter = dftcomm.pwgrp_inter_kgrp
 
+    assert isinstance(ksham, KSHam)
+    assert isinstance(kswfn, KSWfn)
+    assert ksham.gkspc is kswfn.gkspc
+
     with kgrp_intra as comm:
-        assert isinstance(ksham, KSHam)
-        assert isinstance(kswfn, KSWfn)
-        assert ksham.gkspc is kswfn.gkspc
+        if comm.rank == 0:
+            assert isinstance(diago_thr, float)
+            assert diago_thr > 0
+            assert isinstance(numwork, int) and numwork > 1
+            assert isinstance(maxiter, int) and maxiter > 1
 
         diago_thr = comm.bcast(diago_thr)
-        assert isinstance(diago_thr, float)
-        assert diago_thr > 0
-
         vloc_g0 = comm.bcast(vloc_g0)
         # assert isinstance(vloc_g0, Number), print(type(vloc_g0), vloc_g0)
-
         numwork = comm.bcast(numwork)
-        assert isinstance(numwork, int) and numwork > 1
-
         maxiter = comm.bcast(maxiter)
-        assert isinstance(maxiter, int) and maxiter > 1
 
     WavefunG: type[WavefunGType] = type(kswfn.evc_gk)
     gkspc = WavefunG.gkspc
@@ -56,30 +64,30 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     # inverted so that the small terms will not be transformed to large
     # quantities
     ham_diag = ksham.ke_gk + ksham.vnl_diag
-    ham_diag.data[..., :gkspc.size_g] += vloc_g0[0]
+    ham_diag.data[..., : gkspc.size_g] += vloc_g0[0]
     if is_noncolin:
-        ham_diag.data[..., gkspc.size_g:] += vloc_g0[1]
+        ham_diag.data[..., gkspc.size_g :] += vloc_g0[1]
 
-    @qtmlogger.time('davidson:apply_g_psi')
-    def apply_g_psi(l_wfn: WavefunGType, l_evl: NDArray):
+    @qtmlogger.time("davidson:apply_g_psi")
+    def apply_g_psi(l_wfn: WavefunGType, l_evl: NDArray):  # type: ignore
         scala = 2.0
         for wfn_, evl_ in zip(l_wfn, l_evl):
             x = scala * (ham_diag - evl_)
             denom = 0.5 * (1 + x + np.sqrt(1 + (x - 1) ** 2)) / scala
-            wfn_ /= denom*2
+            wfn_ /= denom * 2
 
     evc = kswfn.evc_gk
     evl = gkspc.allocate_array(numeig)
-    unconv_flag = np.ones(numeig, dtype='bool', like=evl)
+    unconv_flag = np.ones(numeig, dtype="bool", like=evl)
     n_unconv = numeig
 
     ndim_max = numwork * numeig
     psi = WavefunG.empty(ndim_max)
     hpsi = WavefunG.empty(ndim_max)
-    ham_red = np.zeros((ndim_max, ndim_max), dtype='c16', like=evl)
-    ovl_red = np.zeros((ndim_max, ndim_max), dtype='c16', like=evl)
-    evc_red = np.zeros((numeig, ndim_max), dtype='c16', like=evl)
-    evl_red = np.zeros(numeig, dtype='c16', like=evl)
+    ham_red = np.zeros((ndim_max, ndim_max), dtype="c16", like=evl)
+    ovl_red = np.zeros((ndim_max, ndim_max), dtype="c16", like=evl)
+    evc_red = np.zeros((numeig, ndim_max), dtype="c16", like=evl)
+    evl_red = np.zeros(numeig, dtype="c16", like=evl)
 
     ndim = numeig
     psi[:ndim] = evc
@@ -92,30 +100,31 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
         if sl_start >= sl_stop:
             return slice(sl_start, sl_stop)
         len_ = sl_stop - sl_start
-        sca_start = sl_start \
-            + grprank * (len_ // grpsize) \
-            + min(grprank, len_ % grpsize)
-        sca_stop = sca_start \
-            + (len_ // grpsize) \
-            + (grprank < len_ % grpsize)
+        sca_start = (
+            sl_start + grprank * (len_ // grpsize) + min(grprank, len_ % grpsize)
+        )
+        sca_stop = sca_start + (len_ // grpsize) + (grprank < len_ % grpsize)
         return slice(sca_start, sca_stop)
 
-    def gen_bufspec(len_, grpsize):
-        grprank = np.arange(grpsize, dtype='i8', like=evl)
+    def gen_bufspec(len_: int, grpsize: int) -> np.ndarray:
+        grprank = np.arange(grpsize, dtype="i8")  # , like=evl)
+        # WARNING: Looks like `cupy.ndarray` is not supported
+        #          as a valid `Sequence[Count]` argument in `mpi4py.typing.BufSpecV` .
+        #          To be more precise, cupy.ndarray does not implement all the ABC `Sequence` methods.
         return (len_ // grpsize) + (grprank < len_ % grpsize)
 
-    @qtmlogger.time('davidson:compute_hpsi')
+    @qtmlogger.time("davidson:compute_hpsi")
     def compute_hpsi(istart, istop):
         with bgrp_inter as comm:
             sl_psi = slice(istart, istop)
             sl_bgrp = scatter_slice(sl_psi, comm.size, comm.rank)
             if sl_bgrp.stop > sl_bgrp.start:
                 ksham.h_psi(psi[sl_bgrp], hpsi[sl_bgrp])
+            # NOTE: The following Allgatherv is responsible for slightly slower performance of compute_hpsi
+            #        under band parallelization, compared to k-point parallelization.
             comm.Barrier()
             bufspec = gen_bufspec(istop - istart, comm.size) * basis_size
-            comm.Allgatherv(bgrp_inter.IN_PLACE, (
-                hpsi[sl_psi].data, bufspec
-            ))
+            comm.Allgatherv(bgrp_inter.IN_PLACE, (hpsi[sl_psi].data, bufspec))
 
     # Grouping the unconverged eigenvectors of the reduced hamiltonian together
     # For batched operations using matmul (GEMM)
@@ -145,36 +154,74 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     # of the reduced hamiltonian. The residual of the resulting wavefunctions
     # are used to expand the subspace. Preconditioning is applied to the
     # residuals before adding to the basis of the subspace
-    @qtmlogger.time('davidson:expand_psi')
-    def expand_psi():
+    @qtmlogger.time("davidson:expand_psi")
+    def expand_psi(band_parallel_expand_psi=True):
         nonlocal ndim
         sl_curr = slice(ndim)
         sl_new = slice(ndim, ndim + n_unconv)
-        with bgrp_inter as comm:
-            sl_bgrp = scatter_slice(sl_curr, comm.size, comm.rank)
 
-            np.matmul(evc_red[:n_unconv, sl_bgrp], psi[sl_bgrp], out=psi[sl_new])
-            np.matmul(evc_red[:n_unconv, sl_bgrp], hpsi[sl_bgrp], out=hpsi[sl_new])
-            comm.Allreduce(comm.IN_PLACE, psi[sl_new].data)
-            comm.Allreduce(comm.IN_PLACE, hpsi[sl_new].data)
+        # TODO: Use dedicated linear algebra parallelization level,
+        #       or some library that can choose and optimal no. of tasks for matmul.
+        if band_parallel_expand_psi:
+            with bgrp_inter as comm:
+                sl_unconv_bgrp = scatter_slice(slice(n_unconv), comm.size, comm.rank)
+                sl_new_bgrp = scatter_slice(sl_new, comm.size, comm.rank)
 
-        psi[sl_new] *= -evl_red[:n_unconv].reshape((-1, 1))
-        psi[sl_new] += hpsi[sl_new]
+                np.matmul(
+                    evc_red[sl_unconv_bgrp, sl_curr],
+                    psi._data[sl_curr],
+                    out=psi._data[sl_new_bgrp],
+                )
+                np.matmul(
+                    evc_red[sl_unconv_bgrp, sl_curr],
+                    hpsi._data[sl_curr],
+                    out=hpsi._data[sl_new_bgrp],
+                )
 
-        apply_g_psi(psi[sl_new], evl_red[:n_unconv])
-        psi[sl_new].normalize()
+                bufspec = gen_bufspec(n_unconv, comm.size) * basis_size
+                comm.Allgatherv(comm.IN_PLACE, (psi._data[sl_new], bufspec))
+                comm.Allgatherv(comm.IN_PLACE, (hpsi._data[sl_new], bufspec))
+        else:
+            if dftcomm.kgrp_intra.rank == 0:
+                psi[sl_new] = np.matmul(evc_red[:n_unconv, sl_curr], psi._data[sl_curr])
+                hpsi[sl_new] = np.matmul(
+                    evc_red[:n_unconv, sl_curr], hpsi._data[sl_curr]
+                )
+            dftcomm.kgrp_intra.Bcast(psi._data[sl_new])
+            dftcomm.kgrp_intra.Bcast(hpsi._data[sl_new])
+
+        if band_parallel_expand_psi:
+            with bgrp_inter as comm:
+                sl_new_bgrp = scatter_slice(sl_new, comm.size, comm.rank)
+                sl_unconv_bgrp = scatter_slice(slice(n_unconv), comm.size, comm.rank)
+
+                psi.data[sl_new_bgrp] *= -evl_red[sl_unconv_bgrp].reshape((-1, 1))
+                psi.data[sl_new_bgrp] += hpsi.data[sl_new_bgrp]
+                apply_g_psi(psi[sl_new_bgrp], evl_red[sl_unconv_bgrp])
+                psi[sl_new_bgrp].normalize()
+
+                bufspec = gen_bufspec(n_unconv, comm.size) * basis_size
+                comm.Allgatherv(bgrp_inter.IN_PLACE, (psi._data[sl_new], bufspec))
+        else:
+            psi.data[sl_new] *= -evl_red[:n_unconv].reshape((-1, 1))
+            psi.data[sl_new] += hpsi[sl_new]
+
+            apply_g_psi(psi[sl_new], evl_red[:n_unconv])
+            psi[sl_new].normalize()
         compute_hpsi(ndim, ndim + n_unconv)
         ndim += n_unconv
 
     # The reduced hamiltonian matrix needs to be expanded with the newly added
     # basis wavefunctions. The previously computed regions of the reduced
     # hamiltonian is not computed again.
+    @qtmlogger.time("davidson:update_red")
     def update_red():
         ham_red_ = ham_red[:ndim, :ndim]
         ovl_red_ = ovl_red[:ndim, :ndim]
 
-        ham_red_[:] = psi[:ndim].vdot(hpsi[:ndim])
-        ovl_red_[:] = psi[:ndim].vdot(psi[:ndim])
+        # Non-parallelized version of the section of parallelized code after this, for testing and for reference.
+        # ham_red_[:] = psi[:ndim].vdot(hpsi[:ndim])
+        # ovl_red_[:] = psi[:ndim].vdot(psi[:ndim])
 
         sl_new = slice(ndim - n_unconv, ndim)
         with bgrp_inter as comm:
@@ -185,12 +232,8 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
             comm.barrier()
 
             bufspec = gen_bufspec(n_unconv, comm.size) * ndim_max
-            comm.Allgatherv(
-                comm.IN_PLACE, (ham_red[sl_new], bufspec)
-            )
-            comm.Allgatherv(
-                comm.IN_PLACE, (ovl_red[sl_new], bufspec)
-            )
+            comm.Allgatherv(comm.IN_PLACE, (ham_red[sl_new], bufspec))
+            comm.Allgatherv(comm.IN_PLACE, (ovl_red[sl_new], bufspec))
 
         # hermitianize_mat(ham_red_, n_unconv)
         # hermitianize_mat(ovl_red_, n_unconv)
@@ -198,54 +241,58 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     # The reduced hamiltonian is solved and the corresponding eigenpairs
     # are broadcasted to all processes in kgrp
     if WavefunG.ndarray is np.ndarray:
+
         def solve_red():
             ham_red_ = ham_red[:ndim, :ndim]
             ovl_red_ = ovl_red[:ndim, :ndim]
             evc_red_ = evc_red[:, :ndim].T
 
             with kgrp_intra as comm:
+                # TODO: Use a parallel solver for the reduced Hamiltonian
+                #       (e.g. ScaLAPACK, ELPA, etc.).
+                #       Currently, this is the reason for slower band parallelization,
+                #       compared to k-point parallelization.
                 if comm.rank == 0:
                     evl_red[:], evc_red_[:] = eigh(
-                        ham_red_, ovl_red_, subset_by_index=[0, numeig - 1],
-                        lower=True
+                        ham_red_, ovl_red_, subset_by_index=[0, numeig - 1], lower=True
                     )
                 comm.Bcast(evc_red)
                 comm.Bcast(evl_red)
+
     elif CUPY_INSTALLED:
         import cupy as cp
+
         if WavefunG.ndarray is not cp.ndarray:
             raise TypeError
 
         from cupyx import seterr
-        seterr(linalg='raise')
+
+        seterr(linalg="raise")
+
         def solve_red():
             ham_red_ = ham_red[:ndim, :ndim]
             ovl_red_ = ovl_red[:ndim, :ndim]
-            # print('solve', np.sum(np.isnan(ham_red_)), np.sum(np.isnan(ovl_red_)))
-            # print(ovl_red_)
 
             with kgrp_intra as comm:
                 if comm.rank == 0:
                     # Generalized Eigenvalue Problem Ax = eBx
                     A, B = ham_red_, ovl_red_
                     L = cp.linalg.cholesky(B)
-                    # print(np.sum(np.isnan(L)))
                     L_inv = cp.linalg.inv(L)
-                    # print(np.sum(np.isnan(L_inv)))
-                    A = cp.tril(A, -1) + cp.tril(A, -1).T.conj() \
+                    A = (
+                        cp.tril(A, -1)
+                        + cp.tril(A, -1).T.conj()
                         + cp.diag(cp.diag(A).real)
+                    )
                     A_ = L_inv @ A @ L_inv.conj().T
-                    # print(np.sum(np.isnan(A_)))
-                    A_evl, A_evc = cp.linalg.eigh(A_, 'L')
+                    A_evl, A_evc = cp.linalg.eigh(A_, "L")
                     evl_red[:numeig] = A_evl[:numeig]
                     evc_red[:, :ndim] = cp.linalg.solve(L.conj().T, A_evc[:, :numeig]).T
                 comm.Bcast(evc_red)
                 comm.Bcast(evl_red)
-            # print('solve', np.sum(np.isnan(ham_red_)), np.sum(np.isnan(ovl_red_)),
-            #       np.sum(np.isnan(evl[:numeig])), np.sum(np.isnan(evc_red[:, :ndim])))
-            # print(evl_red)
+
     else:
-        raise TypeError('not supported')
+        raise TypeError("not supported")
 
     # Starting with input wavefunctions
     compute_hpsi(0, ndim)
@@ -255,7 +302,6 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
 
     idxiter = 0
     while idxiter < maxiter:
-        # debug: print('|'*30, idxiter, '|'*30)
         idxiter += 1
         move_unconv()
         expand_psi()
@@ -268,27 +314,48 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
             unconv_flag[:] = np.abs(evl_red - evl) > diago_thr
             comm.Bcast(unconv_flag)
 
-        n_unconv = np.sum(unconv_flag)
+        n_unconv = int(np.sum(unconv_flag))
         evl[:] = evl_red[:]
-        # debug: print(ndim, n_unconv)
         # If the number of basis vectors are exceeding the maximum limit
         # (as per 'numwork'), the basis needs to be reset/restarted
         # keeping only the required wavefunctions
         if n_unconv == 0 or ndim + n_unconv > ndim_max:
             with bgrp_inter as comm:
-                sl_bgrp = scatter_slice(slice(ndim), comm.size, comm.rank)
-                np.matmul(evc_red[:numeig, sl_bgrp], psi[sl_bgrp], out=evc[:])
-                comm.Allreduce(comm.IN_PLACE, evc.data)
+                sl_ndim = slice(ndim)
+                sl_numeig_bgrp = scatter_slice(slice(numeig), comm.size, comm.rank)
+                np.matmul(
+                    evc_red[sl_numeig_bgrp, sl_ndim],
+                    psi._data[sl_ndim],
+                    out=evc._data[sl_numeig_bgrp],
+                )
+                bufspec = gen_bufspec(numeig, comm.size) * basis_size
+                comm.Allgatherv(comm.IN_PLACE, (evc._data, bufspec))
                 if n_unconv == 0:
                     break
-                # debug: print('restart')
 
                 # WARNING: the new hpsi's are stored in psi temporarily
                 # as the matmul output must not overlap with input arguments
-                np.matmul(evc_red[:numeig, sl_bgrp], hpsi[sl_bgrp], out=psi[:numeig])
-                comm.Allreduce(comm.IN_PLACE, psi[:numeig].data)
-                hpsi[:numeig] = psi[:numeig]
-                psi[:numeig] = evc[:]
+                np.matmul(
+                    evc_red[sl_numeig_bgrp, sl_ndim],
+                    hpsi._data[sl_ndim],
+                    out=psi._data[sl_numeig_bgrp],
+                )
+                comm.Allgatherv(comm.IN_PLACE, (psi._data[:numeig], bufspec))
+                hpsi._data[:numeig] = psi._data[:numeig]
+                psi._data[:numeig] = evc._data[:]
+
+                # OLD VERSION:
+                # sl_bgrp = scatter_slice(slice(ndim), comm.size, comm.rank)
+                # np.matmul(evc_red[:numeig, sl_bgrp], psi[sl_bgrp], out=evc[:])
+                # comm.Allreduce(comm.IN_PLACE, evc.data)
+                # if n_unconv == 0:
+                #     break
+                # # WARNING: the new hpsi's are stored in psi temporarily
+                # # as the matmul output must not overlap with input arguments
+                # np.matmul(evc_red[:numeig, sl_bgrp], hpsi[sl_bgrp], out=psi[:numeig])
+                # comm.Allreduce(comm.IN_PLACE, psi[:numeig].data)
+                # hpsi[:numeig] = psi[:numeig]
+                # psi[:numeig] = evc[:]
 
             ndim = numeig
             ham_red[:], ovl_red[:], evc_red[:] = 0, 0, 0
@@ -299,5 +366,4 @@ def solve(dftcomm: DFTCommMod, ksham: KSHam, kswfn: KSWfn, diago_thr: float,
     kswfn.evc_gk[:] = evc
 
     kswfn.evl[:] = np.array(evl.real, like=kswfn.evl)
-    # print(kswfn.evl)
     return kswfn, idxiter

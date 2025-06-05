@@ -4,15 +4,17 @@ channels:
   - defaults
 dependencies:
   - python=3.11
-  - mkl_fft
-  - pylibxc
-  - mpi4py
-  - pyfftw
-  - ipykernel
-  - h5py
   - numpy
   - scipy
   - tqdm
   - spglib
+  - h5py
+  - pylibxc
+  - mpi4py
+  - pyfftw
+  - sphinx
+  - sphinx-rtd-theme
+  - sphinx-math-dollar
+  - numpydoc
 variables:
   OMP_NUM_THREADS: '1'

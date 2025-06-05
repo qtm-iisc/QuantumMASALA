@@ -21,8 +21,8 @@ from qtm.fft.backend.utils import get_fft_driver
 from qtm.gspace import GkSpace, GSpace
 from qtm.gspace.base import cryst2idxgrid
 from qtm.gw.core import QPoints, reorder_2d_matrix_sorted_gvecs, sort_cryst_like_BGW
-from qtm.gw.io_bgw.wfn2py import WfnData
-from qtm.gw.io_h5.h5_utils import *
+from qtm.interfaces.bgw.wfn2py import WfnData
+from qtm.interfaces.bgw.h5_utils import *
 from qtm.gw.vcoul import Vcoul
 from qtm.klist import KList
 from qtm.mpi.comm import MPI4PY_INSTALLED
@@ -222,36 +222,37 @@ class Sigma:
         l_wfn_kgrp_q: List[List[KSWfn]],
         sigmainp: NamedTuple,
         epsinp: NamedTuple,
-        epsilon:Epsilon,
+        epsilon: Epsilon,
         rho: NamedTuple,
         vxc: NamedTuple,
         outdir: str = None,
-        parallel: bool = True,       
+        parallel: bool = True,
     ):
         rho_temp = deepcopy(rho)
         rho_temp._data *= crystal.numel / (sum(rho_temp.data_g0))
 
-        rho_nt = namedtuple("RHO", ["rho", "gvecs"])(rho_temp.data[0], rho_temp.gspc.g_cryst.T)
-        vxc_nt = namedtuple("VXC", ["vxc"])(vxc/ELECTRONVOLT_HART)
-
+        rho_nt = namedtuple("RHO", ["rho", "gvecs"])(
+            rho_temp.data[0], rho_temp.gspc.g_cryst.T
+        )
+        vxc_nt = namedtuple("VXC", ["vxc"])(vxc / ELECTRONVOLT_HART)
 
         sigma = Sigma(
-            crystal = crystal,
-            gspace = gspace,
-            kpts = kpts,
+            crystal=crystal,
+            gspace=gspace,
+            kpts=kpts,
             kptsq=kptsq,
-            l_wfn = [wfn[0] for wfn in l_wfn_kgrp],
-            l_wfnq = [wfn[0] for wfn in l_wfn_kgrp_q],
-            l_gsp_wfn = [wfn[0].gkspc for wfn in l_wfn_kgrp],
-            l_gsp_wfnq = [wfn[0].gkspc for wfn in l_wfn_kgrp_q],
-            qpts = QPoints.from_cryst(kpts.recilat, epsinp.is_q0, *epsinp.qpts),
+            l_wfn=[wfn[0] for wfn in l_wfn_kgrp],
+            l_wfnq=[wfn[0] for wfn in l_wfn_kgrp_q],
+            l_gsp_wfn=[wfn[0].gkspc for wfn in l_wfn_kgrp],
+            l_gsp_wfnq=[wfn[0].gkspc for wfn in l_wfn_kgrp_q],
+            qpts=QPoints.from_cryst(kpts.recilat, epsinp.is_q0, *epsinp.qpts),
             sigmainp=sigmainp,
-            epsinp = epsinp,
+            epsinp=epsinp,
             l_epsmats=epsilon.l_epsinv,
             rho=rho_nt,
             vxc=vxc_nt,
             outdir=outdir,
-            parallel=parallel
+            parallel=parallel,
         )
         return sigma
 
@@ -385,12 +386,31 @@ class Sigma:
 
     def pprint_sigma_mat(self, mat):
         _mat = deepcopy(mat).real.T
-        print("  n  ",end="")
-        print(("    ik={:<5}" * _mat.shape[-1]).format(*self.l_k_indices))
-        
-        for i,row in enumerate(_mat.reshape(-1, _mat.shape[-1])):
-            print(f"{i+self.sigmainp.band_index_min:>3} ",end="")
-            print(("{:12.6f}" * _mat.shape[-1]).format(*np.around(row, 6)))
+
+        if mat.shape[1] <= 4:
+            # Create table header
+            header = "k-pt index   k-point (crystal coords)     " + (" " * 10).join(
+                [f"n={i+1:<3}" for i in range(mat.shape[1])]
+            )
+            print(header)
+            print("-" * len(header))
+
+            # Create table rows
+            for i, k_index in enumerate(self.l_k_indices):
+                k_point = self.kpts.cryst[k_index]
+                row = (
+                    f"{k_index:<11}   {k_point[0]:>5.3f}  {k_point[1]:>5.3f}  {k_point[2]:>5.3f}   "
+                    + "   ".join(
+                        [f"{mat[i, j].real:12.6f}" for j in range(mat.shape[1])]
+                    )
+                )
+                print(row)
+        else:
+            # Too many bands to print in one line
+            for i, k_index in enumerate(self.l_k_indices):
+                k_point = self.kpts.cryst[k_index]
+                print(f"k-point index: {k_index}\nk-point (crystal coords.): {k_point}")
+                print("Sigma matrix elements:", mat[i].real)
 
     # ==================================================================
     # Plane wave matrix elements calculation methods
@@ -406,12 +426,13 @@ class Sigma:
         l_k_indices=None,
     ):
         """
-        Parameters
-        ----------
-        i_q : index of q-point
-        bra_all_bands : If True, calculate mtxel for all bands for bra. Otherwise, only occupied bands
-        ket_all_bands : If True, calculate mtxel for all bands for ket. Otherwise, only unoccupied bands
-        ret_E : If True, return energy eigenvalues. Thisoption is useful for GPP Sigma, where energy eigenvalues corresponding to matrix elements are required.
+        Args:
+            i_q : index of q-point
+            bra_all_bands : If True, calculate mtxel for all bands for bra. Otherwise, only occupied bands
+            ket_all_bands : If True, calculate mtxel for all bands for ket. Otherwise, only unoccupied bands
+            ret_E : If True, return energy eigenvalues. Thisoption is useful for GPP Sigma, where energy eigenvalues corresponding to matrix elements are required.
+
+        Notes:
 
         To Calculate the M - matrix for calculation of polarizability.
 
@@ -536,13 +557,13 @@ class Sigma:
             for i_k_ket, i_k_bra in pairs_i_k:
                 i_k_ket_in_mtxel_call = np.where(self.l_k_indices == i_k_ket)[0][0]
                 for i_b_bra in range(n_bra):
-                    E_bra[i_k_ket_in_mtxel_call, i_b_bra] = self.l_wfn[i_k_bra].evl[
-                        i_b_bra + i_b_bra_beg
-                    ]  * 2
+                    E_bra[i_k_ket_in_mtxel_call, i_b_bra] = (
+                        self.l_wfn[i_k_bra].evl[i_b_bra + i_b_bra_beg] * 2
+                    )
                 for i_b_ket in range(n_ket):
-                    E_ket[i_k_ket_in_mtxel_call, i_b_ket] = self.l_wfn[i_k_ket].evl[
-                        i_b_ket + i_b_ket_beg
-                    ]  * 2
+                    E_ket[i_k_ket_in_mtxel_call, i_b_ket] = (
+                        self.l_wfn[i_k_ket].evl[i_b_ket + i_b_ket_beg] * 2
+                    )
 
         # Matrix elements calculation
 
@@ -723,8 +744,9 @@ class Sigma:
     def sigma_x(self, yielding=True, parallel=True):
         """
         Fock exchange energy term
-        =========================
-        Returns Sigma_x[i_k, i_band] for diag = True
+
+        Returns:
+          Sigma_x[i_k, i_band]
 
         - Sum _(n" over occupied, q, G, G')   M^*_n"n'(k,-q,-G)  M_n"n'(k,-q,-G')  delta_GG'  v(q+G')
         - Sum _(n" over occupied, q, G=G')    M^*_n"n'(k,-q,-G)  M_n"n'(k,-q,-G)  v(q+G)
@@ -821,7 +843,6 @@ class Sigma:
     def sigma_sx_static(self, yielding=True):
         """
         Static Screened Exchange
-        ========================
         """
 
         # Setting einstein summation string for M* M epsinv v
@@ -935,7 +956,6 @@ class Sigma:
     def sigma_ch_static(self, yielding=True):
         """
         Static Coulomb Hole (partial sum)
-        =================================
         """
 
         # Setting einstein summation string for M* M epsinv v
@@ -1031,10 +1051,10 @@ class Sigma:
 
     # @pw_logger.time("sigma:sigma_ch_static_exact")
     def sigma_ch_static_exact(self):
-        """
+        r"""
         Static Coulomb Hole (Exact)
-        ========================
-        0.5 * \Sum_{q,G,G'} = M_{n,n'}(k, q=0, G'-G) * [\eps^{-1}_{G,G'}(q;0) - \delta_{G,G'}] * v(q+G')
+
+        $$0.5 * \sum_{q,G,G'} = M_{n,n'}(k, q=0, G'-G) * [\varepsilon^{-1}_{G,G'}(q;0) - \delta_{G,G'}] * v(q+G')$$
 
         1e-3 disagreement: Doubt goes to limits on G'-G: is it all G and G' within cutoff or G-G' within cutoff
         """
@@ -1227,13 +1247,10 @@ class Sigma:
 
     # @pw_logger.time("sigma:sigma_sx_gpp")
     def sigma_sx_gpp(self, dE=0, yielding=True):
-        """
-        (H.L.) Plasmon Pole Screened Exchange
-        ======================================
+        r"""
+        (Hybertsen-Louie) Plasmon Pole Screened Exchange
 
-                                            Omega^2(G,G`)
-        SX(E) = M(n,G)*conj(M(m,G`)) * ------------------------ * Vcoul(G`)
-                                       (E-E_n1(k-q))^2-wtilde^2
+        $$\Sigma_{\text{SX}}(E) = M(n,G) \cdot M^*(m,G') \cdot \frac{\Omega^2(G,G')}{(E - E_{n1}(k-q))^2 - \tilde{\omega}^2} \cdot V_{\text{coul}}(G')$$
         """
 
         # Setting einstein summation string for M* M epsinv v
@@ -1444,13 +1461,10 @@ class Sigma:
 
     # @pw_logger.time("sigma:sigma_ch_gpp")
     def sigma_ch_gpp(self, dE=0, yielding=True):
-        """
+        r"""
         Plasmon Pole Coulomb Hole (partial sum)
-        =======================================
 
-                                            Omega^2(G,G`)
-        CH(E) = M(n,G)*conj(M(m,G`)) * ----------------------------- * Vcoul(G`)
-                                    2*wtilde*[E-E_n1(k-q)-wtilde]
+        $$\Sigma_{\text{CH}}(E) = M(n,G) \cdot M^*(m,G') \cdot \frac{\Omega^2(G,G')}{2 \cdot \tilde{\omega} \cdot [E - E_{n1}(k-q) - \tilde{\omega}]} \cdot V_{\text{coul}}(G')$$
 
         """
 
@@ -1714,7 +1728,9 @@ class Sigma:
         if self.print_condition:
             print()
             for k in range(len(self.l_k_indices)):
-                print(f"\n       k =  {self.kpts.cryst[k,0]:.6f}  {self.kpts.cryst[k,1]:.6f}  {self.kpts.cryst[k,2]:.6f} ik =  {k} spin = 1")
+                print(
+                    f"\n       k =  {self.kpts.cryst[k,0]:.6f}  {self.kpts.cryst[k,1]:.6f}  {self.kpts.cryst[k,2]:.6f} ik =  {k} spin = 1"
+                )
                 print(
                     "   n         Emf          Eo           X        SX-X          CH         Sig         Vxc        Eqp0        Eqp1         CH`        Sig`       Eqp0`       Eqp1`         Znk"
                 )
@@ -1930,7 +1946,9 @@ class Sigma:
         )
         if self.print_condition:
             for k in range(len(self.l_k_indices)):
-                print(f"\n       k =  {self.kpts.cryst[k,0]:.6f}  {self.kpts.cryst[k,1]:.6f}  {self.kpts.cryst[k,2]:.6f} ik =  {k} spin = 1")
+                print(
+                    f"\n       k =  {self.kpts.cryst[k,0]:.6f}  {self.kpts.cryst[k,1]:.6f}  {self.kpts.cryst[k,2]:.6f} ik =  {k} spin = 1"
+                )
                 print(
                     "   n         Emf          Eo           X        SX-X          CH         Sig         Vxc        Eqp0        Eqp1         CH`        Sig`       Eqp0`       Eqp1`         Znk"
                 )
@@ -1997,8 +2015,8 @@ if __name__ == "__main__":
     # Load WFN data
 
     # from qtm.mpi.comm import qtmconfig.mpi4py_installed, COMM_WORLD
-    from qtm.gw.io_bgw import inp
-    from qtm.gw.io_bgw.epsmat_read_write import read_mats
+    from qtm.interfaces.bgw import inp
+    from qtm.interfaces.bgw.epsmat_read_write import read_mats
 
     if MPI4PY_INSTALLED and COMM_WORLD.Get_size() > 1:
         in_parallel = True
@@ -2030,7 +2048,7 @@ if __name__ == "__main__":
     epsinp = inp.read_epsilon_inp(filename=dirname + "epsilon.inp")
 
     # wfn2py
-    from qtm.gw.io_bgw.wfn2py import wfn2py
+    from qtm.interfaces.bgw.wfn2py import wfn2py
 
     if print_condition:
         print(f"Reading WFN.h5 from directory: {dirname}", flush=True)

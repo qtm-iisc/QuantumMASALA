@@ -1,8 +1,11 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+
+from qtm.fft.backend.utils import get_fft_driver
+
 if TYPE_CHECKING:
     from typing import Sequence
-__all__ = ['GSpaceBase', 'cryst2idxgrid']
+__all__ = ["GSpaceBase", "cryst2idxgrid"]
 
 import numpy as np
 
@@ -41,16 +44,20 @@ def check_g_cryst(shape: tuple[int, int, int], g_cryst: NDArray) -> None:
     assert all(isinstance(ni, int) and ni > 0 for ni in shape)
 
     # Check if 'g_cryst' is an array with correct shape and dtype
-    assert isinstance(g_cryst, NDArray)
+    from qtm.config import NDArray
+
+    assert isinstance(
+        g_cryst, NDArray
+    ), f"Expected 'g_cryst' to be a {NDArray} array, got {type(g_cryst)}."
     assert g_cryst.ndim == 2
-    assert g_cryst.dtype == 'i8'
+    assert g_cryst.dtype == "i8"
     assert g_cryst.shape[0] == 3
 
     # Check if values are within bounds
     for idim, n in enumerate(shape):
-        assert np.all(g_cryst[idim] >= -(n // 2)) \
-            and np.all(g_cryst[idim] < (n + 1) // 2), \
-            f"'g_cryst' has points that lie outside of the FFT grid"
+        assert np.all(g_cryst[idim] >= -(n // 2)) and np.all(
+            g_cryst[idim] < (n + 1) // 2
+        ), f"'g_cryst' has points that lie outside of the FFT grid"
 
 
 def cryst2idxgrid(shape: tuple[int, int, int], g_cryst: NDArray) -> NDArray:
@@ -75,9 +82,11 @@ def cryst2idxgrid(shape: tuple[int, int, int], g_cryst: NDArray) -> NDArray:
     check_g_cryst(shape, g_cryst)
     n1, n2, n3 = shape
     i1, i2, i3 = g_cryst
-    idxgrid = n2 * n3 * (i1 + n1 * (i1 < 0)) \
-        + n3 * (i2 + n2 * (i2 < 0)) \
+    idxgrid = (
+        n2 * n3 * (i1 + n1 * (i1 < 0))
+        + n3 * (i2 + n2 * (i2 < 0))
         + (i3 + n3 * (i3 < 0))
+    )
     return idxgrid
 
 
@@ -96,19 +105,22 @@ def _sort_g(grid_shape: tuple[int, int, int], idxgrid: NDArray) -> NDArray:
     This requires the G-vectors to be grouped into sticks that are
     parallel to X-axis and distributed as evenly as possibly.
     """
-    ix, iy, iz = np.unravel_index(idxgrid, grid_shape, order='C')
+    ix, iy, iz = np.unravel_index(idxgrid, grid_shape, order="C")
     # Arrays stacked below because CuPy's lexsort works with a single 2D array
     # and not tuple of 1d arrays
     return np.lexsort(np.stack((ix, iz, iy)))
 
 
 class GSpaceBase:
-
-    FFT3D = FFT3DFull
     _normalise_idft: bool = True
 
-    def __init__(self, recilat: ReciLattice, grid_shape: tuple[int, int, int],
-                 g_cryst: NDArray, backend: str | None = None):
+    def __init__(
+        self,
+        recilat: ReciLattice,
+        grid_shape: tuple[int, int, int],
+        g_cryst: NDArray,
+        backend: str | None = None,
+    ):
         self.recilat: ReciLattice = recilat
         """Reciprocal Lattice"""
 
@@ -142,8 +154,11 @@ class GSpaceBase:
         self.reallat_dv: float = self.reallat_cellvol / np.prod(self.grid_shape)
         """Differential volume used when evaluating integrals across a unit-cell
         of the real-space lattice"""
+        self.FFT3D = get_fft_driver()
         self._fft = self.FFT3D(
-            self.grid_shape, self.idxgrid, normalise_idft=self._normalise_idft,
+            self.grid_shape,
+            self.idxgrid,
+            normalise_idft=self._normalise_idft,
             backend=backend,
         )
         """FFT Module"""
@@ -162,15 +177,14 @@ class GSpaceBase:
     @property
     def g_norm2(self) -> NDArray:
         """(``(size, )``, ``'f8'``) Norm squared of G vectors."""
-        return self.recilat.norm2(self.g_cryst, 'cryst')
+        return self.recilat.norm2(self.g_cryst, "cryst")
 
     @property
     def g_norm(self) -> NDArray:
         """(``(size, )``, ``'f8'``) Norm of G vectors."""
         return np.sqrt(self.g_norm2)
 
-    def allocate_array(self, shape: int | Sequence[int],
-                       dtype: str = 'c16') -> NDArray:
+    def allocate_array(self, shape: int | Sequence[int], dtype: str = "c16") -> NDArray:
         """Returns an empty C-contiguous array of given shape and dtype.
 
         Parameters
@@ -219,13 +233,13 @@ class GSpaceBase:
         """
         self.check_array_type(arr)
         if arr.ndim == 0:
-            raise ValueError(value_mismatch_msg(
-                'arr.ndim', arr.ndim, 'a positive integer'
-            ))
+            raise ValueError(
+                value_mismatch_msg("arr.ndim", arr.ndim, "a positive integer")
+            )
         if arr.shape[-1] != self.size_r:
-            raise ValueError(value_mismatch_msg(
-                'arr.shape', arr.shape, (..., self.size_r)
-            ))
+            raise ValueError(
+                value_mismatch_msg("arr.shape", arr.shape, (..., self.size_r))
+            )
 
     def check_array_g(self, arr: NDArray) -> None:
         """Checks if last axis of input array has length `size_g`
@@ -242,17 +256,18 @@ class GSpaceBase:
         """
         self.check_array_type(arr)
         if arr.ndim == 0:
-            raise ValueError(value_mismatch_msg(
-                'arr.ndim', arr.ndim, 'a positive integer'
-            ))
+            raise ValueError(
+                value_mismatch_msg("arr.ndim", arr.ndim, "a positive integer")
+            )
         if arr.shape[-1] != self.size_g:
-            raise ValueError(value_mismatch_msg(
-                'arr.shape', arr.shape, (..., self.size_g)
-            ))
+            raise ValueError(
+                value_mismatch_msg("arr.shape", arr.shape, (..., self.size_g))
+            )
 
     def _r2g(self, arr_r: NDArray, arr_g: NDArray):
-        for inp, out in zip(arr_r.reshape(-1, *self.grid_shape),
-                            arr_g.reshape(-1, self.size_g)):
+        for inp, out in zip(
+            arr_r.reshape(-1, *self.grid_shape), arr_g.reshape(-1, self.size_g)
+        ):
             self._fft.r2g(inp, out)
 
     def r2g(self, arr_r: NDArray, arr_g: NDArray | None = None) -> NDArray:
@@ -265,8 +280,9 @@ class GSpaceBase:
         return arr_g
 
     def _g2r(self, arr_g: NDArray, arr_r: NDArray):
-        for inp, out in zip(arr_g.reshape(-1, self.size_g),
-                            arr_r.reshape(-1, *self.grid_shape)):
+        for inp, out in zip(
+            arr_g.reshape(-1, self.size_g), arr_r.reshape(-1, *self.grid_shape)
+        ):
             self._fft.g2r(inp, out)
 
     def g2r(self, arr_g: NDArray, arr_r: NDArray | None = None) -> NDArray:

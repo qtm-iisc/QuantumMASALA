@@ -1,0 +1,42 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Ne-106'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 4
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Ne 20.1797 Ne_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+22 22 22  1 1 1
+
+CELL_PARAMETERS angstrom
+4.71328262518539 0.00000000000000 0.00000000000000
+0.00000000000000 4.71328262518539 0.00000000000000
+0.00000000000000 0.00000000000000 4.71328262518539
+
+ATOMIC_POSITIONS angstrom
+Ne 1.1783206563 1.1783206563 1.1783206563 
+Ne 1.1783206563 3.5349619689 3.5349619689 
+Ne 3.5349619689 1.1783206563 3.5349619689 
+Ne 3.5349619689 3.5349619689 1.1783206563 
+

@@ -1,0 +1,40 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Hf-100'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 2
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Hf 178.49 Hf_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+36 36 20  1 1 1
+
+CELL_PARAMETERS angstrom
+3.20273000000000 0.00000000000000 0.00000000000000
+1.60136500000000 2.77364554146253 0.00000000000000
+0.00000000000000 0.00000000000000 5.06493000000000
+
+ATOMIC_POSITIONS angstrom
+Hf 1.6013730068 0.9245531366 1.2662325000 
+Hf 3.2027219932 1.8490924049 3.7986975000 
+

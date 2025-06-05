@@ -1,0 +1,41 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Li-106'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 3
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Li 6.94 Li_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+38 38 38  1 1 1
+
+CELL_PARAMETERS angstrom
+7.78988274781863 0.00000000000000 0.00000000000000
+7.15888435018319 3.07126164392820 0.00000000000000
+7.15888435018319 1.47081072130520 2.69617579314818
+
+ATOMIC_POSITIONS angstrom
+Li 2.4563811524 0.5046696605 0.2995720924 
+Li 7.3691434572 1.5140089815 0.8987162771 
+Li 19.6512702958 4.0374027047 2.3966037008 
+

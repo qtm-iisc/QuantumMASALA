@@ -1,0 +1,40 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Ge-98'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 2
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Ge 72.63 Ge_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+30 30 30  1 1 1
+
+CELL_PARAMETERS angstrom
+4.04684561905093 0.00000000000000 0.00000000000000
+2.02342280952547 3.50467111129187 0.00000000000000
+2.02342280952547 1.16822370376396 3.30423561149743
+
+ATOMIC_POSITIONS angstrom
+Ge 3.0351342143 1.7523355556 1.2390883543 
+Ge 5.0585570238 2.9205592594 2.0651472572 
+

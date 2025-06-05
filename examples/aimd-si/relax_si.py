@@ -1,0 +1,236 @@
+import numpy as np
+import time
+"""
+This example file demonstrates the usage of G-space parallelization in QuantumMASALA.
+
+The code performs a self-consistent field (SCF) calculation for a silicon supercell.
+
+The main steps of the code are as follows:
+1. Import necessary modules and libraries.
+2. Set up the communication world for parallelization.
+3. Define the lattice and atom basis for the crystal.
+4. Generate the supercell based on the specified size.
+5. Generate k-points using a Monkhorst Pack grid.
+6. Set up the G-Space for the calculation.
+7. Perform the SCF calculation using the specified parameters.
+8. Print the SCF convergence status and results.
+
+Example usage:
+python si_scf_supercell.py <supercell_size>
+
+Parameters:
+- supercell_size: The size of the supercell in each dimension.
+
+Output:
+- SCF convergence status and results.
+
+"""
+from qtm.constants import RYDBERG
+from qtm.lattice import RealLattice
+from qtm.crystal import BasisAtoms, Crystal
+from qtm.mpi.gspace import DistGSpace
+from qtm.pseudo import UPFv2Data
+from qtm.kpts import gen_monkhorst_pack_grid
+from qtm.gspace import GSpace
+from qtm.mpi import QTMComm
+from qtm.dft import DFTCommMod, scf
+from qtm.force import force, force_ewald, force_local, force_nonloc
+from qtm.relaxation import relax
+from qtm.io_utils.dft_printers import print_scf_status
+
+import argparse
+
+from qtm import qtmconfig
+from qtm.logger import qtmlogger
+
+initial_time=time.time()
+
+# qtmconfig.fft_backend = "pyfftw"
+qtmconfig.set_gpu(False)
+
+from qtm.config import MPI4PY_INSTALLED
+if MPI4PY_INSTALLED:
+    from mpi4py.MPI import COMM_WORLD
+else:
+    COMM_WORLD = None
+
+comm_world = QTMComm(COMM_WORLD)
+
+# Only G-space parallelization
+# K-point and/or band parallelization along with G-space parallelization is currently broken.
+dftcomm = DFTCommMod(comm_world, 1, comm_world.size)
+
+parser = argparse.ArgumentParser()
+parser.add_argument("supercell_size", help="Side length of the supercell", type=int)
+
+args = parser.parse_args()
+supercell_size = args.supercell_size
+
+alat=10.2*supercell_size
+# Lattice
+reallat = RealLattice.from_alat(
+    alat, a1=[-0.5, 0.0, 0.5], a2=[0.0, 0.5, 0.5], a3=[-0.5, 0.5, 0.0]  # Bohr
+)
+
+# Atom Basis
+si_oncv = UPFv2Data.from_file("Si_ONCV_PBE-1.2.upf")
+
+si_atoms = BasisAtoms(
+    "si",
+    si_oncv,
+    28.086,
+    reallat,
+    np.array([[0.875, 0.875, 0.875], [0.125, 0.125, 0.125]]).T,
+)
+
+crystal_unit = Crystal(reallat, [si_atoms]) 
+crystal_supercell=crystal_unit.gen_supercell([supercell_size] * 3)
+##print the crystal coordinates of the supercell
+#print("The crystal coordinates of the supercell", crystal_supercell.l_atoms[0].r_alat)
+r_alat_supercell=crystal_supercell.l_atoms[0].r_alat.T
+
+#print("the original coordinates are", r_alat_supercell)
+
+data=[[ 6.58943879e-04,6.91497266e-04,7.48515032e-05],
+ [-6.05728097e-05, -8.75943473e-04, -7.04679950e-04],
+ [-6.10954497e-04, -7.56690520e-04, -8.03117566e-04],
+ [-9.45313375e-04, -9.18127002e-04,4.66155557e-04],
+ [-5.54215340e-04, -3.11150267e-04,6.97699613e-04],
+ [ 4.70218205e-04, -2.94599103e-04,5.82396611e-04],
+ [ 1.34223693e-04,5.39662464e-04, -7.56884917e-04],
+ [ 1.46562007e-04, -4.75724968e-04,3.49339605e-05],
+ [ 3.69045709e-05,5.57544205e-04, -2.28853210e-04],
+ [-9.00268630e-05, -5.47027040e-04,1.76136806e-04],
+ [ 4.61637614e-04, -9.79828799e-04, -1.53985018e-04],
+ [-2.81704763e-04,9.31582408e-04,8.38253258e-04],
+ [-2.83497159e-04, -4.75322115e-04, -2.09080901e-04],
+ [ 6.31048459e-04, -4.72329903e-04,8.38034461e-04],
+ [ 4.90094430e-04,5.37888451e-04,1.71644742e-04],
+ [ 1.10833347e-04,8.81252041e-05,5.23560885e-04],
+ [-5.04979146e-04,4.49471438e-04,5.75469663e-04],
+ [-9.10478528e-05,8.85532305e-04,1.91818065e-04],
+ [ 4.73158124e-04, -9.14054407e-04, -6.20230266e-04],
+ [-7.51088497e-04,6.05364535e-04, -2.27549946e-04],
+ [ 1.47776811e-05,9.24451428e-04, -7.83801622e-04],
+ [ 6.93567368e-04, -2.98025129e-04, -3.18008522e-05],
+ [ 6.61267454e-04,2.22968662e-04,8.32347226e-04],
+ [-8.07183488e-04, -1.18307189e-04, -9.11752326e-04],
+ [-3.28766544e-04, -9.00191478e-04, -5.56297740e-04],
+ [-6.12949076e-04,4.61322052e-05, -6.24005589e-04],
+ [ 5.57522831e-04, -6.27987365e-04, -8.37730046e-04],
+ [-2.85304595e-04, -7.31672139e-04, -7.44141875e-04],
+ [-9.74106801e-04, -5.89766002e-04,6.74298368e-04],
+ [ 8.13531704e-05,1.91106733e-04, -8.15295801e-04],
+ [ 8.46892006e-04,9.03127092e-04, -2.45955077e-04],
+ [-6.59793927e-04,6.62838914e-04,4.50476010e-04],
+ [ 7.42760612e-04, -8.01320341e-04, -3.15969379e-04],
+ [ 8.52419875e-04, -9.60273012e-04,1.13681948e-04],
+ [-7.97482839e-04, -3.91599552e-04, -3.26885348e-04],
+ [ 3.98426986e-04,6.32619791e-04,5.24122998e-04],
+ [ 3.78839087e-04, -4.99125943e-04,6.51472900e-05],
+ [ 1.25583492e-04,6.68896747e-04, -8.03354387e-05],
+ [ 3.94636444e-04, -1.14553966e-04, -1.74867050e-04],
+ [-5.76888111e-04, -6.50713363e-04, -3.05995101e-04],
+ [ 9.81393712e-04, -8.63231993e-04, -9.23577518e-04],
+ [-4.37174688e-04,9.40450698e-04, -5.56705373e-04],
+ [-3.84127055e-04,2.60384611e-05,1.92124696e-04],
+ [ 4.15749460e-04, -4.67585213e-04, -8.85328530e-04],
+ [ 9.42300802e-04, -2.92518048e-04, -2.63869872e-04],
+ [ 7.44418850e-04, -9.10014530e-04,9.49943459e-05],
+ [-6.26709933e-04, -3.45556276e-04,4.59098437e-04],
+ [-5.09495385e-04,6.92071890e-04,6.30685829e-04],
+ [ 6.63648691e-04, -1.68377664e-04,7.66466740e-04],
+ [ 5.65275529e-05,9.75354510e-04, -7.27349789e-04],
+ [-3.82731670e-04, -6.25633060e-04, -1.78607492e-04],
+ [-4.04577925e-04, -6.72948025e-05,4.37152063e-04],
+ [ 1.58613273e-04,1.07264431e-04, -9.99014418e-04],
+ [-9.95646352e-04, -2.10658918e-04,9.96020775e-04]]
+
+data=np.array(data)
+N=r_alat_supercell
+##Delete the 7th row of N
+N=np.delete(N, 6, 0)
+
+#print("the new coordinates in alat units", N)
+
+si_atoms_supercell = BasisAtoms.from_alat(
+    "si",
+    si_oncv,
+    28.086,
+    reallat,
+    N,  # Fractional coordinates
+)
+
+crystal = Crystal(reallat, [si_atoms_supercell]) 
+
+ # Represents the crystal
+
+#crystal = crystal.gen_supercell([supercell_size] * 3)
+##We want to print the coordinates of the Si atms
+#print("Si basis", si_basis.r_alat)
+#coordinates=generate_coordinates(supercell_size).T
+## Set this as the new coordinates of the basis
+#si_basis.r_cart=coordinates
+#print("new coordinates", si_basis.r_cart)
+# Generating k-points from a Monkhorst Pack grid (reduced to the crystal's IBZ)
+mpgrid_shape = (1, 1, 1)
+mpgrid_shift = (False, False, False)
+kpts = gen_monkhorst_pack_grid(crystal, mpgrid_shape, mpgrid_shift)
+
+# -----Setting up G-Space of calculation-----
+ecut_wfn = 10 * RYDBERG
+ecut_rho = 4 *ecut_wfn
+grho_serial = GSpace(crystal.recilat, ecut_rho)
+
+# If G-space parallelization is not required, use the serial G-space object
+#print("N_pwgrp", dftcomm.n_pwgrp)
+#print("Image_comm_size", dftcomm.image_comm.size)
+if dftcomm.n_pwgrp == dftcomm.image_comm.size:  
+    grho = grho_serial
+else:
+    grho = DistGSpace(comm_world, grho_serial)
+gwfn = grho
+
+#Number of Bands
+tot_num = np.sum([sp.numatoms for sp in crystal.l_atoms])
+extra_band=max(4, int(2*tot_num))
+numbnd = int(2*tot_num)+extra_band # Ensure adequate # of bands if system is not an insulator
+conv_thr = 1e-8 * RYDBERG
+diago_thr_init = 1e-2 * RYDBERG
+
+##Constraint
+constraint=np.ones(tot_num)
+#constraint[0]=0
+
+
+occ = 'smear'
+smear_typ = 'gauss'
+e_temp = 1E-2 * RYDBERG
+
+
+'''smear_typ=smear_typ,
+            e_temp=e_temp,'''
+
+out = relax(dftcomm=dftcomm, 
+            constraint=constraint, 
+            crystal=crystal, 
+            kgrid=mpgrid_shape, 
+            kshift=mpgrid_shift , 
+            ecut_wfn=ecut_wfn,
+            numbnd=numbnd, 
+            is_spin=False, 
+            is_noncolin=False,
+            use_symm=True,
+            is_time_reversal=True,
+            symm_rho=True, 
+            rho_start=None, 
+            occ_typ='smear',
+            smear_typ=smear_typ,
+            e_temp=e_temp,
+            mix_beta=0.3,
+            conv_thr=conv_thr, diago_thr_init=diago_thr_init,
+            iter_printer=print_scf_status)
+
+cryst_final, en_final=out
+
+print("cryst_final", [sp.r_alat for sp in cryst_final.l_atoms])

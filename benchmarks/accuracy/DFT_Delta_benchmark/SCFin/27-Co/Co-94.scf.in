@@ -1,0 +1,41 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Co-94'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 2
+   starting_magnetization(1) = 0.058823529411764705
+   ntyp             = 1
+   nat              = 2
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Co  58.933194 Co_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+46 46 24  1 1 1
+
+CELL_PARAMETERS angstrom
+2.44583059624101 0.00000000000000 0.00000000000000
+1.22291529812051 2.11815142969796 0.00000000000000
+0.00000000000000 0.00000000000000 3.94852548287177
+
+ATOMIC_POSITIONS angstrom
+Co  1.2229214127 0.7060540068 0.9871313707
+Co  2.4458244817 1.4120974229 2.9613941122
+

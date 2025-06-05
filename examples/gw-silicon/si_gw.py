@@ -1,13 +1,9 @@
-# %% [markdown]
-# ### Tutorial Notebook: G<sub>0</sub>W<sub>0</sub> Approximation 
+
+# Tutorial: G0W0 Approximation 
 # 
-# In this notebook, we present an example calculation of quasiparticle energies using QuatumMASALA's `gw` module.
+# In this example, we present an example calculation of quasiparticle energies using QuatumMASALA's `gw` module.
 
-# %%
-%load_ext autoreload
-%autoreload 2
 
-# %%
 # Imports
 import numpy as np
 import sys
@@ -16,12 +12,11 @@ sys.path.append(".")
 
 dirname = "./"
 
-# %% [markdown]
-# ### DFT Calculation
-# 
+
+# DFT Calculation
 # We will start with a DFT calculation to get the energy eigenfunctions and eigenvalues.
 
-# %%
+
 import numpy as np
 
 from qtm.constants import RYDBERG, ELECTRONVOLT
@@ -37,22 +32,29 @@ from qtm.io_utils.dft_printers import print_scf_status
 
 from qtm import qtmconfig
 from qtm.logger import qtmlogger
+qtmconfig.set_gpu(False)
 # qtmconfig.fft_backend = 'mkl_fft'
 
-from mpi4py.MPI import COMM_WORLD
+from qtm.config import MPI4PY_INSTALLED
+if MPI4PY_INSTALLED:
+    from mpi4py.MPI import COMM_WORLD
+else:
+    COMM_WORLD = None
 comm_world = QTMComm(COMM_WORLD)
-dftcomm = DFTCommMod(comm_world)
+dftcomm = DFTCommMod(comm_world, 1, comm_world.size)    
+# FIXME: kpts.KList and klist.KList are not fully compatible.
+#        Therefore, as a temporary fix, we are running the dft calculations serially.
 
 # Lattice
 reallat = RealLattice.from_alat(alat=10.2,  # Bohr
-                                a1=[-0.5,  0.0,  0.5],
-                                a2=[ 0.0,  0.5,  0.5],
-                                a3=[-0.5,  0.5,  0.0])
+                                a1=[-0.5,  0. ,  0.5],
+                                a2=[ 0. ,  0.5,  0.5],
+                                a3=[-0.5,  0.5,  0. ])
 
 # Atom Basis
 si_oncv = UPFv2Data.from_file('Si_ONCV_PBE-1.2.upf')
 si_atoms = BasisAtoms.from_alat('Si', si_oncv, 28.086, reallat,
-                               [[0.875, 0.875, 0.875], [0.125, 0.125, 0.125]])
+                               np.array([[0.875, 0.875, 0.875], [0.125, 0.125, 0.125]]))
 
 crystal = Crystal(reallat, [si_atoms, ])  # Represents the crystal
 
@@ -64,7 +66,6 @@ y = np.linspace(0,1,mpgrid_shape[1], endpoint=False)
 z = np.linspace(0,1,mpgrid_shape[2], endpoint=False)
 xx,yy,zz = np.meshgrid(x,y,z, indexing="ij")
 kcryst = np.vstack([xx.flatten(),yy.flatten(),zz.flatten()])
-
 kpts = KList(recilat=crystal.recilat, k_coords=kcryst, k_weights=np.ones(kcryst.shape[1])/kcryst.shape[1])
 
 
@@ -76,7 +77,7 @@ gwfn = grho
 
 # -----Spin-polarized (collinear) calculation-----
 is_spin, is_noncolin = False, False
-mag_start = [0.0]
+mag_start = None#[0.0]
 numbnd_occ = 4
 numbnd_nscf = 30
 
@@ -85,11 +86,10 @@ occ = 'fixed'
 conv_thr = 1E-8 * RYDBERG
 diago_thr_init = 1E-2 * RYDBERG
 
-# %% [markdown]
+
 # ### DFT: SCF calculation for occupied bands
 
-# %%
-from qtm.constants import ELECTRONVOLT_HART
+
 from qtm.kpts import KList
 
 
@@ -106,11 +106,11 @@ scf_out = scf(dftcomm, crystal, kpts, grho, gwfn,
 print("SCF Routine has exited")
 # print(qtmlogger)
 
-# %% [markdown]
-# #### DFT: NSCF calculation for unshifted grid
+
+# DFT: NSCF calculation for unshifted grid
 # Observe that `maxiter` has been set to `1` and `diago_thr_init` has been set to a high value.
 
-# %%
+
 rho = scf_out[1].copy()
 nscf_out = scf(dftcomm, crystal, kpts, grho, gwfn,
           numbnd_nscf, is_spin, is_noncolin,
@@ -124,12 +124,12 @@ nscf_out = scf(dftcomm, crystal, kpts, grho, gwfn,
 
 scf_converged_nscf, rho_nscf, l_wfn_kgrp, en_nscf, vxc = nscf_out
 
-# %% [markdown]
+
 # #### DFT: NSCF calculation for shifted grid
 # 
 # Dielectric matrix calculation for the $q\to 0$ point will require energy eigenfunctions for a slightly shifted $k$-grid.
 
-# %%
+
 k_coords_q = kpts.k_cryst+np.array([[0,0,0.001]]).T
 k_weights_q = np.ones(k_coords_q.shape[1])/k_coords_q.shape[1]
 kpts_q = KList(recilat=crystal.recilat, k_coords=k_coords_q, k_weights=k_weights_q)
@@ -147,17 +147,17 @@ out_q = scf(dftcomm, crystal, kpts_q, grho, gwfn,
 scf_converged_nscf_q, rho_nscf_q, l_wfn_kgrp_q, en_nscf_q = out_q
 
 
-print("Shifted SCF Routine has exited")
+print("Shifted NSCF Routine has exited")
 # print(qtmlogger)
 
-# %% [markdown]
-# ### Load Input Files
+
+# Load Input Files
 # Input data is handled by the ``EpsInp`` class.\
 # The data can be provided either by constructing the ``EpsInp`` object or by reading BGW-compatible input file ``epsilon.inp``.\
 # The attributes have been supplied with docstrings from BerkeleyGW's input specification, so they will be accessible directly in most IDEs.
 
-# %%
-from qtm.gw.io_bgw.epsinp import Epsinp
+
+from qtm.interfaces.bgw.epsinp import Epsinp
 
 # Constructing input manually
 # epsinp = Epsinp(epsilon_cutoff=1.2,
@@ -172,16 +172,16 @@ epsinp = Epsinp.from_epsilon_inp(filename=dirname+'epsilon.inp')
 # print(epsinp)
 
 # There is an analogous system to read SigmaInp
-from qtm.gw.io_bgw.sigmainp import Sigmainp
+from qtm.interfaces.bgw.sigmainp import Sigmainp
 sigmainp = Sigmainp.from_sigma_inp(filename=dirname+'sigma.inp')
 # print(sigmainp)
 
-# %% [markdown]
-# ### Initialize Epsilon Class
+
+# Initialize Epsilon Class
 # 
 # ``Epsilon`` class can be initialized by either directly passing the required `quantummasala.core` objects or by passing the input objects discussed earlier.
 
-# %%
+
 from qtm.gw.core import QPoints
 from qtm.gw.epsilon import Epsilon
 from qtm.klist import KList
@@ -203,39 +203,13 @@ epsilon = Epsilon(
 
 # epsilon = Epsilon.from_data(wfndata=wfndata, wfnqdata=wfnqdata, epsinp=epsinp)
 
-# %% [markdown]
+
 # The three main steps involved in the calculation have been mapped to the corresponding functions:
 # 1.  ``matrix_elements``: Calculation of Planewave Matrix elements
 # 2.  ``polarizability``: Calculation of RPA polarizability matrix $P$
 # 3.  ``epsilon_inverse``: Calculation of (static) epsilon-inverse matrix
-# 
-# <!-- 1.  ``matrix_elements``: Calculation of Planewave Matrix elements
-#     $$M_{nn'}({\textbf k},{\textbf q},{\textbf G}) = \bra{n\,{\textbf k}{+}{\textbf q}}e^{i({\textbf q}+{\textbf G})\cdot{\textbf r}}\ket{n'\,\textbf k}$$
-#     where the $\textbf G$-vectors included in the calculation satisfy $|\textbf q + \textbf G|^2 < E_{\text{cut}}$.
-#     Since this is a convolution in k-space, the time complexity can be reduced from $\mathcal{O}\left(N^2_G\right)$ to $\mathcal{O}\left(N_G\ln N_G\right)$ by using Fast Fourier Transform, where $N_G$  the number of reciprocal lattice vectors in the wavefunction.
-#     $$
-#     M_{nn'}({\bf k},{\bf q},\{{\bf G}\}) = {\rm FFT}^{-1}\left( \phi^{*}_{n,{\bf k}+{\bf q} }({\bf r}) \phi_{n',{\bf k} }({\bf r}) \right).
-#     $$
-#     where $\phi_{n',{\bf k}}({\bf r}) = {\rm FFT}\left( \psi_{n\bf k}(\bf G)\right)$. 
-#     
-# 2.  ``polarizability``: Calculation of RPA polarizability matrix $P$
-#     $$
-#         P_{\textbf{GG'}}{\left({\textbf q}\;\!;0\right)}=
-#         \,\,{}\sum_{n}^{\textrm occ}\sum_{n'}^{\textrm emp}\sum_{{\textbf k}}
-#         \frac{
-#         \bra{n'\textbf k}e^{-i({\textbf q}+{\textbf G})\cdot{\textbf r}}\ket{n{\textbf k}{+}{\textbf q}}
-#         \bra{n{\textbf k}{+}{\textbf q}}e^{i({\textbf q}+{\textbf G'})\cdot{\textbf r}}\ket{n'\textbf k}
-#         }{E_{n{\textbf k}{+}{\textbf q}}\,{-}\,E_{n'{\textbf k}}}.
-#     $$
-# 3.  ``epsilon_inverse``: Calculation of (static) epsilon-inverse matrix
-#     $$
-#         \epsilon_{\textbf{GG'}}{\left({\textbf q}\;\!\right)}=
-#         \delta_{\textbf{GG'}}\,{-}\,v{\left({\textbf q}{+}{\textbf G}\right)} \,
-#         P_{\textbf{GG'}}{\left({\textbf q}\;\!\right)}
-#     $$
-#     where $ v(\textbf{q} + \textbf{G}) = \frac{8\pi}{\left|\textbf q + \textbf G\right|^2} $ is bare Coulomb potential, written in Rydberg units. If this formula is used as-is for the case where $|\textbf q| = |\textbf G| = 0$, the resulting $v\left({\textbf{q=0}, \textbf{G=0}}\;\!\right)$ blows up as $1/q^2$. However, for 3D gapped systems, the matrix elements $\big| M_{nn'}\left({\bf k},{\textbf{q}\to\textbf{0}},{\textbf{G=0}}\right)\big| \sim q$ cancel the Coulomb divergence and $\epsilon_{\textbf{00}}\left({\textbf q\to\textbf{0}}\;\!\right) \sim q^2/q^2$ which is a finite number. In order to calculate $\epsilon_{\textbf{00}}\left({\textbf q=\textbf{0}}\;\!\right)$, we use the scheme specified in BGW2012, wherein $q=0$ is replaced with a small but non-zero value. Since matrix element calculation involves the eigenvectors $\ket{n{\textbf k}{+}{\textbf q}}$, having a non-$\Gamma$-centered $\textbf q\to 0$ point requires mean-field eigenvectors over a shifted $k$-grid. -->
 
-# %%
+
 from tqdm import trange
 from qtm.gw.core import reorder_2d_matrix_sorted_gvecs, sort_cryst_like_BGW
 
@@ -305,8 +279,8 @@ def calculate_epsilon(numq=None, writing=False):
 calculate_epsilon()
 
 
-# %% [markdown]
-# ### Sigma Calculation
+
+# Sigma Calculation
 # 
 # Here we demonstate the calculation of diagonal matrix elements of $\Sigma_{\text{QP}}$. The input parameters for sigma calculation are being read from `sigma.inp` file, but the same parameters can also be provided by manually constructing a `SigmaInp` object. 
 # 
@@ -315,7 +289,7 @@ calculate_epsilon()
 # - $L$: `k=(0.5,0.5,0)`
 # - $X$: `k=(0,0.5,0)`
 
-# %%
+
 from qtm.gw.sigma import Sigma
 
 outdir = dirname+"temp/"
@@ -347,40 +321,40 @@ sigma = Sigma.from_qtm_scf(
 #     outdir=outdir,
 # )
 
-# %%
+
 sigma_sx_cohsex_mat = sigma.sigma_sx_static(yielding=True)    
 print("Sigma SX COHSEX")
 sigma.pprint_sigma_mat(sigma_sx_cohsex_mat)
 
-# %%
+
 sigma_ch_cohsex_mat = sigma.sigma_ch_static()    
 print("Sigma CH COHSEX")
 sigma.pprint_sigma_mat(sigma_ch_cohsex_mat)
 
-# %%
+
 sigma.autosave=False
 sigma.print_condition=True
 cohsex_result = sigma.calculate_static_cohsex()
 
-# %%
+
 sigma.print_condition=True
 print("Sigma CH COHSEX EXACT")
 sigma_ch_exact_mat = sigma.sigma_ch_static_exact()    
 sigma.pprint_sigma_mat(sigma_ch_exact_mat)
 
-# %%
+
 sigma.print_condition=False
 sigma_sx_gpp = sigma.sigma_sx_gpp()    
 print("Sigma SX GPP")
 sigma.pprint_sigma_mat(sigma_sx_gpp)
 
-# %%
+
 sigma.print_condition=False
 sigma_ch_gpp,_ = sigma.sigma_ch_gpp()    
 print("Sigma CH GPP")
 sigma.pprint_sigma_mat(sigma_ch_gpp)
 
-# %%
+
 gpp_result = sigma.calculate_gpp()
 
 

@@ -1,0 +1,40 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Zn-100'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 2
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Zn 65.38 Zn_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+44 44 20  1 1 1
+
+CELL_PARAMETERS angstrom
+2.66169000000000 0.00000000000000 0.00000000000000
+1.33084500000000 2.30509115699900 0.00000000000000
+0.00000000000000 0.00000000000000 5.00397000000000
+
+ATOMIC_POSITIONS angstrom
+Zn 1.3308516542 0.7683675608 1.2509925000 
+Zn 2.6616833458 1.5367235962 3.7529775000 
+

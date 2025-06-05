@@ -1,0 +1,46 @@
+&CONTROL
+   calculation      = 'scf'
+   verbosity        = 'high'
+   prefix           = 'Ga-98'
+   disk_io          = 'nowf'
+   pseudo_dir       = './'
+/
+&SYSTEM
+   ecutwfc          = 100
+   occupations      = 'smearing'
+   degauss          = 0.0007349862
+   smearing         = 'gaussian'
+   nspin            = 1
+   ntyp             = 1
+   nat              = 8
+   ibrav            = 0
+/
+&ELECTRONS
+   conv_thr         = 1e-10
+/
+&IONS
+/
+&CELL
+/
+
+ATOMIC_SPECIES
+Ga 69.723 Ga_ONCV_PBE-1.2.upf
+
+K_POINTS automatic
+22 12 22  1 1 1
+
+CELL_PARAMETERS angstrom
+4.53623880800540 0.00000000000000 0.00000000000000
+0.00000000000000 7.70126286162098 0.00000000000000
+0.00000000000000 0.00000000000000 4.56890806309919
+
+ATOMIC_POSITIONS angstrom
+Ga 1.1340597020 1.2046315368 0.3709953347 
+Ga 1.1340597020 6.4966313248 4.1979127284 
+Ga 1.1340597020 2.6459998940 2.6554493663 
+Ga 1.1340597020 5.0552629676 1.9134586968 
+Ga 3.4021791060 5.0552629676 0.3709953347 
+Ga 3.4021791060 2.6459998940 4.1979127284 
+Ga 3.4021791060 6.4966313248 2.6554493663 
+Ga 3.4021791060 1.2046315368 1.9134586968 
+
