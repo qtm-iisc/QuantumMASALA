@@ -1,0 +1,47 @@
+&CONTROL
+    calculation='scf'
+    prefix='NiO'
+    restart_mode='from_scratch'
+    outdir='./NiO'
+    pseudo_dir='./'
+    tprnfor   = .true.
+    verbosity = 'high'
+/
+&system
+    ibrav = 0, celldm(1) = 9.6715
+    nat = 4, ntyp = 3, nspin=2,
+    ecutwfc = 50.0
+    starting_magnetization(1)=  0.2,
+    starting_magnetization(2)= -0.2,
+    tot_magnetization = 0.0,
+    nbnd=28, 
+    occupations = 'smearing',
+    smearing = 'gauss',
+    degauss=0.01, 
+ /
+ &electrons
+    mixing_beta = 0.3,
+    conv_thr = 1d-10
+ /
+CELL_PARAMETERS {alat}
+0.288675  -0.166667   0.942809  
+0.000000   0.333333   0.942809   
+-0.288675  -0.166667   0.942809  
+
+ATOMIC_SPECIES
+Ni1 58.6934   Ni_ONCV_PBE-1.2_wfc.upf
+Ni2  58.6934   Ni_ONCV_PBE-1.2_wfc.upf
+O  15.999   O_ONCV_PBE-1.2.upf
+
+ATOMIC_POSITIONS crystal
+Ni1  0.0000000000  0.0000000000  0.0000000000
+Ni2  0.5000000000  0.5000000000  0.5000000000
+O  0.7500000000  0.7500000000  0.7500000000
+O  0.2500000000  0.2500000000  0.2500000000
+
+K_POINTS automatic
+3 3 3 0 0 0
+
+HUBBARD {atomic}
+U Ni1-3d 6.3
+U Ni2-3d 6.3

@@ -140,6 +140,7 @@ class PWscfIn(NamedTuple):
                 while True:
                     line = read_line().rstrip(",")
                     # Discard Comments
+                    print(line)
                     if line.lstrip()[0] in ["!", "#"]:
                         continue
                     # Namelist ends when line starts with '/'

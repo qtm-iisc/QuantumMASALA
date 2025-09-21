@@ -1,0 +1,45 @@
+ &control
+    calculation='scf'
+    restart_mode='from_scratch',
+    prefix='CoO'
+    pseudo_dir = './'
+    outdir='./CoO'
+    verbosity='high'
+ /
+ &system
+    ibrav = 0,
+    celldm(1) = 8.00,
+    nat = 4,
+    ntyp = 3,
+    ecutwfc = 50
+    nspin = 2
+    starting_magnetization(1) =  0.5,
+    starting_magnetization(2) = -0.5,
+    occupations = 'smearing',
+    smearing = 'gauss',
+    degauss=0.01, 
+    nbnd=28
+ /
+ &electrons
+    conv_thr =  1.d-8,
+    electron_maxstep = 100
+ /
+ATOMIC_SPECIES
+ Co1  58.933194  Co_ONCV_PBE_sr.upf
+ Co2  58.933194  Co_ONCV_PBE_sr.upf
+ O    15.999     O_ONCV_PBE_sr.upf
+ATOMIC_POSITIONS {crystal}
+Co1      0.00000000     0.00000000     0.00000000
+Co2      0.50000000     0.50000000     0.50000000
+O        0.25000000     0.25000000     0.25000000
+O        0.75000000     0.75000000     0.75000000
+CELL_PARAMETERS {alat}
+   0.570726115   0.570726115   1.031099100
+   0.570726115   1.031099100   0.570726115
+   1.031099100   0.570726115   0.570726115
+K_POINTS {automatic}
+3 3 3 0 0 0
+
+!HUBBARD {atomic}
+!U Co1-3d 6.3
+!U Co2-3d 6.3

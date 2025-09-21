@@ -10,6 +10,7 @@ import numpy as np
 from qtm.containers import FieldRType, get_WavefunG
 from qtm.gspace import GkSpace
 from qtm.pseudo import NonlocGenerator
+from qtm.dft.dftU import dftU
 
 from qtm.logger import qtmlogger
 from qtm.msg_format import *
@@ -22,6 +23,8 @@ class KSHam:
         is_noncolin: bool,
         vloc: FieldRType,
         l_nloc: Sequence[NonlocGenerator],
+        ispin: int = 0,
+        dftU_: dftU = None
     ):
         if not isinstance(gkspc, GkSpace):
             raise TypeError(type_mismatch_msg("gkspc", gkspc, GkSpace))
@@ -62,6 +65,8 @@ class KSHam:
             vkb, dij, vkb_diag = nloc.gen_vkb_dij(self.gkspc)
             self.l_vkb_dij.append((vkb, dij))
             self.vnl_diag += vkb_diag
+        self.ispin = ispin
+        self.dftU_ = dftU_
 
     @qtmlogger.time("KSHam:h_psi")
     def h_psi(self, l_psi: get_WavefunG, l_hpsi: get_WavefunG):
@@ -77,6 +82,9 @@ class KSHam:
             psi_r = psi.to_r()
             psi_r *= self.vloc.data.ravel()
             hpsi += psi_r.to_g()
+
+        if self.dftU_ is not None:
+            self.dftU_.V_U(l_psi, l_hpsi, self.ispin, self.gkspc)
 
         for vkb, dij in self.l_vkb_dij:
             # proj = vkb.vdot(l_psi)

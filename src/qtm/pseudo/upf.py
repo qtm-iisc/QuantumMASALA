@@ -8,12 +8,12 @@ import copy
 import numpy as np
 from dataclasses import dataclass
 from typing import Optional, List
-
-from qtm.crystal.basis_atoms import PseudoPotFile
+from qtm.crystal.basis_atoms import PseudoPotFile, nl_to_str
 from qtm.constants import RYDBERG
 
-_LIBXC_MAP = {"pbe": ("gga_x_pbe", "gga_c_pbe")}
 
+
+_LIBXC_MAP = {"pbe": ("gga_x_pbe", "gga_c_pbe")}
 
 @dataclass
 class UPFv2Data(PseudoPotFile):
@@ -76,6 +76,12 @@ class UPFv2Data(PseudoPotFile):
 
     # Fields in 'PP_RHOATOM'.
     rhoatom: np.ndarray
+
+    #Fields in 'PP_PSWFC'.
+    nl: List[str]
+    oc: dict
+    epseu: dict
+    atwfc: dict
 
     @classmethod
     def from_file(cls, dirname: str):
@@ -152,6 +158,30 @@ class UPFv2Data(PseudoPotFile):
         else:
             data["dij"] = np.zeros((0, 0), dtype=np.float64)
             data["l_beta_times_r"] = []
+
+        #Reading field 'PP_PSWFC'
+        print(data["number_of_wfc"])
+        if data["number_of_wfc"]!=0:
+            child = root.findall("PP_PSWFC")[0]
+            nl = []
+            oc = {}
+            epseu = {}
+            atwfc = {}
+            for gchild in child:
+                if gchild.tag.startswith("PP_CHI."):
+                    nlstr = nl_to_str(int(gchild.attrib["label"][0]), int(gchild.attrib["l"]))
+                    oc[nlstr]=float(gchild.attrib["occupation"])
+                    epseu[nlstr]=float(gchild.attrib["pseudo_energy"])
+                    atwfc[nlstr]=np.array(gchild.text.split(), dtype=np.float64)[:data["mesh_size"]]
+                    nl.append(nlstr)
+            if len(nl)!= data["number_of_wfc"]:
+                print("Number of wavefunctions in the upf file does not match the number_of_wfc field")
+            data["oc"] = oc
+            data["nl"] = nl
+            data["epseu"] =epseu
+            data["atwfc"] = atwfc
+        else:
+            print("No wavefunctions in the upf file")
 
         data["libxc_func"] = None
         funcname = data["functional"]

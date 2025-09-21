@@ -59,7 +59,7 @@ if __name__ == "__main__":
         return argval
 
     filename = fetch_arg_long_short_default("in", "in", filename, typecasting_func=str)
-
+    
     npools = fetch_arg_long_short_default("npools", "nk", 1)
 
     ntaskgroups = fetch_arg_long_short_default("ntg", "nt", 1)

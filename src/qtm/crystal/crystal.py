@@ -133,6 +133,7 @@ class CrystalSymm:
     def __init__(self, crystal: Crystal):
         assert isinstance(crystal, Crystal)
 
+        alat=crystal.reallat.alat
         lattice = crystal.reallat.latvec.T
         positions = [sp.r_cryst.T for sp in crystal.l_atoms]
         numbers = np.repeat(range(len(positions)), [len(pos) for pos in positions])
@@ -140,11 +141,11 @@ class CrystalSymm:
 
         if qtmconfig.gpu_enabled:
             reallat_symm = get_symmetry(
-                (lattice.get(), positions.get(), numbers), symprec=self.symprec
+                (lattice.get(), positions.get(), numbers), symprec=self.symprec/alat
             )
         else:
             reallat_symm = get_symmetry(
-                (lattice, positions, numbers), symprec=self.symprec
+                (lattice, positions, numbers), symprec=self.symprec/alat
             )
         del reallat_symm["equivalent_atoms"]
         if reallat_symm is None:
@@ -185,7 +186,20 @@ class CrystalSymm:
             ],
         )
         """List of Symmetry operations of input crystal"""
-
+        """Calculating equivalent atoms after transformation"""
+        self.equiv_atoms = {}
+        for sp in crystal.l_atoms:
+            self.equiv_atoms[sp] = np.zeros((numsymm, sp.numatoms), dtype="i4")
+            original_positions = sp.r_cryst.T % 1
+            for ig, sym in enumerate(reallat_symm['rotations']):
+                for i, old in enumerate(original_positions):
+                    new = sym@old %1
+                    dists = np.linalg.norm(original_positions - new, axis=1)
+                    j = int(np.argmin(dists))
+                    if dists[j] > 1e-3:
+                        raise RuntimeError("No match found for transformed atom")
+                    self.equiv_atoms[sp][ig, i] = j  
+                    
     @property
     def numsymm(self) -> int:
         """Total number of crystal symmetries"""
