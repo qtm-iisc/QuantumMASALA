@@ -7,13 +7,33 @@ import numpy as np
 from hashlib import md5
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-
+from typing import Sequence
 from qtm.lattice import RealLattice
 
 from qtm.config import NDArray
 from qtm.msg_format import *
 
 from qtm.constants import ANGSTROM
+
+def l_to_spdf(l:int):
+    arr = ["s", "p", "d", "f"]   
+    try: 
+        return arr[l]
+    except IndexError:
+        raise ValueError(f"Invalid orbital number: {l}")
+
+def spdf_to_l(char: str):
+    mapping = {"s": 0, "p": 1, "d": 2, "f": 3}
+    try:
+        return mapping[char.lower()]
+    except KeyError:
+        raise ValueError(f"Invalid orbital letter: {char}")
+    
+def nl_to_str(n: int, l: int):
+    return f"{n}{l_to_spdf(l)}"
+
+def str_to_nl(label: str):
+    return int(label[:-1]), spdf_to_l(label[-1])
 
 
 @dataclass
@@ -87,6 +107,8 @@ class BasisAtoms:
         mass: float | None,
         reallat: RealLattice,
         r_cryst: NDArray,
+        starting_magnetization: int = 0,
+        hubbard_parameters: Sequence[dict] | None = None
     ):
         self.label: str = label
         """Label assigned to the atomic species."""
@@ -130,6 +152,27 @@ class BasisAtoms:
             )
         self.r_cryst: NDArray = r_cryst
         """(``(3, self.numatoms)``) Crystal Coordinates of atoms in unit cell"""
+
+        #initializing hubbard parameters
+        if hubbard_parameters is None:
+            self.is_hubbard = False
+            
+        else:
+            self.is_hubbard = len(hubbard_parameters) #Number of hubbard manifolds
+            self.Hubbard_U = [i['U'] for i in hubbard_parameters] #Hubbard U
+            self.Hubbard_J = [i['J'] if 'J' in i else 0 for i in hubbard_parameters] # Liechtenstein J
+            self.Hubbard_occ = [self.ppdata.oc[i['nl']] for i in hubbard_parameters]
+            self.Hubbard_nl = [i['nl'] for i in hubbard_parameters]
+            self.Hubbard_n = [int(i['nl'][0]) for i in hubbard_parameters]
+            self.Hubbard_l = [spdf_to_l(i['nl'][1]) for i in hubbard_parameters]
+            self.dftU_type = [i['type'] for i in hubbard_parameters] #(d)udarev or (l)iechtenstein
+            self.proj_type = [i['proj'] for i in hubbard_parameters]
+            self.Hubbard_B = [i['B'] if 'B' in i else 0 for i in hubbard_parameters]
+            self.Hubbard_E2 = [i['E2'] if 'E2' in i else 0 for i in hubbard_parameters]
+            self.Hubbard_E3 = [i['E3'] if 'E3' in i else 0 for i in hubbard_parameters]
+
+
+        self.start_mag = starting_magnetization
 
     @property
     def numatoms(self) -> int:

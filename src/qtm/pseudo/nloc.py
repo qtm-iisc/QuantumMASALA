@@ -333,5 +333,4 @@ class NonlocGenerator:
         # for vkb in l_vkb_full:
         #     if np.any(np.isnan(vkb)):
         #         print("Naans in vkb")
-
         return l_vkb_full, dij_full, vkb_diag

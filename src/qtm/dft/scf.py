@@ -25,9 +25,11 @@ from qtm.containers import FieldGType, FieldRType, get_FieldG
 
 from qtm.pot import hartree, xc, ewald
 from qtm.pseudo import loc_generate_rhoatomic, loc_generate_pot_rhocore, NonlocGenerator
+from qtm.pseudo.atomic_wfc import AtwfcGenerator
 from qtm.symm.symmetrize_field import SymmFieldMod
 
 from qtm.dft import DFTCommMod, DFTConfig, KSWfn, KSHam, eigsolve, occup, mixing
+from qtm.dft.dftU import dftU
 
 from qtm.mpi.check_args import check_system
 from qtm.mpi.utils import scatter_slice
@@ -51,6 +53,8 @@ class EnergyData:
 
     HO_level: float | None = None
     LU_level: float | None = None
+
+    eth: float = 0 #Hubbard Correction Energy
 
 
 from qtm.io_utils.dft_printers import print_scf_parameters
@@ -152,15 +156,17 @@ def scf(
                 )
         elif is_spin:
             if rho_start is None:
-                raise ValueError(
-                    type_mismatch_msg(
-                        "rho_start",
-                        rho_start,
-                        f"a {get_FieldG} instance or a sequeuce of numbers between -1 and +1 "
-                        f"representing starting spin polarisation on each atomic type of"
-                        f"crystal (for is_spin = {is_spin})",
-                    )
-                )
+                rho_start = [sp.start_mag for sp in crystal.l_atoms]
+                if np.any([mag is None for mag in rho_start]):
+                    raise ValueError(
+                        type_mismatch_msg(
+                            "rho_start",
+                            rho_start,
+                            f"a {get_FieldG} instance or a sequeuce of numbers between -1 and +1 "
+                            f"representing starting spin polarisation on each atomic type of"
+                            f"crystal (for is_spin = {is_spin})",
+                        )
+                    )  
             starting_mag = rho_start
             rho_start = get_FieldG(grho).zeros(1 + is_spin)
             for sp, mag in zip(crystal.l_atoms, starting_mag):
@@ -253,8 +259,8 @@ def scf(
         i_kpts_kgrp = range(kpts.numkpts)[scatter_slice(kpts.numkpts, n_kgrp, i_kgrp)]
 
         symm_mod = None
-        # if symm_rho:
-        symm_mod = SymmFieldMod(crystal, grho)
+        if symm_rho:
+            symm_mod = SymmFieldMod(crystal, grho)
 
         if wfn_init is None:
 
@@ -310,7 +316,12 @@ def scf(
             rho_core += rho_core_sp
             l_nloc.append(NonlocGenerator(sp, gwfn))
         v_ion = v_ion.to_r()
-
+        
+        dftU_ = None
+        use_dftU = np.any([atom.is_hubbard for atom in crystal.l_atoms])
+        if use_dftU:
+            dftU_ = dftU(crystal, is_spin+1, gwfn, mix_beta, symm_rho)
+        
         en = EnergyData()
         if occ_typ == "smear":
             en.fermi, en.smear, en.internal = 0, 0, 0
@@ -376,7 +387,9 @@ def scf(
                         kswfn_.gkspc,
                         is_noncolin,
                         vloc if is_noncolin else vloc[ispin],
-                        l_nloc,
+                        l_nloc, 
+                        ispin, 
+                        dftU_
                     )
                 ksham_ = ksham_k[ispin]
                 ksham_.vloc = vloc if is_noncolin else vloc[ispin]
@@ -435,17 +448,23 @@ def scf(
                 if kroot_intra.is_null:
                     kroot_intra.skip_with_block()
                 e_eigen = kroot_intra.allreduce(e_eigen)
+            deltae_U = 0
+            if use_dftU:
+                en.eth = dftU_.E_U()
+                deltae_U = dftU_.delta_e()
             e_eigen = image_comm.bcast(e_eigen)
             v_hxc = v_hart + v_xc
             e_vhxc = sum((v_hxc * rho_out.to_r())).integrate_unitcell()
-            en.one_el = (e_eigen - e_vhxc).real
-            en.total = en.one_el + en.ewald + en.hartree + en.xc
+            
+            en.one_el = (e_eigen - e_vhxc + deltae_U).real
+            en.total = en.one_el + en.ewald + en.hartree + en.xc + en.eth
             en.hwf = np.real(
                 e_eigen
                 - sum((v_hxc * rho_in.to_r())).integrate_unitcell()
                 + en.ewald
                 + en.hartree
                 + en.xc
+                + en.eth
             )  # Harris-Weinert-Foulkes energy estimate
             if occ_typ == "smear":
                 en.total += en.smear
@@ -488,6 +507,8 @@ def scf(
                 )
 
             update_rho_out()
+            if use_dftU:
+                dftU_.update_ns(l_kswfn_kgrp)
             compute_en()
             e_error = float(mixmod.compute_error(rho_in, rho_out))
             e_error = image_comm.bcast(e_error)

@@ -39,7 +39,7 @@ class SymmFieldMod:
         crystal_symm.filter_frac_trans(grid_shape)
         recilat_rot = np.asarray(crystal_symm.recilat_rot, like=g_cryst)
         reallat_trans = np.asarray(crystal_symm.reallat_trans, like=g_cryst)
-
+        #print(recilat_rot)
         # Sorting G-vectors such that they are grouped by their lengths, within
         # which they are sorted by their corresponding 'idxgrid'
         i1, i2, i3 = g_cryst
@@ -62,7 +62,7 @@ class SymmFieldMod:
             # Rotating all G-vectors in shell with all symmetries
             g_cryst_shell = g_cryst[:, ig]
             g_cryst_rot = np.tensordot(recilat_rot, g_cryst_shell, axes=1)
-
+            #print(g_cryst_rot)
             # Computing the idxgrid of all generated G-vectors
             i1, i2, i3 = g_cryst_rot.transpose((1, 0, 2))
             idxgrid_rot = (
@@ -70,6 +70,7 @@ class SymmFieldMod:
                 + n3 * (i2 + n2 * (i2 < 0))
                 + (i3 + n3 * (i3 < 0))
             )
+            #print("idxgrid_rot shape:", idxgrid_rot.shape)
 
             # Constructing a subset of G-vectors that will yield all G-vectors
             # in shell using symmetry operations.
@@ -82,7 +83,9 @@ class SymmFieldMod:
             # Step 2: Then we take the unique vectors among them. This new set
             # is enough to generate all the G-vectors in shell
             _, idx_red = np.unique(np.amin(idxgrid_rot, axis=0), return_index=True)
-
+            #print("idx_red:", idx_red)
+            #print(idxgrid_rot[0])
+            #print(idxgrid_rot[:, idx_red])
             shells_ig.append(
                 ig[np.searchsorted(idxgrid_rot[0], idxgrid_rot[:, idx_red])]
             )
