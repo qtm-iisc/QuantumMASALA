@@ -3,7 +3,7 @@ from __future__ import annotations
 __all__ = ["NonlocGenerator"]
 
 import numpy as np
-from scipy.special import sph_harm
+from scipy.special import sph_harm_y
 from scipy.linalg import block_diag
 
 from qtm.crystal.basis_atoms import BasisAtoms
@@ -281,7 +281,7 @@ class NonlocGenerator:
             # Applying angular part using spherical harmonics
             l = self.beta_l[idxbeta]
             for abs_m in range(l + 1):
-                ylm = sph_harm(abs_m, l, phi, theta)
+                ylm = sph_harm_y(l, abs_m, theta, phi)
                 if abs_m == 0:
                     l_vkb_atom[idxvkb] = ylm * beta_gk
                 else:
