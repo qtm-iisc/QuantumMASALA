@@ -45,7 +45,7 @@ class Lattice:
 
         self.primvec: NDArray = primvec.copy("C").astype("f8")
         r"""(``(3, 3)``, ``'f8'``, ``'C'``) Matrix containing
-        lattice translation vectors. 
+        lattice translation vectors.
         :math:`\vec{a}_i` is given by `primvec[:, i]`.
         """
 
@@ -62,7 +62,7 @@ class Lattice:
         self.metric: NDArray = self.primvec.T @ self.primvec
         """(``(3, 3)``) Metric Tensor.
         """
-        self.cellvol: float = float(np.linalg.det(self.primvec))
+        self.cellvol: float = float(np.abs(np.linalg.det(self.primvec)))
         """Volume of unit cell.
         """
 
@@ -617,7 +617,7 @@ class RealLattice(Lattice):
     def __str__(self) -> str:
 
         crystal_axes_str = f"Crystal Axes: coordinates in units of 'alat' ({self.alat:.5f} a.u.)"
-        
+
         crystal_axes = "\n".join(
             f"    a({i+1}) = ({vec[0]:8.5f}, {vec[1]:8.5f}, {vec[2]:8.5f})"
             for i, vec in enumerate(self.latvec.T / self.alat)
