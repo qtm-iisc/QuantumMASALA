@@ -113,8 +113,11 @@ class KSWfn:
         wavefunction, optimized for reduced memory consumption."""
 
         rng_mod = get_rng_module(self.evc_gk.data)
+        seed = np.zeros(len(self.k_cryst) + 1 , dtype="uint")   # qtmconfig.rng_seed is an int
         seed_k = np.array(self.k_cryst).view("uint")
-        rng = rng_mod.default_rng([seed_k, qtmconfig.rng_seed])
+        seed[:len(self.k_cryst)] = seed_k
+        seed[-1] = qtmconfig.rng_seed
+        rng = rng_mod.default_rng(seed)
         data = self.evc_gk.data
 
         # Generate random values in chunks to reduce memory usage
