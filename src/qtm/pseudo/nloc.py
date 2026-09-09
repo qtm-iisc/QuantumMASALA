@@ -5,7 +5,7 @@ __all__ = ["NonlocGenerator"]
 import numpy as np
 from scipy.linalg import block_diag
 from scipy import __version__ as sc_version
-if sc_version >= "1.15.0" :
+if int(str(sc_version).split('.')[1]) >= 15 :
     from scipy.special import sph_harm_y
 else :
     from scipy.special import sph_harm
