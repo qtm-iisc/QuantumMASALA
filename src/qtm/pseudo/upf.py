@@ -153,6 +153,15 @@ class UPFv2Data(PseudoPotFile):
             data["dij"] = np.zeros((0, 0), dtype=np.float64)
             data["l_beta_times_r"] = []
 
+        # 'data' was seeded from 'cls.__annotations__', so any PP_HEADER
+        # attribute absent from this particular file (some, like
+        # 'wfc_cutoff', are optional per the UPF spec) was never overwritten
+        # and is still literally its own type annotation (e.g. the class
+        # 'float') rather than a value -- replace those with 'None'.
+        for key, val in data.items():
+            if isinstance(val, type):
+                data[key] = None
+
         data["libxc_func"] = None
         funcname = data["functional"]
         if funcname.lower() in _LIBXC_MAP:

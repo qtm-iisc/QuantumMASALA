@@ -139,12 +139,12 @@ class KList:
         else:
             if is_time_reversal:
                 ki = [
-                    np.arange(ni // 2 + 1) + 0.5 * si / ni
+                    (np.arange(ni // 2 + 1) + 0.5 * si) / ni
                     for ni, si in zip(grid_shape, shifts)
                 ]
             else:
                 ki = [
-                    np.arange(-ni // 2 + 1, ni // 2 + 1) + 0.5 * si / ni
+                    (np.arange(-ni // 2 + 1, ni // 2 + 1) + 0.5 * si) / ni
                     for ni, si in zip(grid_shape, shifts)
                 ]
             k_mesh_cryst = np.meshgrid(*ki, indexing="ij")

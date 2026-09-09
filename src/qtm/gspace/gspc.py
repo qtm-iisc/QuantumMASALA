@@ -78,7 +78,7 @@ def check_grid_shape(
     min_grid_shape = minimal_grid_shape(recilat, ecut)
     assert isinstance(grid_shape, tuple)
     assert all(isinstance(ni, int) and ni > 0 for ni in grid_shape)
-    for idim, ni in enumerate(min_grid_shape):
+    for idim, ni in enumerate(grid_shape):
         if ni < min_grid_shape[idim]:
             raise ValueError(
                 "'grid_shape' is too small to fit all the G-vectors within "

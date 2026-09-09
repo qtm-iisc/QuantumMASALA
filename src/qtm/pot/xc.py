@@ -35,7 +35,7 @@ def get_libxc_func(crystal: Crystal) -> tuple[str, str]:
     for typ in crystal.l_atoms:
         ppdata = typ.ppdata
         if ppdata.libxc_func is None:
-            qtmlogger.warn(
+            qtmlogger.warning(
                 "could not find the correct libxc functional names for "
                 f"species '{typ.label}' (Pseudopotential: '{ppdata.filename}').\n"
             )

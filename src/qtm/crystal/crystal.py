@@ -85,8 +85,15 @@ class Crystal:
             r_cryst = (grid + sp.r_cryst.reshape((3, 1, -1))).reshape(3, -1)
             r_cart_sup = reallat.cryst2cart(r_cryst)
             r_cryst_sup = reallat_sup.cart2cryst(r_cart_sup)
+            # 'sp.ppdata' is None whenever 'sp' was built with a bare
+            # valence-electron-count int instead of a real pseudopotential
+            # (BasisAtoms.__init__ keeps only 'sp.valence' in that case) --
+            # passing it through unchanged would silently set the new
+            # species' valence to -1 (BasisAtoms.__init__'s ppdata=None
+            # default) instead of preserving the original count.
+            ppdata_sup = sp.ppdata if sp.ppdata is not None else sp.valence
             l_atoms_sup.append(
-                BasisAtoms(sp.label, sp.ppdata, sp.mass, reallat_sup, r_cryst_sup)
+                BasisAtoms(sp.label, ppdata_sup, sp.mass, reallat_sup, r_cryst_sup)
             )
 
         return Crystal(reallat_sup, l_atoms_sup)
@@ -212,3 +219,95 @@ class CrystalSymm:
             np.linalg.norm(fac - np.rint(fac), axis=1) <= self.symprec
         )[0]
         self.symm = self.symm[idx_comm].copy()
+
+    _KPOINT_ROUND_PREC: int = 6
+
+    @staticmethod
+    def _find_symm(
+        recilat_rot: np.ndarray,
+        k_src: np.ndarray,
+        k_dest: np.ndarray,
+        time_reversal: bool = None,
+    ) -> list[tuple[int, bool]]:
+        tol = 10.0 ** (-CrystalSymm._KPOINT_ROUND_PREC)
+        matches = []
+        for tr in (False, True) if time_reversal is None else (time_reversal,):
+            sign = -1 if tr else 1
+            k_rot = sign * np.tensordot(recilat_rot, k_src, axes=1)
+            g0 = np.rint(k_rot - k_dest)
+            match = np.all(np.abs(k_rot - g0 - k_dest) < tol, axis=-1)
+            matches.extend((int(i), tr) for i in np.nonzero(match)[0])
+        return matches
+
+    def find_symm(
+        self,
+        k_src: tuple[float, float, float],
+        k_dest: tuple[float, float, float],
+        time_reversal: bool = None,
+    ) -> list[tuple[int, bool]]:
+        r"""Lists every symmetry operation relating `k_src` to `k_dest`.
+
+        Since more than one ``(isymm, time_reversal)`` pair can satisfy
+        :math:`\mathbf{k}_{dest} = \pm S_{isymm}\mathbf{k}_{src}
+        \pmod{\mathbf{G}}` (e.g. when `k_src` has a nontrivial little
+        group), use this to see every candidate rather than assuming there
+        is only one.
+
+        Parameters
+        ----------
+        k_src, k_dest : tuple[float, float, float]
+            The two k-points, in crystal coordinates.
+        time_reversal : bool, optional
+            If given, only operations combined (`True`) or not combined
+            (`False`) with time reversal are searched for. If `None`
+            (default), both are tried.
+
+        Returns
+        -------
+        list[tuple[int, bool]]
+            Every ``(isymm, time_reversal)`` pair, in ascending order of
+            `isymm` (operations without time reversal listed before those
+            with it), such that symmetry operation ``isymm`` of this
+            crystal (combined with time reversal if `time_reversal` is
+            `True`) relates `k_src` to `k_dest`.
+        """
+        k_src = np.around(np.asarray(k_src, dtype="f8"), self._KPOINT_ROUND_PREC)
+        k_dest = np.around(np.asarray(k_dest, dtype="f8"), self._KPOINT_ROUND_PREC)
+        return self._find_symm(self.recilat_rot, k_src, k_dest, time_reversal)
+
+    def little_group(
+        self,
+        k_cryst: tuple[float, float, float],
+        time_reversal: bool = None,
+    ) -> list[tuple[int, bool]]:
+        r"""Lists every symmetry operation that fixes `k_cryst` (mod a
+        reciprocal lattice vector) -- its little group (also called its
+        stabilizer, or small group).
+
+        This is exactly ``find_symm(k_cryst, k_cryst, time_reversal)``: an
+        operation fixes `k_cryst` iff it relates `k_cryst` to itself. A
+        k-point with a nontrivial little group (more than just the
+        identity, for `time_reversal=False`) can have symmetry-protected
+        degenerate bands there; the little group's irreducible
+        representations give the degeneracy dimensions that are actually
+        allowed (see e.g. the `spgrep
+        <https://github.com/spglib/spgrep>`_ package for computing those
+        from a crystal structure -- this method only finds the *operations*
+        forming the little group, not their representations).
+
+        Parameters
+        ----------
+        k_cryst : tuple[float, float, float]
+            The k-point, in crystal coordinates.
+        time_reversal : bool, optional
+            If given, only operations combined (`True`) or not combined
+            (`False`) with time reversal are searched for. If `None`
+            (default), both are tried.
+
+        Returns
+        -------
+        list[tuple[int, bool]]
+            Every ``(isymm, time_reversal)`` pair fixing `k_cryst`, in the
+            same format as `find_symm`.
+        """
+        return self.find_symm(k_cryst, k_cryst, time_reversal)

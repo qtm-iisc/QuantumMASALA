@@ -31,20 +31,19 @@ def scatter_slice(
     assert len_ >= 0
     assert isinstance(grp_size, int)
     assert grp_size > 0
-    if grp_rank is not None:
+
+    all_ranks = grp_rank is None
+    if all_ranks:
+        # One slice per rank, computed in a single vectorized pass.
+        ranks = np.arange(grp_size, dtype="i8")
+    else:
         assert isinstance(grp_rank, int)
         assert 0 <= grp_rank < grp_size
-    else:
-        grp_rank = np.arange(grp_size, dtype="i8")
+        ranks = grp_rank
 
-    all_ranks = False
-    if grp_rank is None:
-        grp_rank = np.arange(grp_size, dtype="i8")
-        all_ranks = True
-
-    start = (len_ // grp_size) * grp_rank + min(grp_rank, len_ % grp_size)
-    stop = start + ((len_ // grp_size) + (grp_rank < len_ % grp_size))
+    start = (len_ // grp_size) * ranks + np.minimum(ranks, len_ % grp_size)
+    stop = start + ((len_ // grp_size) + (ranks < len_ % grp_size))
 
     if not all_ranks:
-        return slice(start, stop)
-    return tuple(slice(start[grp_rank], stop[grp_rank]) for grp_rank in range(grp_rank))
+        return slice(int(start), int(stop))
+    return tuple(slice(int(start[r]), int(stop[r])) for r in range(grp_size))

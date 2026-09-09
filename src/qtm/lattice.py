@@ -600,6 +600,8 @@ class RealLattice(Lattice):
             origin = self.cart2cryst(origin)
         elif coords == "alat":
             origin = self.alat2cryst(origin)
+        else:
+            origin = np.asarray(origin, dtype="f8")
         r_cryst -= origin.reshape((3, 1, 1, 1))
         r_cryst -= np.rint(r_cryst)
 
@@ -609,6 +611,12 @@ class RealLattice(Lattice):
             return self.cryst2cart(r_cryst)
         elif coords == "alat":
             return self.cryst2alat(r_cryst)
+
+    def __eq__(self, other: "RealLattice") -> bool:
+        # 'Lattice.__eq__' only compares 'latvec'; two lattices with the same
+        # matrix but different 'alat' would otherwise compare equal despite
+        # 'cart2alat'/'axes_alat'/'from_recilat' giving different results.
+        return super().__eq__(other) and abs(self.alat - other.alat) <= 1e-5
 
     def __repr__(self, indent="        ") -> str:
         latvec = f"{indent}    " + str(self.latvec).replace("\n", f"\n{indent}    ")
@@ -808,6 +816,10 @@ class ReciLattice(Lattice):
             raise ValueError(
                 f"'coords' must be one of 'cryst', 'cart' or 'tpiba'. Got {coords}"
             )
+
+    def __eq__(self, other: "ReciLattice") -> bool:
+        # See 'RealLattice.__eq__': 'Lattice.__eq__' alone ignores 'tpiba'.
+        return super().__eq__(other) and abs(self.tpiba - other.tpiba) <= 1e-5
 
     def __repr__(self) -> str:
         return f"ReciLattice(tpiba={self.tpiba}, recvec={self.recvec})"

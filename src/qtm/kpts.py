@@ -97,7 +97,11 @@ class KList:
 
     @property
     def k_tpiba(self) -> NDArray:
-        return self.recilat.cryst2tpiba(self.k_cryst, axis=1)
+        # 'k_cryst' has shape (3, numkpts) -- the vector-component axis is
+        # 0, matching 'k_cart' just above (this used to be 'axis=1', which
+        # is wrong for any 'numkpts != 3' and silently transposes the
+        # k-point and vector-component axes when 'numkpts == 3').
+        return self.recilat.cryst2tpiba(self.k_cryst, axis=0)
 
     def __len__(self):
         return self.numkpts

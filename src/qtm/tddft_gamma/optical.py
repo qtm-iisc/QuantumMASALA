@@ -56,7 +56,7 @@ def dipole_response(
             f" got '{kick_direction}'."
         )
     if kick_strength < EPS8:
-        qtmlogger.warn(
+        qtmlogger.warning(
             "'kick_strength' might be too small and/or negative. "
             f"got {kick_strength}."
         )
