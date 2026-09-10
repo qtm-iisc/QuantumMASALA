@@ -99,21 +99,30 @@ class Crystal:
         return Crystal(reallat_sup, l_atoms_sup)
 
     def __repr__(self, indent="") -> str:
-        res = "Crystal(\n    "+indent+f"reallat={self.reallat.__repr__(indent+'    ')}, \n    "+indent+f"l_atoms=["
+        res = (
+            "Crystal(\n    "
+            + indent
+            + f"reallat={self.reallat.__repr__(indent+'    ')}, \n    "
+            + indent
+            + f"l_atoms=["
+        )
         for sp in self.l_atoms:
-            res += "\n"+indent + "  " + sp.__repr__(indent=indent+"    ")
+            res += "\n" + indent + "  " + sp.__repr__(indent=indent + "    ")
 
-        res += "\n    "+indent+"  ])"
+        res += "\n    " + indent + "  ])"
         return res
 
     def __str__(self) -> str:
-        
         alat_str = f"Lattice parameter 'alat' :   {self.reallat.alat:.5f}  a.u."
-        cellvol_str = f"Unit cell volume         :  {self.reallat.cellvol:.5f}  (a.u.)^3"
-        num_atoms_str = f"Number of atoms/cell     : {sum(sp.numatoms for sp in self.l_atoms)}"
+        cellvol_str = (
+            f"Unit cell volume         :  {self.reallat.cellvol:.5f}  (a.u.)^3"
+        )
+        num_atoms_str = (
+            f"Number of atoms/cell     : {sum(sp.numatoms for sp in self.l_atoms)}"
+        )
         num_types_str = f"Number of atomic types   : {len(self.l_atoms)}"
         num_electrons_str = f"Number of electrons      : {self.numel}"
-        
+
         reallat_str = str(self.reallat)
         atoms_str = ""
         for i, sp in enumerate(self.l_atoms, start=1):

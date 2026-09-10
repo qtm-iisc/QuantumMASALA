@@ -249,9 +249,7 @@ class BasisAtoms:
     def __repr__(self, indent="") -> str:
         r_cryst_str = ""
         for i in range(self.numatoms):
-            r_cryst_str += (
-                f"\n{indent}      {np.array2string(self.r_cryst[:, i], separator=', ')},"
-            )
+            r_cryst_str += f"\n{indent}      {np.array2string(self.r_cryst[:, i], separator=', ')},"
         res = (
             f"    BasisAtoms(\n"
             f"{indent}    label='{self.label}', \n"

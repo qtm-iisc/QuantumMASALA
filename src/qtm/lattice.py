@@ -623,8 +623,9 @@ class RealLattice(Lattice):
         return f"RealLattice(\n{indent}  alat={self.alat:.5f}, \n{indent}  latvec=\n{latvec},\n{indent})"
 
     def __str__(self) -> str:
-
-        crystal_axes_str = f"Crystal Axes: coordinates in units of 'alat' ({self.alat:.5f} a.u.)"
+        crystal_axes_str = (
+            f"Crystal Axes: coordinates in units of 'alat' ({self.alat:.5f} a.u.)"
+        )
 
         crystal_axes = "\n".join(
             f"    a({i+1}) = ({vec[0]:8.5f}, {vec[1]:8.5f}, {vec[2]:8.5f})"

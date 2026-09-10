@@ -127,7 +127,9 @@ class RotateWfn:
                     + (
                         " (with or without time reversal)"
                         if time_reversal is None
-                        else " combined with time reversal" if time_reversal else ""
+                        else " combined with time reversal"
+                        if time_reversal
+                        else ""
                     )
                 )
             isymm, time_reversal = matches[0]

@@ -224,6 +224,7 @@ class QTMConfig:
         global NDArray
         if gpu_enabled and self.check_cupy():
             import cupy as cp
+
             self.gpu_enabled = True
             self.fft_backend = "cupy"
             NDArray = cp.ndarray
@@ -231,13 +232,15 @@ class QTMConfig:
             self.gpu_enabled = False
             self.fft_backend = self.fft_available_backends[0]
             NDArray = np.ndarray
-        
+
     def __repr__(self):
         return f"QTMConfig(gpu_enabled={self.gpu_enabled}, fft_backend={self.fft_backend}, fft_use_sticks={self.fft_use_sticks})"
+
 
 NDArray = np.ndarray
 if CUPY_INSTALLED:
     import cupy as cp
+
     qtmconfig = QTMConfig(gpu_enabled=True)
 else:
     qtmconfig = QTMConfig(gpu_enabled=False)

@@ -69,60 +69,48 @@ def get_git_info():
         return None
 
     try:
-        commit_hash = (
-            subprocess.check_output(
-                ["git", "rev-parse", "--short", "HEAD"],
-                stderr=subprocess.DEVNULL,
-                text=True,
-            )
-            .strip()
-        )
+        commit_hash = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
 
-        commit_date = (
-            subprocess.check_output(
-                [
-                    "git",
-                    "log",
-                    "-1",
-                    "--format=%ad",
-                    "--date=rfc",
-                    # "--date=format:%A, %d %B, %Y %H:%M:%S %Z",
-                ],
-                stderr=subprocess.DEVNULL,
-                text=True,
-            )
-            .strip()
-        )
+        commit_date = subprocess.check_output(
+            [
+                "git",
+                "log",
+                "-1",
+                "--format=%ad",
+                "--date=rfc",
+                # "--date=format:%A, %d %B, %Y %H:%M:%S %Z",
+            ],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
 
-        changed_files = (
-            subprocess.check_output(
-                [
-                    "git",
-                    "diff-tree",
-                    "--no-commit-id",
-                    "--name-status",
-                    "-r",
-                    "HEAD",
-                ],
-                stderr=subprocess.DEVNULL,
-                text=True,
-            )
-            .strip()
-        )
+        changed_files = subprocess.check_output(
+            [
+                "git",
+                "diff-tree",
+                "--no-commit-id",
+                "--name-status",
+                "-r",
+                "HEAD",
+            ],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
 
-        dirty_files = (
-            subprocess.check_output(
-                [
-                    "git",
-                    "diff",
-                    "--name-status",
-                    "HEAD",
-                ],
-                stderr=subprocess.DEVNULL,
-                text=True,
-            )
-            .strip()
-        )
+        dirty_files = subprocess.check_output(
+            [
+                "git",
+                "diff",
+                "--name-status",
+                "HEAD",
+            ],
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
 
         return {
             "hash": commit_hash,
@@ -154,6 +142,7 @@ def print_project_git_info():
             print(f"  {line}")
     else:
         print("No local changes.")
+
 
 def print_scf_parameters_old(
     dftcomm,
@@ -248,7 +237,9 @@ def print_scf_parameters(
     print("Quantum MASALA")
     print_project_git_info()
     now = datetime.datetime.now()
-    print(f"Started calculation on {now.strftime('%Y-%m-%d')} at {now.strftime('%H:%M:%S')}.")
+    print(
+        f"Started calculation on {now.strftime('%Y-%m-%d')} at {now.strftime('%H:%M:%S')}."
+    )
     print("=========================================")
     print("SCF Parameters:")
     print()

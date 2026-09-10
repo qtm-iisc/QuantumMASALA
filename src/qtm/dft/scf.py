@@ -68,10 +68,12 @@ if version_info[1] >= 8:
             diago_thr: float,
             diago_avgiter: float,
             en: EnergyData,
-        ) -> None: ...
+        ) -> None:
+            ...
 
     class WfnInit(Protocol):
-        def __call__(self, ik: int, kswfn: list[KSWfn]) -> None: ...
+        def __call__(self, ik: int, kswfn: list[KSWfn]) -> None:
+            ...
 
 else:
     IterPrinter = "IterPrinter"
