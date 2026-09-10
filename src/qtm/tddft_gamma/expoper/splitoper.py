@@ -7,8 +7,14 @@ from qtm.gspace.gkspc import GkSpace
 from qtm.pseudo.nloc import NonlocGenerator
 from scipy.linalg import expm, block_diag
 from scipy.sparse.linalg import LinearOperator, gmres
+from scipy import __version__ as sc_version
 
 from .base import TDExpOperBase
+
+# scipy renamed gmres's 'tol' kwarg to 'rtol' in 1.12.0 (deprecating 'tol'),
+# then dropped 'tol' entirely in 1.14.0 -- see nloc.py for the same pattern
+# applied to the sph_harm/sph_harm_y rename.
+_GMRES_TOL_KWARG = "rtol" if int(str(sc_version).split(".")[1]) >= 14 else "tol"
 
 
 class SplitOper(TDExpOperBase):
@@ -218,9 +224,9 @@ class SplitOper(TDExpOperBase):
                 oper,
                 rhs,
                 x0=psi_old,
-                tol=self.VLOC_SOLVER_TOL,
                 atol=0.0,
                 maxiter=self.VLOC_SOLVER_MAXITER,
+                **{_GMRES_TOL_KWARG: self.VLOC_SOLVER_TOL},
             )
             if info != 0:
                 raise RuntimeError(
