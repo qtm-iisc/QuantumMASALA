@@ -93,11 +93,7 @@ if __name__ == "__main__":
     # parse_inp() handles ecutrho=None case appropriately.
 
     grho_serial = GSpace(crystal.recilat, ecut_rho)
-    # print(dftcomm.image_comm.size, dftcomm.n_pwgrp)
-    if dftcomm.n_pwgrp == dftcomm.image_comm.size:
-        grho = grho_serial
-    else:
-        grho = DistGSpace(comm_world, grho_serial)
+    grho = DistGSpace.from_dftcomm(dftcomm, grho_serial)
     gwfn = grho
 
     # -----Spin-polarized (collinear) calculation-----

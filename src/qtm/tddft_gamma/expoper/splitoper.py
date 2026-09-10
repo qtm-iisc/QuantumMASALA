@@ -6,15 +6,9 @@ from qtm.dft.kswfn import KSWfn
 from qtm.gspace.gkspc import GkSpace
 from qtm.pseudo.nloc import NonlocGenerator
 from scipy.linalg import expm, block_diag
-from scipy.sparse.linalg import LinearOperator, gmres
-from scipy import __version__ as sc_version
 
+from ._bicgstab import bicgstab_dist
 from .base import TDExpOperBase
-
-# scipy renamed gmres's 'tol' kwarg to 'rtol' in 1.12.0 (deprecating 'tol'),
-# then dropped 'tol' entirely in 1.14.0 -- see nloc.py for the same pattern
-# applied to the sph_harm/sph_harm_y rename.
-_GMRES_TOL_KWARG = "rtol" if int(str(sc_version).split(".")[1]) >= 14 else "tol"
 
 
 class SplitOper(TDExpOperBase):
@@ -190,8 +184,12 @@ class SplitOper(TDExpOperBase):
         ``gkspc``-basis-out) operator ``_vloc_linear`` is Hermitian on
         ``gkspc``'s own basis, so this substitution restores exact
         unitarity for any time step and any basis size, at the cost of an
-        iterative linear solve (GMRES) per band instead of a single
-        pointwise multiplication.
+        iterative linear solve (BiCGSTAB -- see
+        `qtm.tddft_gamma.expoper._bicgstab` for why a distribution-aware
+        implementation, rather than `scipy.sparse.linalg.bicgstab` or
+        `gmres` directly, is required here once ``gkspc`` is an MPI-
+        distributed `DistGkSpace`) per band instead of a single pointwise
+        multiplication.
         """
         evc = l_prop_psi[0].evc_gk
         size_g = self.gkspc.size_g
@@ -202,36 +200,22 @@ class SplitOper(TDExpOperBase):
         def matvec(x):
             return x + 1j * a * self._vloc_linear(x)
 
-        oper = LinearOperator((size_g, size_g), matvec=matvec, dtype="c16")
-
         for iband in range(data.shape[0]):
             psi_old = data[iband].copy()
-            v_psi_old = self._vloc_linear(psi_old)
-            rhs = psi_old - 1j * a * v_psi_old
+            rhs = psi_old - 1j * a * self._vloc_linear(psi_old)
 
-            # x0=psi_old already solves the system exactly whenever V==0
-            # (or 'a' is negligibly small): the initial residual
-            # rhs - matvec(psi_old) == -2j*a*v_psi_old is then exactly (or
-            # numerically) zero, which degenerates scipy's GMRES (it
-            # divides by the residual norm while building the Krylov basis)
-            # -- skip the solve entirely in that case rather than let it
-            # fail on a trivial system.
-            if np.linalg.norm(v_psi_old) <= 1e-14 * (np.linalg.norm(psi_old) + 1e-300):
-                data[iband] = psi_old
-                continue
-
-            psi_new, info = gmres(
-                oper,
+            psi_new, info = bicgstab_dist(
+                matvec,
                 rhs,
-                x0=psi_old,
-                atol=0.0,
+                psi_old,
+                self.gkspc,
+                tol=self.VLOC_SOLVER_TOL,
                 maxiter=self.VLOC_SOLVER_MAXITER,
-                **{_GMRES_TOL_KWARG: self.VLOC_SOLVER_TOL},
             )
             if info != 0:
                 raise RuntimeError(
                     "SplitOper.oper_vloc: the Cayley-transform linear solve "
-                    f"did not converge (gmres info={info})."
+                    f"did not converge (bicgstab info={info})."
                 )
             data[iband] = psi_new
 

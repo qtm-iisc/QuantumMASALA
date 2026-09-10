@@ -341,6 +341,31 @@ class DistGSpace(DistGSpaceBase, GSpace):
         DistGSpaceBase.__init__(self, comm, gspc)
         self.ecut = self.gspc_glob.ecut
 
+    @classmethod
+    def from_dftcomm(cls, dftcomm, gspc_serial: GSpace) -> GSpace:
+        """Returns `gspc_serial` unchanged if `dftcomm` has no plane-wave-
+        group distribution (`dftcomm.pwgrp_intra is None`), otherwise
+        wraps it in a `DistGSpace` using `dftcomm.pwgrp_intra`.
+
+        `dftcomm.pwgrp_intra` is the only communicator that is always
+        EXACTLY one plane-wave group, since band groups and k-point
+        groups are also sub-divisions of `dftcomm.image_comm`
+        ('comm_world'). Building `DistGSpace` directly on `image_comm`
+        instead only happens to be correct when there's a single k-group
+        and a single band group (where `image_comm` and the lone
+        plane-wave group coincide); with more than one of either active,
+        `image_comm` spans multiple separate plane-wave groups, and
+        distributing G-vectors across it produces a per-rank G-vector
+        count that silently disagrees between ranks that are otherwise
+        equivalent (same position within their own, different, plane-wave
+        group) -- surfacing downstream as a cryptic `MPI_ERR_TRUNCATE`
+        deep inside Davidson's band-group broadcast, or a k-group's
+        density Allreduce picking up the wrong contribution.
+        """
+        if dftcomm.pwgrp_intra is None:
+            return gspc_serial
+        return cls(dftcomm.pwgrp_intra, gspc_serial)
+
 
 class DistGkSpace(DistGSpaceBase, GkSpace):
     gspc_glob: GkSpace

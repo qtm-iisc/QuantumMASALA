@@ -62,11 +62,7 @@ print(kpts.numkpts)
 ecut_wfn = 25 * RYDBERG
 ecut_rho = 4 * ecut_wfn
 grho_serial = GSpace(crystal.recilat, ecut_rho)
-# If G-space parallelization is not required, use the serial G-space object
-if dftcomm.n_pwgrp == dftcomm.image_comm.size:
-    grho = grho_serial
-else:
-    grho = DistGSpace(comm_world, grho_serial)
+grho = DistGSpace.from_dftcomm(dftcomm, grho_serial)
 gwfn = grho
 
 

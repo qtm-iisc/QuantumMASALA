@@ -1,8 +1,9 @@
 """A more sophisticated (non-diagonal-Hamiltonian-adjacent) ground-truth
-test for `qtm.tddft_gamma.expoper`'s two time-propagators, `TaylorExp` and
-`SplitOper` -- both subclass `qtm.dft.ksham.KSHam` (already covered by
-'../dft_tests/test_ksham.py'), so they're built the same way: a plain
-synthetic cubic `GkSpace` with `vloc`/`l_nloc=[]`, no crystal, no SCF.
+test for `qtm.tddft_gamma.expoper`'s three time-propagators, `TaylorExp`,
+`SplitOper`, and `CrankNicolson` -- all subclass `qtm.dft.ksham.KSHam`
+(already covered by '../dft_tests/test_ksham.py'), so they're built the
+same way: a plain synthetic cubic `GkSpace` with `vloc`/`l_nloc=[]`, no
+crystal, no SCF.
 
 With `vloc=0` and no nonlocal projectors, `h_psi` is exactly the plane-wave
 kinetic operator (see '../dft_tests/test_davidson.py'), so the exact
@@ -41,6 +42,7 @@ from qtm.containers import get_FieldR, get_WavefunG
 from qtm.dft import KSHam, KSWfn
 from qtm.gspace import GkSpace, GSpace
 from qtm.lattice import RealLattice, ReciLattice
+from qtm.tddft_gamma.expoper.cranknicolson import CrankNicolson
 from qtm.tddft_gamma.expoper.splitoper import SplitOper
 from qtm.tddft_gamma.expoper.taylor import TaylorExp
 
@@ -360,4 +362,97 @@ def test_splitoper_single_step_local_error_is_third_order_in_dt():
     # err/dt^3 should be roughly constant (not shrinking, which is what the
     # old, non-unitary implementation showed -- err/dt^3 there grew as dt
     # shrank, the signature of an actual O(dt^2) error).
+    assert max(ratios) / min(ratios) < 2.0
+
+
+# ----- CrankNicolson: full-Hamiltonian Cayley transform (no splitting) ------
+# Applies the Cayley transform directly to the FULL h_psi (kinetic + local +
+# nonlocal combined), rather than SplitOper's Strang-split sub-steps -- see
+# qtm.tddft_gamma.expoper.cranknicolson's module docstring for why this
+# needs no operator splitting at all, and why BiCGSTAB (not GMRES, and not
+# plain Conjugate Gradient) is the appropriate solver for the resulting
+# normal-but-not-Hermitian linear system.
+def test_cranknicolson_free_electron_matches_scalar_cayley_transform():
+    # vloc=0 makes h_psi exactly diagonal (ke_gk only), so the linear solve
+    # reduces, per G-vector, to the plain SCALAR Cayley transform of ke_g --
+    # NOT exp(-i*ke_g*dt) (see the analogous uniform-potential case for
+    # SplitOper: the Cayley transform is only a [1/1] Pade approximant to
+    # the exponential, exact only as dt->0).
+    vloc = FieldR.zeros(())
+    cn = CrankNicolson(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT)
+
+    kswfn_in = _make_kswfn(3)
+    kswfn_out = KSWfn(gkspc, 1.0, 3, is_noncolin=False)
+    cn.prop_psi([kswfn_in], [kswfn_out])
+
+    cayley_ke = (1 - 0.5j * DT * KE_G) / (1 + 0.5j * DT * KE_G)
+    assert np.allclose(np.abs(cayley_ke), 1.0)  # exactly unitary for any dt
+    assert np.allclose(kswfn_out.evc_gk.data, cayley_ke[None, :] * kswfn_in.evc_gk.data, atol=1e-8)
+
+
+def test_cranknicolson_prop_psi_does_not_mutate_input():
+    vloc = _nonuniform_vloc()
+    cn = CrankNicolson(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT)
+
+    kswfn_in = _make_kswfn(2)
+    orig_data = kswfn_in.evc_gk.data.copy()
+    kswfn_out = KSWfn(gkspc, 1.0, 2, is_noncolin=False)
+    cn.prop_psi([kswfn_in], [kswfn_out])
+
+    assert np.array_equal(kswfn_in.evc_gk.data, orig_data)
+
+
+def test_cranknicolson_prop_psi_can_write_in_place():
+    # l_psi_in and l_psi_out are allowed to be the SAME object(s) (this is
+    # exactly how qtm.tddft_gamma.prop.etrs.prop_step calls prop_psi).
+    vloc = _nonuniform_vloc()
+    cn = CrankNicolson(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT)
+
+    kswfn = _make_kswfn(2)
+    orig_data = kswfn.evc_gk.data.copy()
+    cn.prop_psi([kswfn], [kswfn])
+
+    assert not np.array_equal(kswfn.evc_gk.data, orig_data)  # actually propagated
+    assert np.allclose(kswfn.evc_gk.norm2(), 1.0, atol=1e-8)  # still unitary
+
+
+def test_cranknicolson_is_exactly_unitary_for_a_nonuniform_potential():
+    vloc = _nonuniform_vloc()
+    for dt in (0.5, 0.2, 0.1, 0.05, 0.02, 0.01):
+        cn = CrankNicolson(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=dt)
+        B = np.zeros((gkspc.size_g, gkspc.size_g), dtype=complex)
+        for j in range(gkspc.size_g):
+            k_in = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+            k_in.evc_gk.data[:] = 0
+            k_in.evc_gk.data[0, j] = 1.0
+            k_out = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+            cn.prop_psi([k_in], [k_out])
+            B[:, j] = k_out.evc_gk.data[0]
+        unitarity_err = np.max(np.abs(B.conj().T @ B - np.eye(gkspc.size_g)))
+        assert unitarity_err < 1e-8, f"dt={dt}: max|B^H B - I| = {unitarity_err:.3e}"
+
+
+def test_cranknicolson_single_step_local_error_is_third_order_in_dt():
+    vloc = _nonuniform_vloc()
+    H = _dense_h(vloc)
+
+    rng = np.random.default_rng(3)
+    psi0 = rng.standard_normal(gkspc.size_g) + 1j * rng.standard_normal(gkspc.size_g)
+    psi0 /= np.linalg.norm(psi0)
+
+    ratios = []
+    for dt in (0.4, 0.2, 0.1, 0.05, 0.025):
+        cn = CrankNicolson(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=dt)
+        k_in = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+        k_in.evc_gk.data[:] = psi0
+        k_out = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+        cn.prop_psi([k_in], [k_out])
+        out = k_out.evc_gk.data[0]
+
+        exact = sla.expm(-1j * dt * H) @ psi0
+        phase = np.vdot(exact, out)
+        phase /= abs(phase)
+        err = np.max(np.abs(out / phase - exact))
+        ratios.append(err / dt**3)
+
     assert max(ratios) / min(ratios) < 2.0

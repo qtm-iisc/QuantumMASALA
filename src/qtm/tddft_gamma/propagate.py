@@ -83,6 +83,8 @@ def propagate(
         prop_kwargs["order"] = config.taylor_order
     elif config.tddft_exp_method == "splitoper":
         from .expoper.splitoper import SplitOper as PropOper
+    elif config.tddft_exp_method == "cranknicolson":
+        from .expoper.cranknicolson import CrankNicolson as PropOper
     else:
         raise ValueError(
             "'config.tddft_exp_method' not recognized. "
