@@ -47,9 +47,9 @@ with `A` per iteration and no growing basis to store, and is the standard
 practical choice for shifted-Hermitian/normal systems like this one in the
 Crank-Nicolson-for-Schrodinger-equation literature -- this is what both
 `CrankNicolson` and `SplitOper.oper_vloc`'s Cayley transform use, via the
-distribution-aware `qtm.tddft_gamma.expoper._bicgstab.bicgstab_dist` (see
-its module docstring for why `scipy.sparse.linalg.bicgstab` itself cannot
-be used directly once `gkspc` is an MPI-distributed `DistGkSpace`).
+distribution-aware `qtm.linalg.bicgstab.bicgstab_dist` (see its module
+docstring for why `scipy.sparse.linalg.bicgstab` itself cannot be used
+directly once `gkspc` is an MPI-distributed `DistGkSpace`).
 """
 __all__ = ["CrankNicolson"]
 
@@ -62,7 +62,8 @@ from qtm.gspace.gkspc import GkSpace
 from qtm.logger import qtmlogger
 from qtm.pseudo.nloc import NonlocGenerator
 
-from ._bicgstab import bicgstab_dist
+from qtm.linalg.bicgstab import bicgstab_dist
+
 from .base import TDExpOperBase
 
 

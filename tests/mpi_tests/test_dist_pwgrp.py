@@ -6,7 +6,7 @@ paths within a single process.
 
 `SplitOper` and `CrankNicolson`'s per-band BiCGSTAB solve deadlocks under
 `pwgrp_size > 1` unless it uses the distribution-aware solver in
-`qtm.tddft_gamma.expoper._bicgstab` -- a bug that only running under more
+`qtm.linalg.bicgstab` -- a bug that only running under more
 than one process (which no other test in the suite does) can catch; see
 `test_dist_tddft_propagators_no_deadlock` below.
 """

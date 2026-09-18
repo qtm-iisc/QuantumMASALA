@@ -2,7 +2,7 @@
 pwgrp_tddft_short.py` by `tests/mpi_tests/test_dist_pwgrp.py`.
 
 Regression guard for a BiCGSTAB-under-MPI deadlock (see
-`qtm.tddft_gamma.expoper._bicgstab`): `SplitOper` (Cayley
+`qtm.linalg.bicgstab`): `SplitOper` (Cayley
 `vloc_method`, the default) and `CrankNicolson` both solve a per-band
 Cayley transform iteratively, and a naive (`scipy.sparse.linalg.bicgstab`)
 solver checks convergence using each MPI rank's LOCAL residual only, which

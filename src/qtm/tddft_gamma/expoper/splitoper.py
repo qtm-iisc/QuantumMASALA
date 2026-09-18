@@ -7,7 +7,8 @@ from qtm.gspace.gkspc import GkSpace
 from qtm.pseudo.nloc import NonlocGenerator
 from scipy.linalg import expm, block_diag
 
-from ._bicgstab import bicgstab_dist
+from qtm.linalg.bicgstab import bicgstab_dist
+
 from .base import TDExpOperBase
 
 
@@ -185,7 +186,7 @@ class SplitOper(TDExpOperBase):
         ``gkspc``'s own basis, so this substitution restores exact
         unitarity for any time step and any basis size, at the cost of an
         iterative linear solve (BiCGSTAB -- see
-        `qtm.tddft_gamma.expoper._bicgstab` for why a distribution-aware
+        `qtm.linalg.bicgstab` for why a distribution-aware
         implementation, rather than `scipy.sparse.linalg.bicgstab` or
         `gmres` directly, is required here once ``gkspc`` is an MPI-
         distributed `DistGkSpace`) per band instead of a single pointwise

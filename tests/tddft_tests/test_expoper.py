@@ -1,9 +1,9 @@
 """A more sophisticated (non-diagonal-Hamiltonian-adjacent) ground-truth
-test for `qtm.tddft_gamma.expoper`'s three time-propagators, `TaylorExp`,
-`SplitOper`, and `CrankNicolson` -- all subclass `qtm.dft.ksham.KSHam`
-(already covered by '../dft_tests/test_ksham.py'), so they're built the
-same way: a plain synthetic cubic `GkSpace` with `vloc`/`l_nloc=[]`, no
-crystal, no SCF.
+test for `qtm.tddft_gamma.expoper`'s five time-propagators, `TaylorExp`,
+`SplitOper`, `CrankNicolson`, `KTEExp`, and `LanczosExp` -- all subclass
+`qtm.dft.ksham.KSHam` (already covered by '../dft_tests/test_ksham.py'),
+so they're built the same way: a plain synthetic cubic `GkSpace` with
+`vloc`/`l_nloc=[]`, no crystal, no SCF.
 
 With `vloc=0` and no nonlocal projectors, `h_psi` is exactly the plane-wave
 kinetic operator (see '../dft_tests/test_davidson.py'), so the exact
@@ -43,6 +43,8 @@ from qtm.dft import KSHam, KSWfn
 from qtm.gspace import GkSpace, GSpace
 from qtm.lattice import RealLattice, ReciLattice
 from qtm.tddft_gamma.expoper.cranknicolson import CrankNicolson
+from qtm.tddft_gamma.expoper.kte import KTEExp
+from qtm.tddft_gamma.expoper.lanczos import LanczosExp
 from qtm.tddft_gamma.expoper.splitoper import SplitOper
 from qtm.tddft_gamma.expoper.taylor import TaylorExp
 
@@ -71,7 +73,12 @@ def test_taylor_exp_converges_to_exact_propagator_with_increasing_order():
     prev_err = np.inf
     for order in (2, 4, 8, 16):
         te = TaylorExp(
-            gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT,
+            gkspc,
+            is_spin=0,
+            is_noncolin=False,
+            vloc=vloc,
+            l_nloc=[],
+            time_step=DT,
             order=order,
         )
         kswfn_out = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
@@ -91,7 +98,12 @@ def test_taylor_exp_matches_analytic_truncation_error_at_fixed_order():
     order = 4
     kswfn_in = _make_kswfn(1)
     te = TaylorExp(
-        gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT,
+        gkspc,
+        is_spin=0,
+        is_noncolin=False,
+        vloc=vloc,
+        l_nloc=[],
+        time_step=DT,
         order=order,
     )
     kswfn_out = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
@@ -113,7 +125,9 @@ def test_splitoper_free_electron_matches_exact_propagator():
     # identity, so oper_vloc is a no-op and the whole sequence reduces to
     # the exact kinetic propagator, with no scaling ambiguity of any kind.
     vloc = FieldR.zeros(())
-    so = SplitOper(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT)
+    so = SplitOper(
+        gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT
+    )
     so.update_vloc(vloc)
 
     kswfn_in = _make_kswfn(3)
@@ -142,7 +156,9 @@ def test_splitoper_uniform_potential_matches_scalar_cayley_transform():
     v0 = 0.37
     vloc = FieldR.zeros(())
     vloc.data[:] = v0 / gwfn.size_r  # KSHam's pre-division-by-size_r convention
-    so = SplitOper(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT)
+    so = SplitOper(
+        gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT
+    )
     so.update_vloc(vloc)
 
     kswfn_in = _make_kswfn(2)
@@ -152,7 +168,9 @@ def test_splitoper_uniform_potential_matches_scalar_cayley_transform():
 
     cayley_scalar = (1 - 0.5j * DT * v0) / (1 + 0.5j * DT * v0)
     assert np.isclose(abs(cayley_scalar), 1.0)  # exactly unitary for any dt, any v0
-    assert np.allclose(kswfn.evc_gk.data, cayley_scalar * kswfn_in.evc_gk.data, atol=1e-8)
+    assert np.allclose(
+        kswfn.evc_gk.data, cayley_scalar * kswfn_in.evc_gk.data, atol=1e-8
+    )
 
 
 def test_splitoper_prop_psi_matches_the_direct_suboperator_sequence():
@@ -169,7 +187,9 @@ def test_splitoper_prop_psi_matches_the_direct_suboperator_sequence():
     v0 = 0.37
     vloc = FieldR.zeros(())
     vloc.data[:] = v0 / gwfn.size_r
-    so = SplitOper(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT)
+    so = SplitOper(
+        gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT
+    )
     so.update_vloc(vloc)
 
     kswfn_in = _make_kswfn(2)
@@ -207,7 +227,12 @@ def test_splitoper_prop_psi_matches_the_direct_suboperator_sequence():
 def test_splitoper_exponential_method_free_electron_matches_exact_propagator():
     vloc = FieldR.zeros(())
     so = SplitOper(
-        gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT,
+        gkspc,
+        is_spin=0,
+        is_noncolin=False,
+        vloc=vloc,
+        l_nloc=[],
+        time_step=DT,
         vloc_method="exponential",
     )
     so.update_vloc(vloc)
@@ -231,7 +256,12 @@ def test_splitoper_exponential_method_uniform_potential_matches_exact_exponentia
     vloc = FieldR.zeros(())
     vloc.data[:] = v0 / gwfn.size_r
     so = SplitOper(
-        gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT,
+        gkspc,
+        is_spin=0,
+        is_noncolin=False,
+        vloc=vloc,
+        l_nloc=[],
+        time_step=DT,
         vloc_method="exponential",
     )
     so.update_vloc(vloc)
@@ -251,7 +281,12 @@ def test_splitoper_rejects_unknown_vloc_method():
     vloc = FieldR.zeros(())
     with pytest.raises(ValueError):
         SplitOper(
-            gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT,
+            gkspc,
+            is_spin=0,
+            is_noncolin=False,
+            vloc=vloc,
+            l_nloc=[],
+            time_step=DT,
             vloc_method="not_a_real_method",
         )
 
@@ -305,7 +340,12 @@ def test_exponential_method_is_measurably_not_unitary_for_a_nonuniform_potential
     # dt=0.2-0.5).
     vloc = _nonuniform_vloc()
     so = SplitOper(
-        gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=0.2,
+        gkspc,
+        is_spin=0,
+        is_noncolin=False,
+        vloc=vloc,
+        l_nloc=[],
+        time_step=0.2,
         vloc_method="exponential",
     )
     so.update_vloc(vloc)
@@ -317,7 +357,9 @@ def test_exponential_method_is_measurably_not_unitary_for_a_nonuniform_potential
 def test_oper_vloc_is_exactly_unitary_for_a_nonuniform_potential():
     vloc = _nonuniform_vloc()
     for dt in (0.5, 0.2, 0.1, 0.05, 0.02, 0.01):
-        so = SplitOper(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=dt)
+        so = SplitOper(
+            gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=dt
+        )
         so.update_vloc(vloc)
         B = _dense_oper_vloc(so)
         unitarity_err = np.max(np.abs(B.conj().T @ B - np.eye(gkspc.size_g)))
@@ -339,7 +381,9 @@ def test_splitoper_single_step_local_error_is_third_order_in_dt():
 
     ratios = []
     for dt in (0.4, 0.2, 0.1, 0.05, 0.025):
-        so = SplitOper(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=dt)
+        so = SplitOper(
+            gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=dt
+        )
         so.update_vloc(vloc)
         k = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
         k.evc_gk.data[:] = psi0
@@ -379,7 +423,9 @@ def test_cranknicolson_free_electron_matches_scalar_cayley_transform():
     # SplitOper: the Cayley transform is only a [1/1] Pade approximant to
     # the exponential, exact only as dt->0).
     vloc = FieldR.zeros(())
-    cn = CrankNicolson(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT)
+    cn = CrankNicolson(
+        gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT
+    )
 
     kswfn_in = _make_kswfn(3)
     kswfn_out = KSWfn(gkspc, 1.0, 3, is_noncolin=False)
@@ -387,12 +433,16 @@ def test_cranknicolson_free_electron_matches_scalar_cayley_transform():
 
     cayley_ke = (1 - 0.5j * DT * KE_G) / (1 + 0.5j * DT * KE_G)
     assert np.allclose(np.abs(cayley_ke), 1.0)  # exactly unitary for any dt
-    assert np.allclose(kswfn_out.evc_gk.data, cayley_ke[None, :] * kswfn_in.evc_gk.data, atol=1e-8)
+    assert np.allclose(
+        kswfn_out.evc_gk.data, cayley_ke[None, :] * kswfn_in.evc_gk.data, atol=1e-8
+    )
 
 
 def test_cranknicolson_prop_psi_does_not_mutate_input():
     vloc = _nonuniform_vloc()
-    cn = CrankNicolson(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT)
+    cn = CrankNicolson(
+        gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT
+    )
 
     kswfn_in = _make_kswfn(2)
     orig_data = kswfn_in.evc_gk.data.copy()
@@ -406,7 +456,9 @@ def test_cranknicolson_prop_psi_can_write_in_place():
     # l_psi_in and l_psi_out are allowed to be the SAME object(s) (this is
     # exactly how qtm.tddft_gamma.prop.etrs.prop_step calls prop_psi).
     vloc = _nonuniform_vloc()
-    cn = CrankNicolson(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT)
+    cn = CrankNicolson(
+        gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=DT
+    )
 
     kswfn = _make_kswfn(2)
     orig_data = kswfn.evc_gk.data.copy()
@@ -419,7 +471,9 @@ def test_cranknicolson_prop_psi_can_write_in_place():
 def test_cranknicolson_is_exactly_unitary_for_a_nonuniform_potential():
     vloc = _nonuniform_vloc()
     for dt in (0.5, 0.2, 0.1, 0.05, 0.02, 0.01):
-        cn = CrankNicolson(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=dt)
+        cn = CrankNicolson(
+            gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=dt
+        )
         B = np.zeros((gkspc.size_g, gkspc.size_g), dtype=complex)
         for j in range(gkspc.size_g):
             k_in = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
@@ -442,7 +496,9 @@ def test_cranknicolson_single_step_local_error_is_third_order_in_dt():
 
     ratios = []
     for dt in (0.4, 0.2, 0.1, 0.05, 0.025):
-        cn = CrankNicolson(gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=dt)
+        cn = CrankNicolson(
+            gkspc, is_spin=0, is_noncolin=False, vloc=vloc, l_nloc=[], time_step=dt
+        )
         k_in = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
         k_in.evc_gk.data[:] = psi0
         k_out = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
@@ -456,3 +512,330 @@ def test_cranknicolson_single_step_local_error_is_third_order_in_dt():
         ratios.append(err / dt**3)
 
     assert max(ratios) / min(ratios) < 2.0
+
+
+# ----- KTEExp: Chebyshev (Kosloff-Tal-Ezer) expansion -----------------------
+def test_kte_exp_converges_to_exact_propagator_with_decreasing_tol():
+    vloc = FieldR.zeros(())
+    kswfn_in = _make_kswfn(1)
+    exact = np.exp(-1j * KE_G * DT) * kswfn_in.evc_gk.data
+
+    prev_err = np.inf
+    for tol in (1e-4, 1e-8, 1e-12):
+        kte = KTEExp(
+            gkspc,
+            is_spin=0,
+            is_noncolin=False,
+            vloc=vloc,
+            l_nloc=[],
+            time_step=DT,
+            tol=tol,
+        )
+        kswfn_out = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+        kte.prop_psi([kswfn_in], [kswfn_out])
+
+        err = np.max(np.abs(kswfn_out.evc_gk.data - exact))
+        assert err < prev_err
+        prev_err = err
+    assert prev_err < 1e-10
+
+
+def test_kte_exp_accurate_for_a_nonuniform_potential_across_dt():
+    # Unlike TaylorExp/SplitOper/CrankNicolson (a fixed order, or a fixed
+    # [1/1] Pade approximant, so their error has an intrinsic dt-scaling),
+    # KTEExp's order is chosen at runtime from 'tol', so the relevant check
+    # here is that accuracy stays near 'tol' regardless of dt, not that it
+    # scales a particular way with dt.
+    vloc = _nonuniform_vloc()
+    H = _dense_h(vloc)
+    rng = np.random.default_rng(3)
+    psi0 = rng.standard_normal(gkspc.size_g) + 1j * rng.standard_normal(gkspc.size_g)
+    psi0 /= np.linalg.norm(psi0)
+
+    for dt in (0.5, 0.2, 0.05, 0.01):
+        kte = KTEExp(
+            gkspc,
+            is_spin=0,
+            is_noncolin=False,
+            vloc=vloc,
+            l_nloc=[],
+            time_step=dt,
+            tol=1e-10,
+        )
+        k_in = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+        k_in.evc_gk.data[:] = psi0
+        k_out = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+        kte.prop_psi([k_in], [k_out])
+        exact = sla.expm(-1j * dt * H) @ psi0
+        err = np.max(np.abs(k_out.evc_gk.data[0] - exact))
+        assert err < 1e-8, f"dt={dt}: err={err:.3e}"
+
+
+def test_kte_exp_stays_close_to_unitary():
+    vloc = _nonuniform_vloc()
+    for dt in (0.5, 0.1, 0.01):
+        kte = KTEExp(
+            gkspc,
+            is_spin=0,
+            is_noncolin=False,
+            vloc=vloc,
+            l_nloc=[],
+            time_step=dt,
+            tol=1e-10,
+        )
+        kswfn_in = _make_kswfn(1)
+        kswfn_out = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+        kte.prop_psi([kswfn_in], [kswfn_out])
+        assert np.allclose(kswfn_out.evc_gk.norm2(), 1.0, atol=1e-8)
+
+
+def test_kte_exp_prop_psi_does_not_mutate_input():
+    vloc = _nonuniform_vloc()
+    kte = KTEExp(
+        gkspc,
+        is_spin=0,
+        is_noncolin=False,
+        vloc=vloc,
+        l_nloc=[],
+        time_step=DT,
+        tol=1e-10,
+    )
+    kswfn_in = _make_kswfn(2)
+    orig_data = kswfn_in.evc_gk.data.copy()
+    kswfn_out = KSWfn(gkspc, 1.0, 2, is_noncolin=False)
+    kte.prop_psi([kswfn_in], [kswfn_out])
+    assert np.array_equal(kswfn_in.evc_gk.data, orig_data)
+
+
+def test_kte_exp_prop_psi_can_write_in_place():
+    vloc = _nonuniform_vloc()
+    kte = KTEExp(
+        gkspc,
+        is_spin=0,
+        is_noncolin=False,
+        vloc=vloc,
+        l_nloc=[],
+        time_step=DT,
+        tol=1e-10,
+    )
+    kswfn = _make_kswfn(2)
+    orig_data = kswfn.evc_gk.data.copy()
+    kte.prop_psi([kswfn], [kswfn])
+    assert not np.array_equal(kswfn.evc_gk.data, orig_data)
+    assert np.allclose(kswfn.evc_gk.norm2(), 1.0, atol=1e-8)
+
+
+# ----- KTEExp: spectral-bound caching and periodic refresh ------------------
+def test_kte_exp_bounds_are_estimated_once_and_never_refreshed_by_default():
+    vloc = _nonuniform_vloc()
+    kte = KTEExp(
+        gkspc,
+        is_spin=0,
+        is_noncolin=False,
+        vloc=vloc,
+        l_nloc=[],
+        time_step=DT,
+        tol=1e-8,
+    )
+    assert kte._e_bounds is None
+
+    kswfn = _make_kswfn(1)
+    kte.prop_psi([kswfn], [KSWfn(gkspc, 1.0, 1, is_noncolin=False)])
+    bounds_after_first_call = kte._e_bounds
+    assert bounds_after_first_call is not None
+
+    # A much larger-amplitude potential shifts the true spectral range
+    # substantially -- if the cache were being refreshed, '_e_bounds' would
+    # visibly change here.
+    kte.update_vloc(_nonuniform_vloc(amplitude=5.0))
+    kte.prop_psi([kswfn], [KSWfn(gkspc, 1.0, 1, is_noncolin=False)])
+    assert kte._e_bounds == bounds_after_first_call
+
+
+def test_kte_exp_refresh_every_updates_bounds_at_the_right_steps():
+    # amplitude ratio kept moderate (20x, not more): too large a jump for
+    # 'n_probe_refresh' (deliberately small -- see KTEExp's docstring) to
+    # fully re-converge on in one refresh is an expected limitation, not
+    # what this test is checking.
+    vloc_lo = _nonuniform_vloc(amplitude=0.1)
+    vloc_hi = _nonuniform_vloc(amplitude=2.0)
+    kte = KTEExp(
+        gkspc,
+        is_spin=0,
+        is_noncolin=False,
+        vloc=vloc_lo,
+        l_nloc=[],
+        time_step=DT,
+        tol=1e-8,
+        refresh_every=2,
+    )
+    kswfn = _make_kswfn(1)
+    out = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+
+    kte.prop_psi([kswfn], [out])  # 1st call: initial estimate, from vloc_lo
+    bounds_first = kte._e_bounds
+
+    kte.update_vloc(vloc_hi)  # true range now much wider
+    kte.prop_psi([kswfn], [out])  # 2nd call: not yet due for a refresh
+    assert kte._e_bounds == bounds_first  # still the stale vloc_lo-based estimate
+
+    kte.prop_psi([kswfn], [out])  # 3rd call: refresh_every=2 fires here
+    bounds_refreshed = kte._e_bounds
+    assert bounds_refreshed != bounds_first
+    span_first = bounds_first[1] - bounds_first[0]
+    span_refreshed = bounds_refreshed[1] - bounds_refreshed[0]
+    assert span_refreshed > 1.5 * span_first  # caught up to vloc_hi's wider range
+
+    # The refreshed estimate should actually bracket vloc_hi's true range,
+    # checked against an independent, generously-probed reference.
+    from qtm.linalg.lanczos import lanczos_bounds
+
+    rng_probe = np.random.default_rng(7)
+    probe = rng_probe.standard_normal(gkspc.size_g) + 1j * rng_probe.standard_normal(
+        gkspc.size_g
+    )
+    e_min_ref, e_max_ref = lanczos_bounds(
+        kte._h_linear, gkspc, probe, n_iter=gkspc.size_g, margin=0.0
+    )
+    assert bounds_refreshed[0] <= e_min_ref + 1e-6
+    assert bounds_refreshed[1] >= e_max_ref - 1e-6
+
+
+# ----- LanczosExp: Krylov-subspace expansion --------------------------------
+def test_lanczos_exp_converges_to_exact_propagator_with_decreasing_tol():
+    vloc = FieldR.zeros(())
+    kswfn_in = _make_kswfn(1)
+    exact = np.exp(-1j * KE_G * DT) * kswfn_in.evc_gk.data
+
+    prev_err = np.inf
+    for tol in (1e-4, 1e-8, 1e-12):
+        lan = LanczosExp(
+            gkspc,
+            is_spin=0,
+            is_noncolin=False,
+            vloc=vloc,
+            l_nloc=[],
+            time_step=DT,
+            tol=tol,
+        )
+        kswfn_out = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+        lan.prop_psi([kswfn_in], [kswfn_out])
+
+        err = np.max(np.abs(kswfn_out.evc_gk.data - exact))
+        assert err < prev_err
+        prev_err = err
+    assert prev_err < 1e-10
+
+
+def test_lanczos_exp_accurate_for_a_nonuniform_potential_across_dt():
+    vloc = _nonuniform_vloc()
+    H = _dense_h(vloc)
+    rng = np.random.default_rng(3)
+    psi0 = rng.standard_normal(gkspc.size_g) + 1j * rng.standard_normal(gkspc.size_g)
+    psi0 /= np.linalg.norm(psi0)
+
+    for dt in (0.5, 0.2, 0.05, 0.01):
+        lan = LanczosExp(
+            gkspc,
+            is_spin=0,
+            is_noncolin=False,
+            vloc=vloc,
+            l_nloc=[],
+            time_step=dt,
+            tol=1e-10,
+        )
+        k_in = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+        k_in.evc_gk.data[:] = psi0
+        k_out = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+        lan.prop_psi([k_in], [k_out])
+        exact = sla.expm(-1j * dt * H) @ psi0
+        err = np.max(np.abs(k_out.evc_gk.data[0] - exact))
+        assert err < 1e-8, f"dt={dt}: err={err:.3e}"
+
+
+def test_lanczos_exp_stays_close_to_unitary():
+    vloc = _nonuniform_vloc()
+    for dt in (0.5, 0.1, 0.01):
+        lan = LanczosExp(
+            gkspc,
+            is_spin=0,
+            is_noncolin=False,
+            vloc=vloc,
+            l_nloc=[],
+            time_step=dt,
+            tol=1e-10,
+        )
+        kswfn_in = _make_kswfn(1)
+        kswfn_out = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+        lan.prop_psi([kswfn_in], [kswfn_out])
+        assert np.allclose(kswfn_out.evc_gk.norm2(), 1.0, atol=1e-8)
+
+
+def test_lanczos_exp_prop_psi_does_not_mutate_input():
+    vloc = _nonuniform_vloc()
+    lan = LanczosExp(
+        gkspc,
+        is_spin=0,
+        is_noncolin=False,
+        vloc=vloc,
+        l_nloc=[],
+        time_step=DT,
+        tol=1e-10,
+    )
+    kswfn_in = _make_kswfn(2)
+    orig_data = kswfn_in.evc_gk.data.copy()
+    kswfn_out = KSWfn(gkspc, 1.0, 2, is_noncolin=False)
+    lan.prop_psi([kswfn_in], [kswfn_out])
+    assert np.array_equal(kswfn_in.evc_gk.data, orig_data)
+
+
+def test_lanczos_exp_prop_psi_can_write_in_place():
+    vloc = _nonuniform_vloc()
+    lan = LanczosExp(
+        gkspc,
+        is_spin=0,
+        is_noncolin=False,
+        vloc=vloc,
+        l_nloc=[],
+        time_step=DT,
+        tol=1e-10,
+    )
+    kswfn = _make_kswfn(2)
+    orig_data = kswfn.evc_gk.data.copy()
+    lan.prop_psi([kswfn], [kswfn])
+    assert not np.array_equal(kswfn.evc_gk.data, orig_data)
+    assert np.allclose(kswfn.evc_gk.norm2(), 1.0, atol=1e-8)
+
+
+def test_lanczos_exp_matches_exact_propagator_for_a_pure_eigenstate_without_warning():
+    # Regression test for a fixed bug: an eigenstate of H closes its Krylov
+    # subspace after exactly one Lanczos vector (beta=0 immediately), which
+    # a previous version of the adaptive stopping logic mistook for "did
+    # not converge within m_max" (a spurious warning) instead of the exact,
+    # genuine convergence it actually is.
+    from unittest.mock import patch
+
+    vloc = FieldR.zeros(())
+    idx = int(np.argmin(KE_G))
+    kswfn_in = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+    kswfn_in.evc_gk.data[:] = 0
+    kswfn_in.evc_gk.data[0, idx] = 1.0
+
+    lan = LanczosExp(
+        gkspc,
+        is_spin=0,
+        is_noncolin=False,
+        vloc=vloc,
+        l_nloc=[],
+        time_step=DT,
+        tol=1e-10,
+    )
+    kswfn_out = KSWfn(gkspc, 1.0, 1, is_noncolin=False)
+    with patch("qtm.tddft_gamma.expoper.lanczos.qtmlogger") as mock_logger:
+        lan.prop_psi([kswfn_in], [kswfn_out])
+        assert not mock_logger.warning.called
+
+    exact = np.exp(-1j * KE_G[idx] * DT)
+    assert np.isclose(kswfn_out.evc_gk.data[0, idx], exact)
+    other = np.arange(gkspc.size_g) != idx
+    assert np.allclose(kswfn_out.evc_gk.data[0, other], 0.0, atol=1e-12)
