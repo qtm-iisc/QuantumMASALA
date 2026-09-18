@@ -23,12 +23,23 @@ from __future__ import annotations
 __all__ = ["lanczos_steps", "lanczos_tridiagonalize", "lanczos_bounds"]
 
 import itertools
-from typing import Callable
+from typing import Callable, Optional
 
 import numpy as np
 from scipy.linalg import eigh_tridiagonal
 
 from .bicgstab import _global_vdot
+
+
+def _extremal_ritz(alphas: np.ndarray, betas: np.ndarray):
+    """Diagonalizes the (small, real, tridiagonal) `m x m` matrix built so
+    far and returns its full set of Ritz values/vectors. `m` stays small
+    enough (tens, not thousands) that this costs nothing next to the
+    matvecs that built it -- see `lanczos_bounds`'s docstring for why that
+    matters."""
+    if alphas.size == 1:
+        return alphas, np.ones((1, 1))
+    return eigh_tridiagonal(alphas, betas)
 
 
 def lanczos_steps(
@@ -113,11 +124,25 @@ def lanczos_bounds(
     n_iter: int = 30,
     margin: float = 0.005,
     return_vectors: bool = False,
+    check_every: int = 5,
+    conv_tol: Optional[float] = None,
 ):
     """Estimates `(e_min, e_max)` for `matvec` by Lanczos-tridiagonalizing
-    it (see `lanczos_tridiagonalize`) starting from `psi0` for up to
-    `n_iter` steps, then padding the resulting extremal Ritz values by
-    `margin` (a fraction of the estimated range, on each side).
+    it (see `lanczos_steps`) starting from `psi0`, then padding the
+    resulting extremal Ritz values by `margin` (a fraction of the
+    estimated range, on each side).
+
+    `n_iter` is a CAP, not a fixed count: the extremal Ritz values of a
+    well-separated spectrum typically stop moving well before `n_iter`
+    Krylov vectors have been added, and diagonalizing the (small,
+    real-tridiagonal) matrix built so far costs nothing next to another
+    matvec -- so every `check_every` vectors, the current extremal Ritz
+    values are compared to the previous checkpoint's, and iteration stops
+    as soon as their change (relative to the current estimated range) is
+    below `conv_tol`. `conv_tol` defaults to `margin` itself: there is no
+    point refining the raw estimate any tighter than the fraction it is
+    about to be padded by anyway, since that padding already absorbs
+    exactly this much residual error.
 
     If `return_vectors` is set, also returns the (full-space, normalized)
     Ritz vectors `(v_min, v_max)` corresponding to the extremal Ritz
@@ -127,11 +152,28 @@ def lanczos_bounds(
     to the new extremal eigenvectors, so a probe seeded from them should
     re-converge in far fewer iterations than a fresh probe would need.
     """
-    Q, alphas, betas = lanczos_tridiagonalize(matvec, gkspc, psi0, n_iter)
-    if alphas.size == 1:
-        ritz_vals, ritz_vecs = alphas, np.ones((1, 1))
-    else:
-        ritz_vals, ritz_vecs = eigh_tridiagonal(alphas, betas)
+    if conv_tol is None:
+        conv_tol = margin
+
+    prev_bounds = None
+    state = None
+    for m_eff, state in enumerate(lanczos_steps(matvec, gkspc, psi0), start=1):
+        _, alphas, betas = state
+        if m_eff % check_every != 0 and m_eff < n_iter:
+            continue
+        ritz_vals, _ = _extremal_ritz(alphas, betas)
+        e_min, e_max = float(ritz_vals.min()), float(ritz_vals.max())
+        if prev_bounds is not None:
+            scale = max(e_max - e_min, 1e-12)
+            changed = max(abs(e_min - prev_bounds[0]), abs(e_max - prev_bounds[1]))
+            if changed / scale < conv_tol:
+                break
+        prev_bounds = (e_min, e_max)
+        if m_eff >= n_iter:
+            break
+
+    Q, alphas, betas = state
+    ritz_vals, ritz_vecs = _extremal_ritz(alphas, betas)
     idx_min, idx_max = int(np.argmin(ritz_vals)), int(np.argmax(ritz_vals))
     e_min, e_max = float(ritz_vals[idx_min]), float(ritz_vals[idx_max])
     pad = margin * max(e_max - e_min, 1e-12)

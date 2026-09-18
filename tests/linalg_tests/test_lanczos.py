@@ -95,21 +95,90 @@ def test_lanczos_bounds_return_vectors_gives_genuine_eigenvectors():
 
 
 def test_lanczos_bounds_margin_pads_symmetrically_and_monotonically():
+    # conv_tol is pinned to 0.0 throughout (rather than left at its
+    # margin-tracking default) specifically so every call below runs the
+    # SAME full n_iter iterations and thus shares the same raw (unpadded)
+    # Ritz estimate -- isolating the padding math from the (separately
+    # tested) early-stopping behavior, which would otherwise make a
+    # larger margin also stop earlier and so change the raw estimate too.
     n = 25
     H = _random_hermitian(n, seed=7)
     psi0 = _random_vec(n, seed=8)
 
-    e_min0, e_max0 = lanczos_bounds(lambda x: H @ x, None, psi0, n_iter=n, margin=0.0)
+    e_min0, e_max0 = lanczos_bounds(
+        lambda x: H @ x, None, psi0, n_iter=n, margin=0.0, conv_tol=0.0
+    )
     prev_pad = 0.0
     for margin in (0.01, 0.05, 0.2):
         e_min, e_max = lanczos_bounds(
-            lambda x: H @ x, None, psi0, n_iter=n, margin=margin
+            lambda x: H @ x, None, psi0, n_iter=n, margin=margin, conv_tol=0.0
         )
         pad_lo = e_min0 - e_min
         pad_hi = e_max - e_max0
         assert pad_lo > prev_pad and pad_hi > prev_pad
         assert np.isclose(pad_lo, pad_hi)  # symmetric padding on each side
         prev_pad = pad_lo
+
+
+def test_lanczos_bounds_stops_early_once_extremal_ritz_values_stabilize():
+    # A well-separated spectrum: Lanczos on this converges its extremal
+    # Ritz values to the true extremes within a handful of iterations, far
+    # short of the n_iter cap -- so with periodic convergence checking,
+    # lanczos_bounds should stop (and thus call matvec) long before
+    # reaching that cap, rather than always paying for the worst case.
+    n = 50
+    rng = np.random.default_rng(12)
+    eigs = np.concatenate([rng.uniform(-1, 1, n - 2), [-20.0, 20.0]])
+    Q, _ = np.linalg.qr(rng.standard_normal((n, n)) + 1j * rng.standard_normal((n, n)))
+    H = (Q * eigs) @ Q.conj().T
+    H = 0.5 * (H + H.conj().T)
+    psi0 = _random_vec(n, seed=13)
+
+    call_count = 0
+
+    def counted_matvec(x):
+        nonlocal call_count
+        call_count += 1
+        return H @ x
+
+    n_iter_cap = 30
+    (e_min, e_max) = lanczos_bounds(
+        counted_matvec, None, psi0, n_iter=n_iter_cap, margin=0.01, check_every=5
+    )
+    assert call_count < n_iter_cap  # stopped early, did not exhaust the cap
+
+    # The early-stopped estimate should still be about as accurate as
+    # running the full cap: the padding (margin) is the only reason for
+    # the two to differ at all.
+    (e_min_full, e_max_full) = lanczos_bounds(
+        lambda x: H @ x, None, psi0, n_iter=n_iter_cap, margin=0.01, check_every=5
+    )
+    assert np.isclose(e_min, e_min_full, atol=1e-6)
+    assert np.isclose(e_max, e_max_full, atol=1e-6)
+    assert np.isclose(e_min, -20.0, atol=0.5)
+    assert np.isclose(e_max, 20.0, atol=0.5)
+
+
+def test_lanczos_bounds_zero_margin_disables_early_stopping_by_default():
+    # margin=0.0 with conv_tol left at its default (= margin) means "never
+    # stop early" -- a relative change of exactly zero essentially never
+    # occurs, so this reduces to the old fixed-n_iter behavior. Several
+    # other tests in this file rely on that to get an EXACT iteration
+    # count; this test makes the guarantee explicit.
+    n = 30
+    H = _random_hermitian(n, seed=14)
+    psi0 = _random_vec(n, seed=15)
+
+    call_count = 0
+
+    def counted_matvec(x):
+        nonlocal call_count
+        call_count += 1
+        return H @ x
+
+    n_iter = 12
+    lanczos_bounds(counted_matvec, None, psi0, n_iter=n_iter, margin=0.0)
+    assert call_count == n_iter
 
 
 def test_lanczos_bounds_from_a_localized_state_needs_far_fewer_iterations():

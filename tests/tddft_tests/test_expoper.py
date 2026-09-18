@@ -645,7 +645,7 @@ def test_kte_exp_bounds_are_estimated_once_and_never_refreshed_by_default():
     assert bounds_after_first_call is not None
 
     # A much larger-amplitude potential shifts the true spectral range
-    # substantially -- if the cache were being refreshed, '_e_bounds' would
+    # substantially -- if the cache were being refreshed, the bounds would
     # visibly change here.
     kte.update_vloc(_nonuniform_vloc(amplitude=5.0))
     kte.prop_psi([kswfn], [KSWfn(gkspc, 1.0, 1, is_noncolin=False)])

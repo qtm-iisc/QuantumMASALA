@@ -34,9 +34,10 @@ not the physical wavefunction being propagated -- see its docstring for
 why), via `qtm.linalg.lanczos.lanczos_bounds` -- and then cached in
 `self._e_bounds` for the lifetime of the instance, deliberately NOT
 refreshed on later calls even as `vloc` is updated between TDDFT steps.
-Bound estimation is itself a Lanczos run whose cost is comparable to the
-propagation step it enables, so recomputing it on every call can cost
-more than the lower Chebyshev order it buys. It also isn't necessary:
+Bound estimation is itself a Lanczos run whose cost (even capped
+adaptively, see `lanczos_bounds`) is comparable to the propagation step
+it enables, so recomputing it on every call can cost more than the lower
+Chebyshev order it buys. It also isn't necessary:
 `H`'s spectral RANGE drifts far more slowly across a self-consistent
 TDDFT run than `psi` itself does, so a single conservatively-padded
 estimate stays valid for the whole run rather than needing to track that
@@ -139,12 +140,15 @@ class KTEExp(TDExpOperBase):
         """Fractional safety padding applied to the estimated spectral
         range -- see `qtm.linalg.lanczos.lanczos_bounds`'s docstring."""
         self.n_probe = n_probe
-        """Lanczos iterations for the INITIAL (cold-start, random-probe)
-        bound estimate, which has nothing to seed from and so needs
-        enough iterations to find the extremal eigenvectors from
-        scratch."""
+        """CAP on Lanczos iterations for the INITIAL (cold-start,
+        random-probe) bound estimate -- `lanczos_bounds` diagonalizes the
+        (cheap, small) tridiagonal matrix every few vectors and stops as
+        soon as the extremal Ritz values stabilize, so this is only
+        reached in the worst case. Set generously since a cold start has
+        nothing to seed from and so may genuinely need many iterations to
+        find the extremal eigenvectors from scratch."""
         self.n_probe_refresh = n_probe_refresh
-        """Lanczos iterations for each periodic refresh (see
+        """CAP on Lanczos iterations for each periodic refresh (see
         `refresh_every`), seeded from the previous extremal Ritz vectors
         rather than a random vector. Deliberately much smaller than
         `n_probe`: physically, `E_max` is set almost entirely by the
