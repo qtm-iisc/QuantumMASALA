@@ -22,6 +22,7 @@ from qtm.crystal import Crystal
 from qtm.kpts import KList
 from qtm.gspace import GSpace, GkSpace
 from qtm.containers import FieldGType, FieldRType, get_FieldG
+from qtm.dft.exchange import Exchange, MultiKExchangeDriver
 
 from qtm.pot import hartree, xc, ewald
 from qtm.pseudo import loc_generate_rhoatomic, loc_generate_pot_rhocore, NonlocGenerator
@@ -44,6 +45,7 @@ class EnergyData:
     ewald: float = 0.0
     hartree: float = 0.0
     xc: float = 0.0
+    exx: float = 0.0
 
     fermi: float | None = None
     smear: float | None = None
@@ -105,6 +107,15 @@ def scf(
     mix_dim: int = 8,
     dftconfig: DFTConfig | None = None,
     ret_vxc: bool = False,
+    hf: bool = False,
+    exx_maxstep: int = 12,
+    adaptive_thr: bool = True,
+    conv_thr_init: float = 1e-3 * RYDBERG,
+    conv_thr_multi: float = 1e-1,
+    exx_conv_thr: float = 1e-8 * RYDBERG,
+    reset_mixing_on_exx: bool = True,
+    exxdiv_treatment: str = "vcut_spherical",
+    exx_Rc: float | None = None,
 ) -> (
     tuple[bool, FieldGType, list[list[KSWfn]], EnergyData, np.ndarray]
     | tuple[bool, FieldGType, list[list[KSWfn]], EnergyData]
@@ -117,6 +128,39 @@ def scf(
         check_system(comm, crystal, grho, gwfn, kpts)
         if grho is not gwfn:
             raise NotImplementedError()
+
+        hf = comm.bcast(hf)
+        assert isinstance(hf, bool)
+
+        exx_maxstep = comm.bcast(exx_maxstep)
+        assert isinstance(exx_maxstep, int)
+        assert exx_maxstep > 0
+
+        adaptive_thr = comm.bcast(adaptive_thr)
+        assert isinstance(adaptive_thr, bool)
+
+        conv_thr_init = comm.bcast(conv_thr_init)
+        assert isinstance(conv_thr_init, float)
+        assert conv_thr_init > 0
+
+        conv_thr_multi = comm.bcast(conv_thr_multi)
+        assert isinstance(conv_thr_multi, float)
+        assert conv_thr_multi >= 0
+
+        exx_conv_thr = comm.bcast(exx_conv_thr)
+        assert isinstance(exx_conv_thr, float)
+        assert exx_conv_thr > 0
+
+        reset_mixing_on_exx = comm.bcast(reset_mixing_on_exx)
+        assert isinstance(reset_mixing_on_exx, bool)
+
+        exxdiv_treatment = comm.bcast(exxdiv_treatment)
+        assert isinstance(exxdiv_treatment, str)
+
+        exx_Rc = comm.bcast(exx_Rc)
+        assert (exx_Rc is None) or isinstance(exx_Rc, float)
+        if isinstance(exx_Rc, float):
+            assert exx_Rc > 0.0
 
         numbnd = comm.bcast(numbnd)
         assert isinstance(numbnd, int)
@@ -212,6 +256,21 @@ def scf(
             dftconfig = DFTConfig()
         comm.bcast(dftconfig)
         assert isinstance(dftconfig, DFTConfig)
+
+    # HF/EXX with a k-point mesh supports k-point parallelism across
+    # MPI k-groups. Each k-group must currently contain one MPI rank,
+    # and distributed plane-wave GSpace is not yet supported.
+    if hf and kpts.numkpts != 1:
+        if isinstance(gwfn, DistGSpace):
+            raise NotImplementedError(
+                "HF/EXX with k-point meshes is not implemented for DistGSpace yet."
+            )
+
+        if dftcomm.kgrp_intra.size != 1:
+            raise NotImplementedError(
+                "HF/EXX k-point MPI currently supports one MPI rank per "
+                "k-group only."
+            )
 
     start_time = perf_counter()
     image_comm = dftcomm.image_comm
@@ -340,12 +399,19 @@ def scf(
         def compute_vloc():
             nonlocal rho_in, v_hart, v_xc, vloc, vloc_g0, v_ion_g0
             v_hart, en.hartree = hartree.compute(rho_in)
-            v_xc, en.xc = xc.compute(rho_in, rho_core, *libxc_func)
+
+            if hf:
+                # Pure HF: no semilocal XC potential or energy
+                v_xc = 0.0 * v_hart
+                en.xc = 0.0
+            else:
+                v_xc, en.xc = xc.compute(rho_in, rho_core, *libxc_func)
+
             vloc = v_ion + v_hart + v_xc
 
             # Grid interpolation from grho -> gwfn goes here
             vloc /= np.prod(gwfn.grid_shape)
-            vloc_g0 = np.sum(vloc, axis=-1)
+
             pwgrp_inter_kgrp.bcast(vloc.data)
             image_comm.bcast(vloc.data)
             v_ion_g0 = np.sum(v_ion) / np.prod(grho.grid_shape)
@@ -369,30 +435,100 @@ def scf(
                 "vloc_g0": None,
             }
 
+        vloc_g0 = None
+        exx_drivers = None
+
         def solve_kswfn(kswfn_k: list[KSWfn], ksham_k: list[KSHam]):
             numiter = 0
-            for ispin in range(2 if is_spin and not is_noncolin else 1):
+            nspin_loop = 2 if is_spin and not is_noncolin else 1
+
+            for ispin in range(nspin_loop):
                 kswfn_ = kswfn_k[ispin]
+
                 if ksham_k[ispin] is None:
+                    ex = None
+                    if hf:
+                        # Exchange occupation prefactor
+                        occ_spin_factor = (2.0 if (not is_spin and not is_noncolin) else 1.0)
+                        f_occ = occ_spin_factor * np.asarray(kswfn_.occ)
+
+                        lat = crystal.reallat.latvec
+                        volume = float(abs(np.linalg.det(lat)))
+
+                        Rc_this = None
+                        if exxdiv_treatment == "vcut_spherical":
+                            if exx_Rc is not None:
+                                Rc_this = float(exx_Rc)
+                            else:
+                                Rc_this = 0.45 * min(
+                                    np.linalg.norm(crystal.reallat.latvec[:, 0]),
+                                    np.linalg.norm(crystal.reallat.latvec[:, 1]),
+                                    np.linalg.norm(crystal.reallat.latvec[:, 2]),
+                                )
+
+                        if kpts.numkpts == 1:
+                            # Single-k-point exchange
+                            ex = Exchange(
+                                kswfn_.gkspc,
+                                kswfn_.evc_gk,
+                                f_occ,
+                                volume,
+                                method=exxdiv_treatment,
+                                Rc=Rc_this,
+                            )
+                        else:
+                            # Multi-k-point exchange
+                            nonlocal exx_drivers
+                            if exx_drivers is None:
+                                nspin_loop_local = 2 if is_spin and not is_noncolin else 1
+
+                                # For non-spin-polarized calculations, k_weight
+                                # includes the spin degeneracy factor.
+                                kweight_bz_factor = (0.5 if (not is_spin and not is_noncolin) else 1.0)
+
+                                exx_drivers = [
+                                    MultiKExchangeDriver(
+                                        volume=volume,
+                                        nk_total=kpts.numkpts,
+                                        exxdiv_treatment=exxdiv_treatment,
+                                        exx_Rc=Rc_this,
+                                        occ_spin_factor=occ_spin_factor,
+                                        kweight_bz_factor=kweight_bz_factor,
+                                        use_ace=False,
+                                        ace_jitter=1e-12,
+                                        kroot_comm=kroot_intra,
+                                    )
+                                    for _ in range(nspin_loop_local)
+                                ]
+
+                                # Initialize the occupied wavefunctions for exchange.
+                                for ispin0 in range(nspin_loop_local):
+                                    exx_drivers[ispin0].update_from_kswfns(
+                                        [kswfn_k[ispin0] for kswfn_k in l_kswfn_kgrp],
+                                        build_ace=True,
+                                    )
+
+                            ex = exx_drivers[ispin].block_for_kswfn(kswfn_)
+
                     ksham_k[ispin] = KSHam(
                         kswfn_.gkspc,
                         is_noncolin,
-                        vloc if is_noncolin else vloc[ispin],
+                        vloc if (is_noncolin or (not is_spin)) else vloc[ispin],
                         l_nloc,
+                        exchange=ex,
                     )
+
                 ksham_ = ksham_k[ispin]
-                ksham_.vloc = vloc if is_noncolin else vloc[ispin]
+                ksham_.vloc = vloc if (is_noncolin or (not is_spin)) else vloc[ispin]
                 ksham_.vloc_g0 = vloc_g0
-                # ksham = KSHam(kswfn_.gkspc, is_noncolin,
-                #               vloc if is_noncolin else vloc[ispin], l_nloc)
+
                 solver_kwargs["vloc_g0"] = vloc_g0
                 _, niter = solver.solve(
                     dftcomm, ksham_, kswfn_, diago_thr, **solver_kwargs
                 )
                 numiter += niter
-            numiter /= 2 if is_spin and not is_noncolin else 1
-            return numiter
 
+            return numiter / nspin_loop
         # Generating rho from l_kswfn_kgrp
         def update_rho_out():
             nonlocal rho_out
@@ -427,120 +563,363 @@ def scf(
 
         def compute_en():
             nonlocal rho_in, rho_out
-            e_eigen = 0
+
+            # Eigenvalue sum
+            e_eigen = 0.0
             for kswfn_k in l_kswfn_kgrp:
                 e_eigen += sum(
                     kswfn_.k_weight * np.sum(kswfn_.evl * kswfn_.occ)
                     for kswfn_ in kswfn_k
                 )
+
             with kroot_intra:
                 if kroot_intra.is_null:
                     kroot_intra.skip_with_block()
                 e_eigen = kroot_intra.allreduce(e_eigen)
+
             e_eigen = image_comm.bcast(e_eigen)
-            v_hxc = v_hart + v_xc
-            e_vhxc = sum((v_hxc * rho_out.to_r())).integrate_unitcell()
-            en.one_el = (e_eigen - e_vhxc).real
-            en.total = en.one_el + en.ewald + en.hartree + en.xc
-            en.hwf = np.real(
-                e_eigen
-                - sum((v_hxc * rho_in.to_r())).integrate_unitcell()
-                + en.ewald
-                + en.hartree
-                + en.xc
-            )  # Harris-Weinert-Foulkes energy estimate
+
+            # Energy
+            if hf:
+                # Exact-exchange energy
+                exx = 0.0
+                for kswfn_k, ksham_k in zip(l_kswfn_kgrp, l_ksham_kgrp):
+                    for ispin in range(2 if is_spin and not is_noncolin else 1):
+                        ksh = ksham_k[ispin]
+                        if (ksh is not None) and (ksh.exchange is not None):
+                            exx += ksh.exchange.energy()
+
+                with kroot_intra:
+                    if kroot_intra.is_null:
+                        kroot_intra.skip_with_block()
+                    exx = kroot_intra.allreduce(exx)
+
+                exx = image_comm.bcast(exx)
+
+                en.exx = float(np.real(exx))
+                en.xc = 0.0
+
+                # HF total energy
+                en.total = float(np.real(e_eigen - en.hartree - en.exx + en.ewald))
+                en.one_el = float(np.real(e_eigen))
+                en.hwf = en.total
+
+            else:
+                v_hxc = v_hart + v_xc
+                e_vhxc = sum((v_hxc * rho_out.to_r())).integrate_unitcell()
+                en.one_el = (e_eigen - e_vhxc).real
+                en.total = en.one_el + en.ewald + en.hartree + en.xc
+
+                en.hwf = np.real(
+                    e_eigen
+                    - sum((v_hxc * rho_in.to_r())).integrate_unitcell()
+                    + en.ewald
+                    + en.hartree
+                    + en.xc
+                )
+
             if occ_typ == "smear":
                 en.total += en.smear
                 en.hwf += en.smear
                 en.internal = en.total - en.smear
 
         # Defining charge mixing routine
-        if dftconfig.mixing_method == "modbroyden":
-            mixmod = mixing.ModBroyden(dftcomm, rho_start, mix_beta, mix_dim)
-        elif dftconfig.mixing_method == "genbroyden":
-            mixmod = mixing.GenBroyden(dftcomm, rho_start, mix_beta, mix_dim)
+        def make_mixmod(rho_ref):
+            if dftconfig.mixing_method == "modbroyden":
+                return mixing.ModBroyden(dftcomm, rho_ref, mix_beta, mix_dim)
+            elif dftconfig.mixing_method == "genbroyden":
+                return mixing.GenBroyden(dftcomm, rho_ref, mix_beta, mix_dim)
+            else:
+                raise ValueError(f"Unknown mixing method: {dftconfig.mixing_method}")
+
         if symm_rho:
             rho_start = symm_mod.symmetrize(rho_start)
-        comm.barrier()
+
+        rho_in = rho_start.copy()
+        mixmod = make_mixmod(rho_in)
+        image_comm.barrier()
 
         diago_thr = diago_thr_init
         scf_converged = False
+        global_inner_iter = 0
 
-        idxiter = 0
-        while idxiter < maxiter:
-            print(end="", flush=True)
-            if symm_rho:
-                rho_in = symm_mod.symmetrize(rho_in)
-            normalize_rho(rho_in)
-            compute_vloc()
-            vloc_g0 = np.sum(vloc, axis=-1) / np.prod(grho.grid_shape)
+        def occ_factor(kswfn_: KSWfn):
+            return (2.0 if (not is_spin and not is_noncolin) else 1.0) * np.asarray(kswfn_.occ)
 
-            diago_avgiter = 0
-            for kswfn_, ksham_ in zip(l_kswfn_kgrp, l_ksham_kgrp):
-                diago_avgiter += solve_kswfn(kswfn_, ksham_)
-            diago_avgiter /= len(i_kpts_kgrp)
+        def update_exchange_from_wfns(*, build_ace: bool = True):
+            """Update the occupied wavefunctions used to construct Vx."""
+            nspin_loop = 2 if is_spin and not is_noncolin else 1
 
-            if occ_typ == "fixed":
-                en.HO_level, en.LU_level = occup.fixed.compute_occ(
-                    dftcomm, l_kswfn_kgrp, crystal.numel
-                )
-            elif occ_typ == "smear":
-                en.fermi, en.smear = occup.smear.compute_occ(
-                    dftcomm, l_kswfn_kgrp, crystal.numel, is_spin, smear_typ, e_temp
-                )
+            # Update multi-k exchange blocks.
+            if hf and (kpts.numkpts != 1):
+                nonlocal exx_drivers
+                if exx_drivers is None:
+                    raise RuntimeError(
+                        "exx_drivers is None in multi-k HF update; exchange blocks were not initialized."
+                    )
+                for ispin0 in range(nspin_loop):
+                    exx_drivers[ispin0].update_from_kswfns(
+                        [kswfn_k[ispin0] for kswfn_k in l_kswfn_kgrp],
+                        build_ace=build_ace,
+                    )
+                return
 
-            update_rho_out()
-            compute_en()
-            e_error = float(mixmod.compute_error(rho_in, rho_out))
-            e_error = image_comm.bcast(e_error)
+            for kswfn_k, ksham_k in zip(l_kswfn_kgrp, l_ksham_kgrp):
+                for ispin in range(nspin_loop):
+                    ksh = ksham_k[ispin]
+                    if (ksh is None) or (ksh.exchange is None):
+                        continue
 
-            if (
-                e_error < conv_thr
-            ):  # and diago_thr < max(1e-13, 0.1*conv_thr/crystal.numel):
-                scf_converged = True
-                rho_out = rho_in.copy()
-                compute_en()
-            elif idxiter == 0 and e_error < diago_thr * crystal.numel:
-                diago_thr = 0.1 * e_error / crystal.numel
-                # continue
-            else:
-                diago_thr = min(diago_thr, 0.1 * e_error / crystal.numel)
-                diago_thr = max(diago_thr, 0.5e-13)
-                rho_in = mixmod.mix(rho_in, rho_out)
+                    kswfn_ = kswfn_k[ispin]
+                    ksh.exchange.update_orbitals(
+                        kswfn_.evc_gk,
+                        occ_factor(kswfn_),
+                        build_ace=build_ace,
+                    )
+
+
+        def compute_fock_energy_from_wfns():
+            """Return fock = sum_i f_i <psi_i|Vx|psi_i> using the current Vx."""
+            fock_val = 0.0
+            nspin_loop = 2 if is_spin and not is_noncolin else 1
+
+            for kswfn_k, ksham_k in zip(l_kswfn_kgrp, l_ksham_kgrp):
+                for ispin in range(nspin_loop):
+                    ksh = ksham_k[ispin]
+                    if (ksh is None) or (ksh.exchange is None):
+                        continue
+
+                    kswfn_ = kswfn_k[ispin]
+                    fock_val += float(
+                        np.real(
+                            ksh.exchange.fock_energy(
+                                kswfn_.evc_gk,
+                                occ_factor(kswfn_),
+                            )
+                        )
+                    )
+
+            with kroot_intra:
+                if kroot_intra.is_null:
+                    kroot_intra.skip_with_block()
+                fock_val = kroot_intra.allreduce(fock_val)
+
+            fock_val = image_comm.bcast(fock_val)
+            return float(np.real(fock_val))
+
+
+        def run_inner_scf(conv_thr_target: float):
+            nonlocal rho_in, rho_out, diago_thr, scf_converged, global_inner_iter, mixmod
+
+            idxiter = 0
+            inner_converged = False
+            last_e_error = np.inf
+
+            while idxiter < maxiter:
+                print(end="", flush=True)
+
                 if symm_rho:
                     rho_in = symm_mod.symmetrize(rho_in)
+                normalize_rho(rho_in)
 
-            scf_converged = image_comm.bcast(scf_converged)
-            diago_thr = image_comm.bcast(diago_thr)
-            image_comm.barrier()
-            if iter_printer is not None and image_comm.rank == 0:
-                iter_printer(
-                    idxiter,
-                    perf_counter() - start_time,
-                    scf_converged,
-                    e_error,
-                    diago_thr,
-                    diago_avgiter,
-                    en,
-                )
-            if scf_converged:
-                if image_comm.rank == 0:
-                    print("SCF Converged.")
-                    if is_spin:
-                        # Total magnetization = int rho_up(r)-rho_down(r) dr
-                        tot_mag = rho_out[0].to_r() - rho_out[1].to_r()
-                        # Abs. magnetization = int |rho_up(r)-rho_down(r)| dr
-                        abs_mag = tot_mag.copy()
-                        abs_mag._data[:] = np.abs(tot_mag.data)
-                        print(
-                            f"Total magnetization:    {tot_mag.integrate_unitcell().real:>5.2f} Bohr magneton / cell (Ry units)"
-                        )
-                        print(
-                            f"Absolute magnetization: {abs_mag.integrate_unitcell().real:>5.2f} Bohr magneton / cell (Ry units)"
-                        )
-                break
-            else:
+                compute_vloc()
+
+                # Davidson expects an indexable vloc_g0
+                vloc_g0_local = np.sum(vloc, axis=-1) / np.prod(grho.grid_shape)
+                if (not is_noncolin) and (not is_spin):
+                    vloc_g0_local = (vloc_g0_local,)
+
+                nonlocal vloc_g0
+                vloc_g0 = vloc_g0_local
+
+                diago_avgiter = 0.0
+                for kswfn_, ksham_ in zip(l_kswfn_kgrp, l_ksham_kgrp):
+                    diago_avgiter += solve_kswfn(kswfn_, ksham_)
+                diago_avgiter /= len(i_kpts_kgrp)
+
+                if occ_typ == "fixed":
+                    en.HO_level, en.LU_level = occup.fixed.compute_occ(
+                        dftcomm, l_kswfn_kgrp, crystal.numel
+                    )
+                elif occ_typ == "smear":
+                    en.fermi, en.smear = occup.smear.compute_occ(
+                        dftcomm, l_kswfn_kgrp, crystal.numel, is_spin, smear_typ, e_temp
+                    )
+
+                update_rho_out()
+                compute_en()
+
+                e_error = float(mixmod.compute_error(rho_in, rho_out))
+                e_error = image_comm.bcast(e_error)
+                last_e_error = e_error
+
+                if e_error < conv_thr_target:
+                    inner_converged = True
+
+                    if hf:
+                        rho_in = rho_out.copy()
+                        if symm_rho:
+                            rho_in = symm_mod.symmetrize(rho_in)
+                        normalize_rho(rho_in)
+                    else:
+                        # Preserve the original SCF convergence behaviour.
+                        rho_out = rho_in.copy()
+                        compute_en()
+                elif idxiter == 0 and e_error < diago_thr * crystal.numel:
+                    diago_thr = 0.1 * e_error / crystal.numel
+                else:
+                    diago_thr = min(diago_thr, 0.1 * e_error / crystal.numel)
+                    diago_thr = max(diago_thr, 0.5e-13)
+                    rho_in = mixmod.mix(rho_in, rho_out)
+                    if symm_rho:
+                        rho_in = symm_mod.symmetrize(rho_in)
+
+                inner_converged = image_comm.bcast(inner_converged)
+                diago_thr = image_comm.bcast(diago_thr)
+                image_comm.barrier()
+
+                if iter_printer is not None and image_comm.rank == 0:
+                    iter_printer(
+                        global_inner_iter,
+                        perf_counter() - start_time,
+                        inner_converged,
+                        e_error,
+                        diago_thr,
+                        diago_avgiter,
+                        en,
+                    )
+
+                global_inner_iter += 1
+
+                if inner_converged:
+                    break
+
                 idxiter += 1
+
+            return inner_converged, last_e_error
+
+        # HF/EXX outer and inner SCF loops.
+        # The exchange operator is fixed during the inner SCF loop and
+        # updated between outer EXX iterations.
+        if not hf:
+            scf_converged, _final_rho_error = run_inner_scf(conv_thr)
+
+        else:
+            scf_converged = False
+
+            # Exchange quantities used for outer-loop convergence:
+            #   fock0: value from the previous outer iteration
+            #   fock1: current wavefunctions with the fixed exchange operator
+            #   fock2: current wavefunctions after updating the exchange operator
+            #   dexx = fock1 - 0.5 * (fock0 + fock2)
+            fock0 = 0.0
+            fock1 = 0.0
+            fock2 = 0.0
+            dexx = np.inf
+
+            conv_thr_this = conv_thr_init if adaptive_thr else conv_thr
+            first_exx_step = True
+
+            exx_step = 0
+            while exx_step < exx_maxstep:
+                inner_converged, final_rho_error = run_inner_scf(conv_thr_this)
+
+                if first_exx_step:
+                    # Initialize the exchange operator for the outer loop.
+                    update_exchange_from_wfns(build_ace=True)
+                    fock2 = compute_fock_energy_from_wfns()
+                    en.exx = 0.5 * fock2
+
+                    if image_comm.rank == 0:
+                        print(
+                            f"[EXX outer {exx_step:02d}] INIT   "
+                            f"fock2 = {fock2: .12e}  "
+                            f"Ex = {0.5 * fock2: .12e}  "
+                            f"conv_thr_inner = {conv_thr_this: .3e}  "
+                            f"rho_error = {final_rho_error: .3e}"
+                        )
+
+                    first_exx_step = False
+
+                    if reset_mixing_on_exx:
+                        mixmod = make_mixmod(rho_in)
+
+                    exx_step += 1
+                    # Keep the initial inner threshold for the next cycle.
+                    continue
+
+                # Current wavefunctions with the fixed exchange operator.
+                fock1 = compute_fock_energy_from_wfns()
+
+                # Update the exchange operator and compute fock2.
+                fock0 = fock2
+                update_exchange_from_wfns(build_ace=True)
+                fock2 = compute_fock_energy_from_wfns()
+                en.exx = 0.5 * fock2
+
+                dexx = float(np.real(fock1 - 0.5 * (fock0 + fock2)))
+
+                # Allow small negative values from numerical noise.
+                dexx_neg_tol = max(
+                    5.0 * exx_conv_thr,
+                    1e-10 * max(abs(fock0), abs(fock1), abs(fock2), 1.0),
+                )
+
+                if dexx < -dexx_neg_tol:
+                    raise RuntimeError(
+                        f"dexx is significantly negative: dexx={dexx:.12e}, "
+                        f"tolerance={dexx_neg_tol:.12e}. Check the EXX divergence "
+                        "treatment, k-point weights, and EXX cutoff."
+                    )
+
+                if dexx < 0.0:
+                    if image_comm.rank == 0:
+                        print(
+                            f"[EXX outer {exx_step:02d}] small negative dexx clipped to zero: "
+                            f"{dexx: .12e}  (tol = {dexx_neg_tol: .12e})"
+                        )
+                    dexx = 0.0
+
+                if image_comm.rank == 0:
+                    print(
+                        f"[EXX outer {exx_step:02d}] STEP   "
+                        f"fock0 = {fock0: .12e}  "
+                        f"fock1 = {fock1: .12e}  "
+                        f"fock2 = {fock2: .12e}  "
+                        f"dexx = {dexx: .3e}  "
+                        f"conv_thr_inner = {conv_thr_this: .3e}  "
+                        f"rho_error = {final_rho_error: .3e}"
+                    )
+
+                if inner_converged and np.isfinite(dexx) and (dexx < exx_conv_thr):
+                    scf_converged = True
+                    break
+
+                if adaptive_thr:
+                    if np.isfinite(dexx):
+                        conv_thr_this = max(conv_thr, conv_thr_multi * dexx)
+                    else:
+                        conv_thr_this = conv_thr_init
+                else:
+                    conv_thr_this = conv_thr
+
+                if reset_mixing_on_exx:
+                    mixmod = make_mixmod(rho_in)
+
+                exx_step += 1
+
+        if scf_converged and image_comm.rank == 0:
+            print("SCF Converged.")
+            if is_spin:
+                tot_mag = rho_out[0].to_r() - rho_out[1].to_r()
+                abs_mag = tot_mag.copy()
+                abs_mag._data[:] = np.abs(tot_mag.data)
+                print(
+                    f"Total magnetization:    {tot_mag.integrate_unitcell().real:>5.2f} Bohr magneton / cell (Ry units)"
+                )
+                print(
+                    f"Absolute magnetization: {abs_mag.integrate_unitcell().real:>5.2f} Bohr magneton / cell (Ry units)"
+                )
 
         # TODO: Make it a separate function.
         if ret_vxc:
