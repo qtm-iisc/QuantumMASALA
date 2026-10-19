@@ -1,5 +1,4 @@
 import numpy as np
-from qtm.dft import kswfn
 from qtm.crystal import Crystal
 from qtm.constants import ELECTRON_RYD, RY_KBAR
 from qtm.dft import DFTCommMod
@@ -32,10 +31,6 @@ def stress_kinetic(dftcomm:DFTCommMod,
             kin_stress_k=np.sum(gk_tensor, axis=0)*k_weight
             kin_stress+=kin_stress_k
     kin_stress*=ELECTRON_RYD**2*hcut_HART**2/me_HART/omega
-    '''if dftcomm.kgrp_intra is not None:
-        kin_stress = dftcomm.kgrp_intra.allreduce(kin_stress)'''
-    #kin_stress=cryst.symm.symmetrize_matrix(kin_stress)
     if dftcomm.image_comm is not None:
-        #print("kinetic stress in", dftcomm.image_comm.rank, "=", kin_stress)
         kin_stress = dftcomm.image_comm.allreduce(kin_stress)
     return kin_stress*RY_KBAR

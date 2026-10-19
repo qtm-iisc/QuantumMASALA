@@ -51,7 +51,7 @@ from qtm.dft import DFTCommMod, DFTConfig, KSWfn, KSHam, eigsolve, occup, mixing
 from qtm.mpi.check_args import check_system
 from qtm.mpi.utils import scatter_slice
 
-from qtm.force import force
+from qtm.pot.force import force
 
 from qtm.msg_format import *
 from qtm.constants import RYDBERG

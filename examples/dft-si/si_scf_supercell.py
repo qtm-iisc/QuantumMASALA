@@ -34,7 +34,6 @@ from qtm.kpts import gen_monkhorst_pack_grid
 from qtm.gspace import GSpace
 from qtm.mpi import QTMComm
 from qtm.dft import DFTCommMod, scf
-from qtm.force import force, force_ewald, force_local, force_nonloc
 
 from qtm.io_utils.dft_printers import print_scf_status
 

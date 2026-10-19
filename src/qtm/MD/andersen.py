@@ -1,109 +1,29 @@
 from __future__ import annotations
-import gc
 
-import numpy as numpy
-
-from qtm.constants import RYDBERG, ELECTRONVOLT, vel_HART, BOLTZMANN_SI, BOLTZMANN_RYD, M_NUC_RYD
-from qtm.lattice import RealLattice
+from qtm.constants import RYDBERG, BOLTZMANN_RYD, M_NUC_RYD
 from qtm.crystal import BasisAtoms, Crystal
-from qtm.pseudo import UPFv2Data
-from qtm.kpts import gen_monkhorst_pack_grid
-from qtm.gspace import GSpace
-from qtm.mpi import QTMComm
 from qtm.dft import DFTCommMod, scf
 
-from qtm.io_utils.dft_printers import print_scf_status
-
 from qtm import qtmconfig
-from qtm.logger import qtmlogger
 qtmconfig.fft_backend = 'mkl_fft'
 
 from typing import TYPE_CHECKING
 
-from qtm.logger import qtmlogger
 if TYPE_CHECKING:
     from typing import Literal
-    from numbers import Number
 __all__ = ['scf', 'EnergyData', 'IterPrinter']
 
-from dataclasses import dataclass
-from time import perf_counter
-from sys import version_info
 import numpy as np
 
-from qtm.crystal import Crystal
 from qtm.kpts import KList
-from qtm.gspace import GSpace, GkSpace
-from qtm.mpi.gspace import DistGSpace
-from qtm.containers import FieldGType, FieldRType, get_FieldG
+from qtm.gspace import GSpace
+from qtm.containers import FieldGType, get_FieldG
 
-from qtm.pot import hartree, xc, ewald
-from qtm.pseudo import (
-    loc_generate_rhoatomic, loc_generate_pot_rhocore,
-    NonlocGenerator
-)
-from qtm.symm.symmetrize_field import SymmFieldMod
+from qtm.dft import DFTCommMod, DFTConfig, KSWfn
 
-from qtm.dft import DFTCommMod, DFTConfig, KSWfn, KSHam, eigsolve, occup, mixing
-
-from qtm.mpi.check_args import check_system
-from qtm.mpi.utils import scatter_slice
-
-from qtm.force import force
+from qtm.pot.force import force
 from qtm.MD.rdist import RDist
-
-from qtm.msg_format import *
-from qtm.constants import RYDBERG
-
-from qtm.config import MPI4PY_INSTALLED
-if MPI4PY_INSTALLED:
-    from mpi4py.MPI import COMM_WORLD
-else:
-    COMM_WORLD = None
-
-comm_world = QTMComm(COMM_WORLD)
-
-@dataclass
-class EnergyData:
-    total: float = 0.0
-    hwf: float = 0.0
-    one_el: float = 0.0
-    ewald: float = 0.0
-    hartree: float = 0.0
-    xc: float = 0.0
-
-    fermi: float | None = None
-    smear: float | None = None
-    internal: float | None = None
-
-    HO_level: float | None = None
-    LU_level: float | None = None
-
-
-if version_info[1] >= 8:
-    from typing import Protocol
-
-    class IterPrinter(Protocol):
-        def __call__(self, idxiter: int, runtime: float, scf_converged: bool,
-                     e_error: float, diago_thr: float, diago_avgiter: float,
-                     en: EnergyData) -> None:
-            ...
-
-    class WfnInit:
-        def __init__(self, pre_existing_wfns: list[KSWfn]):
-            self.pre_existing_wfns = pre_existing_wfns
-
-        def __call__(self, ik: int, kswfn: list[KSWfn]) -> None:
-            """Initialize wavefunctions using pre-existing wavefunctions.
-            For now it only works for spin unpolarised case"""
-            assert len(kswfn) == len(self.pre_existing_wfns[ik])
-            for i in range(len(kswfn)):
-                kswfn[i].evc_gk.data[:] = self.pre_existing_wfns[ik][i].evc_gk.data
-                kswfn[i].evl[:]= self.pre_existing_wfns[ik][i].evl[:]
-                kswfn[i].occ[:]= self.pre_existing_wfns[ik][i].occ[:]  
-else:
-    IterPrinter = 'IterPrinter'
-    WfnInit = 'WfnInit'
+from qtm.MD.common import EnergyData, IterPrinter, WfnInit, comm_world
 
 ## Max_t is the maximum time that can be elapsed, dt is the time steps, and the T_init is the initial temperature of the system.
 ##If store_var is set to true then, the variables like energy and temperature are stored and 
@@ -147,15 +67,11 @@ def Andersen_MD(dftcomm: DFTCommMod,
         label_cryst=np.array([sp.label for sp in l_atoms])
         mass_cryst=np.array([sp.mass for sp in l_atoms])*M_NUC_RYD
         mass_all=np.repeat([sp.mass for sp in l_atoms], [sp.numatoms for sp in l_atoms])*M_NUC_RYD
-        #tot_mass=np.sum(mass_all)
         num_typ = len(l_atoms)
         reallat=crystal.reallat
-        #lnum_labels = np.repeat([np.arange(num_typ)], [sp.numatoms for sp in l_atoms])
-        #coords_alat_all = np.concatenate([sp.r_alat for sp in l_atoms], axis=1)
         coords_cart_all = np.concatenate([sp.r_cart for sp in l_atoms], axis =1).T
         coods_ref=coords_cart_all
         ##This is a numatom times 3 array containing the coordinates of all the atoms in the crystal
-
 
         ##INIT-MD
         ##First we assign velocities to the atoms
@@ -188,18 +104,6 @@ def Andersen_MD(dftcomm: DFTCommMod,
             vel*=np.sqrt(T_init/T)
         else:
             vel= vel_init
-
-        #region Debug statement
-        ##Calculate the kinetic energy
-        ke_init=0.5*np.sum(mass_all*vel.T**2)
-
-        ##Calculate the temperature
-        T_later=2*ke_init/(3*tot_num*BOLTZMANN_RYD)
-
-        print("After rescaling the temperature is", T_later, "K")
-        #endregion End of debug statement
-
-        ##Convert the velocities to atomic units
 
         time_step=int(max_t/dt)
         time_array = np.empty(time_step)
@@ -237,16 +141,10 @@ def Andersen_MD(dftcomm: DFTCommMod,
                     l_atoms_itr.append(Basis_atoms_sp)
                 crystal_itr=Crystal(reallat, l_atoms_itr)
                 kpts.recilat= crystal_itr.recilat
-                #kpts_itr=gen_monkhorst_pack_grid(crystal_itr, kgrid, kshift, use_symm, is_time_reversal)
-                
+
                 FieldG_rho_itr: FieldGType= get_FieldG(grho)
                 if rho is not None: rho_itr=FieldG_rho_itr(rho.data)
                 else: rho_itr=rho
-
-                '''with dftcomm.image_comm as comm: 
-                    print("Hello! my rank is, ", comm.rank)
-                    print("the primvector I have in my lattice is", crystal_itr.reallat.primvec)
-                    print(flush=True)'''
 
                 out = scf(
                         dftcomm=dftcomm, 
@@ -276,11 +174,7 @@ def Andersen_MD(dftcomm: DFTCommMod,
                         )
                 
                 scf_converged, rho, l_wfn_kgrp, en, v_loc, rho_core,  nloc, xc_compute = out
-                if comm.rank==0:  
-                    print("my rank is", dftcomm.image_comm.rank)
-                    print("And I have successfully calculated energy", en.total)
                 #region of calculation of the jacobian i.e the force
-
                 force_itr= force(dftcomm=dftcomm,
                                     numbnd=numbnd,
                                     wavefun=l_wfn_kgrp, 
@@ -293,12 +187,6 @@ def Andersen_MD(dftcomm: DFTCommMod,
                                     verbosity=True)[0]
 
                 del v_loc, nloc, xc_compute, crystal_itr, FieldG_rho_itr
-                for var in list(locals().keys()):
-                    if var not in ["en", "force_itr", "rho"]:
-                        del locals()[var]
-                gc.collect()  
-                #if dftcomm.image_comm.rank==0:
-                    #print("I am process", comm.rank, "and I have calculated the force", force_itr)
                 energy=en.total/RYDBERG
             return energy, force_itr, rho, l_wfn_kgrp
         
@@ -327,9 +215,6 @@ def Andersen_MD(dftcomm: DFTCommMod,
             rho_md=rho
             wfn_md=WfnInit(wfn)
             ##Calculating the new velocity
-            #region debug statement
-            
-            #endregion end of debug statement
             vel=vel+0.5*(accelaration+force_coord_new.T/mass_all).T*dt
 
             #reassigning the forces and coordinates
@@ -339,41 +224,17 @@ def Andersen_MD(dftcomm: DFTCommMod,
             ###Application of the Andersen Thermostat
             kT=T_init*BOLTZMANN_RYD
 
-            if comm.rank==0: print("velocity before random scaling", vel)
-
-            #region debug statement for the velocity
-            #Calculating the total energy and Temperature
-            ke=0.5*np.sum(mass_all*vel.T**2)
-            en_total=en_new+ke
-            T_new=2*ke/(3*tot_num*BOLTZMANN_RYD)
-
             del accelaration, coords_new, force_coord_new
 
-
-
-            ##printing all the variables
-            #region debug statement
-            if comm.rank==0:
-
-                print("the time is", time)
-                print("the temperature before scaling is", T_new)
-                print("the energy before scaling is ", en_total)
-                print("the ke energy before scaling is", ke)
-            #endregion end of debug statement
-
             prob=float(nu)*dt
-            print("the probability is", prob)
 
             if comm.rank==0:
                 for atom in range(tot_num):
                     b=np.random.rand()
-                    print("the random number is", b)
                     if b <prob:
                         sigma=np.sqrt(kT/mass_all[atom])
                         vel[atom]=np.random.normal(0, sigma, 3) ##This is in SI units
-                print("velocity after random scaling", vel)
             comm.Bcast(vel)
-            print("the velocity after the random scaling is", vel)
 
             ##Make the center of Mass stationary
             momentum=mass_all*vel.T
@@ -390,15 +251,6 @@ def Andersen_MD(dftcomm: DFTCommMod,
             ke=0.5*np.sum(mass_all*vel.T**2)
             en_total=en_new+ke
             T_new=2*ke/(3*tot_num*BOLTZMANN_RYD)
-
-            ##printing all the variables
-            #region debug statement
-            if comm.rank==0:
-                print("the time is", time)
-                print("the temperature is", T_new)
-                print("the energy is ", en_total)
-                print("the ke energy is", ke)
-            #endregion end of debug statement
 
             time_step=int(time/dt)
             Ryd_to_eV=27.211386245988/2

@@ -8,7 +8,7 @@ from .crystal import *
 from .containers import *
 from . import mpi
 
-from . import force
-from . import stress
+from .pot import force
+from .pot import stress
 from . import relax
 from . import MD

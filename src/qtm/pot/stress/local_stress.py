@@ -5,13 +5,10 @@ import numpy as np
 from qtm.crystal import Crystal
 from qtm.gspace import GSpace
 from qtm.containers.field import FieldGType
-from qtm.pseudo.loc import loc_generate_pot_rhocore, loc_generate_dpot
+from qtm.pseudo.loc import loc_generate_dpot
 from qtm.constants import RYDBERG, RY_KBAR
 
-
 from qtm.dft import DFTCommMod
-from qtm.mpi import QTMComm
-from mpi4py.MPI import COMM_WORLD  
 
 
 def stress_local(dftcomm:DFTCommMod,
@@ -46,7 +43,6 @@ def stress_local(dftcomm:DFTCommMod,
         dv_loc_isp = loc_generate_dpot(l_atoms[isp], gspc)
         dv_loc[labels==isp]=np.real(dv_loc_isp.data)
     if dftcomm.pwgrp_intra is None or dftcomm.pwgrp_intra.size==1: v_loc=v_loc[:,idxsort]
-    loc_stress=np.zeros((3,3))
     fact=2 if gamma_only else 1
     g_tensor=np.einsum("ij, ik->ijk", cart_g.T, cart_g.T)
     spart=2*dv_loc*np.real(np.exp(-1j*gtau)*np.conjugate(rho))

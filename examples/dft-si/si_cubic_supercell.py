@@ -35,7 +35,7 @@ from qtm.kpts import gen_monkhorst_pack_grid
 from qtm.gspace import GSpace
 from qtm.mpi import QTMComm
 from qtm.dft import DFTCommMod, scf
-from qtm.force import force, force_ewald, force_local, force_nonloc
+from qtm.pot.force import force, force_ewald, force_local, force_nonloc
 
 from qtm.io_utils.dft_printers import print_scf_status
 
@@ -87,11 +87,7 @@ si_atoms = BasisAtoms.from_alat(
 crystal_unit = Crystal(reallat, [si_atoms]) 
 crystal_supercell=crystal_unit.gen_supercell([supercell_size] * 3)
 reallat_supercell=crystal_supercell.reallat
-##print the crystal coordinates of the supercell
-#print("The crystal coordinates of the supercell", crystal_supercell.l_atoms[0].r_alat)
 r_alat_supercell=crystal_supercell.l_atoms[0].r_alat.T
-
-#print("the original coordinates are", r_alat_supercell)
 
 data=[[ 6.58943879e-04,6.91497266e-04,7.48515032e-05],
  [-6.05728097e-05, -8.75943473e-04, -7.04679950e-04],
@@ -162,8 +158,6 @@ data=np.array(data)
 
 N=r_alat_supercell+ 1*data
 
-#print("the new coordinates in alat units", N)
-
 si_atoms_supercell = BasisAtoms.from_alat(
     "si",
     si_oncv,
@@ -172,18 +166,8 @@ si_atoms_supercell = BasisAtoms.from_alat(
     N,
 )
 
-crystal = Crystal(reallat_supercell, [si_atoms_supercell]) 
-#crystal=crystal_supercell
+crystal = Crystal(reallat_supercell, [si_atoms_supercell])  # Represents the crystal
 
- # Represents the crystal
-
-#crystal = crystal.gen_supercell([supercell_size] * 3)
-##We want to print the coordinates of the Si atms
-#print("Si basis", si_basis.r_alat)
-#coordinates=generate_coordinates(supercell_size).T
-## Set this as the new coordinates of the basis
-#si_basis.r_cart=coordinates
-#print("new coordinates", si_basis.r_cart)
 # Generating k-points from a Monkhorst Pack grid (reduced to the crystal's IBZ)
 mpgrid_shape = (1, 1, 1)
 mpgrid_shift = (False, False, False)
@@ -195,16 +179,12 @@ ecut_rho = 4 *ecut_wfn
 grho_serial = GSpace(crystal.recilat, ecut_rho)
 
 # If G-space parallelization is not required, use the serial G-space object
-#print("N_pwgrp", dftcomm.n_pwgrp)
-#print("Image_comm_size", dftcomm.image_comm.size)
-if dftcomm.n_pwgrp == dftcomm.image_comm.size:  
+if dftcomm.n_pwgrp == dftcomm.image_comm.size:
     grho = grho_serial
 else:
     grho = DistGSpace(comm_world, grho_serial)
 gwfn = grho
 
-print("the type of grho is", type(grho))    
-print(flush=True)
 occ_typ="fixed"
 if occ_typ == "fixed":
     numbnd=int(np.round(crystal.numel // 2))
@@ -236,7 +216,6 @@ out = scf(
 scf_converged, rho, l_wfn_kgrp, en, v_loc, nloc, xc_compute, del_v_hxc= out
 
 initial_time=time.time()
-print(type(del_v_hxc))
 start_time = time.time()
 force_ewa=force_ewald(dftcomm=dftcomm,
                       crystal=crystal,
@@ -246,7 +225,6 @@ force_ewa=force_ewald(dftcomm=dftcomm,
 if dftcomm.image_comm.rank==0:
     print("force ewald", force_ewa)
     print("Time taken for ewald force: ", time.time() - start_time)
-print(flush=True)
 
 ##Calculation time of Local Forces
 start_time = time.time()
@@ -259,7 +237,6 @@ force_loc=force_local(dftcomm=dftcomm,
 if dftcomm.image_comm.rank==0:
     print("force local", force_loc)
     print("Time taken for local force: ", time.time() - start_time)
-print(flush=True)
 
 ##Calculation time of Non Local Forces
 start_time = time.time()
@@ -272,9 +249,7 @@ force_nloc=force_nonloc(dftcomm=dftcomm,
 if dftcomm.image_comm.rank==0:
     print("force non local", force_nloc)
     print("Time taken for non local force: ", time.time() - start_time)
-print(flush=True)
 
-#force_time=time.time()
 start_time = time.time()
 force_total, force_norm=force(dftcomm=dftcomm,
                             numbnd=numbnd,

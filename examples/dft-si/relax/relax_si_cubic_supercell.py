@@ -15,8 +15,8 @@ from qtm import qtmconfig
 from qtm.logger import qtmlogger
 qtmconfig.fft_backend = 'mkl_fft'
 
-from qtm.force import force, force_ewald, force_local, force_nonloc
-from qtm.stress import stress, stress_ewald, stress_local, stress_kinetic, stress_har, stress_nonloc, stress_xc
+from qtm.pot.force import force, force_ewald, force_local, force_nonloc
+from qtm.pot.stress import stress, stress_ewald, stress_local, stress_kinetic, stress_har, stress_nonloc, stress_xc
 
 
 from mpi4py.MPI import COMM_WORLD
@@ -31,7 +31,7 @@ reallat = RealLattice.from_alat(
 )
 
 # Atom Basis
-si_oncv = UPFv2Data.from_file('Si_ONCV_PBE-1.2.upf')
+si_oncv = UPFv2Data.from_file('../Si_ONCV_PBE-1.2.upf')
  
 si_atoms = BasisAtoms.from_alat(
     "si",

@@ -34,7 +34,7 @@ from qtm.kpts import gen_monkhorst_pack_grid
 from qtm.gspace import GSpace
 from qtm.mpi import QTMComm
 from qtm.dft import DFTCommMod, scf
-from qtm.force import force, force_ewald, force_local, force_nonloc
+from qtm.pot.force import force, force_ewald, force_local, force_nonloc
 
 from qtm.io_utils.dft_printers import print_scf_status
 
@@ -67,7 +67,7 @@ reallat = RealLattice.from_alat(
 )
 
 # Atom Basis
-si_oncv = UPFv2Data.from_file("Si_ONCV_PBE-1.2.upf")
+si_oncv = UPFv2Data.from_file("../Si_ONCV_PBE-1.2.upf")
 si_atoms = BasisAtoms(
     "si",
     si_oncv,
@@ -138,7 +138,6 @@ force_ewa=force_ewald(dftcomm=dftcomm,
 if dftcomm.image_comm.rank==0:
     print("force ewald", force_ewa)
     print("Time taken for ewald force: ", time.time() - start_time)
-print(flush=True)
 
 ##Calculation time of Local Forces
 start_time = time.time()
@@ -151,7 +150,6 @@ force_loc=force_local(dftcomm=dftcomm,
 if dftcomm.image_comm.rank==0:
     print("force local", force_loc)
     print("Time taken for local force: ", time.time() - start_time)
-print(flush=True)
 
 ##Calculation time of Non Local Forces
 start_time = time.time()
@@ -164,9 +162,7 @@ force_nloc=force_nonloc(dftcomm=dftcomm,
 if dftcomm.image_comm.rank==0:
     print("force non local", force_nloc)
     print("Time taken for non local force: ", time.time() - start_time)
-print(flush=True)
 
-#force_time=time.time()
 start_time = time.time()
 force_total, force_norm=force(dftcomm=dftcomm,
                             numbnd=numbnd,
@@ -193,7 +189,3 @@ final_time=time.time()
 
 if dftcomm.image_comm.rank==0:
     print("Total time taken for the calculation", final_time-initial_time)
-
-if comm_world.rank == 0:
-    print("SCF Routine has exited")
-    print(qtmlogger)

@@ -85,7 +85,3 @@ def stress(dftcomm:DFTCommMod,
     total_presure=np.trace(stress_total)/3
     return stress_total, total_presure
 
-
-
-
-

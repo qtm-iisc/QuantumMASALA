@@ -24,7 +24,6 @@ def stress_har(dftcomm:DFTCommMod,
     ##Constants
     _4pi=4*PI*ELECTRON_RYD**2
 
-    stress_har=np.zeros((3,3))
     g_tensor=2*np.einsum("ij, ik->ijk", cart_g.T, cart_g.T)/(norm2.reshape(-1,1,1))-[np.eye(3)]*gnum
     g_tensor*=((np.abs(rho)**2/norm2).reshape(-1,1,1))
     stress_har=np.sum(g_tensor, axis=0)

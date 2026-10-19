@@ -1,68 +1,13 @@
 import scipy
 import numpy as np
 
-from qtm.lattice import ReciLattice
 from qtm.crystal import Crystal
 from qtm.gspace import GSpace
 from qtm.constants import ELECTRON_RYD, PI, RY_KBAR
 from qtm.dft import DFTCommMod
+from qtm.pot.ewald_rvecs import transgen, rgen
 
 EWALD_ERR_THR = 1e-7  # TODO: In quantum masala ewald energy code it is set to 1e-7
-
-def transgen(latvec: np.ndarray,
-         rmax: float):
-    """r max: the maximum radius we take into account
-
-    max_num: maximum number of r vectors
-
-    latvec: lattice vectors, each column representing a vector.
-            Numpy array with dimensions (3,3)
-
-    recvec: reciprocal lattice vectors, each column representing a vector.
-            Numpy array with dimensions (3,3)
-
-    dtau: difference between atomic positions. numpy array with shape (3,)"""
-
-
-    # making the grid
-    n = np.floor(1/np.linalg.norm(latvec, axis=1)*rmax).astype('i8') + 2
-    ni = n[0]
-    nj = n[1]
-    nk = n[2]
-    l0 = latvec[:, 0]
-    l1 = latvec[:, 1]
-    l2 = latvec[:, 2]
-    i=np.arange(-ni, ni)
-    j=np.arange(-nj, nj)
-    k=np.arange(-nk, nk)
-    l0_trans=np.outer(i, l0)
-    l1_trans=np.outer(j, l1)
-    l2_trans=np.outer(k, l2)
-    l0_trans=l0_trans[np.newaxis, :, np.newaxis, np.newaxis, :]
-    l1_trans=l1_trans[np.newaxis, np.newaxis, :, np.newaxis, :]
-    l2_trans=l2_trans[np.newaxis, np.newaxis, np.newaxis, :, :]
-    trans=np.squeeze(l0_trans+l1_trans+l2_trans).reshape(-1,3)
-    del i, j, k, l0_trans, l1_trans, l2_trans
-    return trans
-
-def rgen(trans:np.ndarray,
-         dtau:np.ndarray,
-         max_num:float,
-            rmax:float
-         ):
-    if rmax == 0:
-        raise ValueError("rmax is 0, grid is non-existent.")
-    trans_copy=trans.copy()
-    trans_copy-=dtau
-    norms=np.linalg.norm(trans_copy, axis=1)
-    mask=(norms<rmax) & (norms**2>1e-5)
-    r=trans_copy[mask]
-    r_norm=norms[mask]
-    vec_num=r.shape[0]
-    del trans_copy, norms, mask
-    if vec_num >= max_num:
-        raise ValueError(f"maximum allowed value of r vectors are {max_num}, got {vec_num}. ")
-    return r.T, r_norm, vec_num
 
 
 def stress_ewald(
@@ -86,22 +31,10 @@ def stress_ewald(
 
         Primvec of Gspc.recilat: The columns represent the reciprocal lattice vectors"""
     # getting the characteristic of the g_vectors:
-
-    '''idxsort=gspc.idxsort
-    gcart_nonzero = gspc.g_cart[:, 1:]
-    gcart_nonzero = (gcart_nonzero.T[idxsort[1:] - 1]).T
-    gg_nonzero = np.sum(gcart_nonzero * gcart_nonzero, axis=0)'''
-
     norm2=gspc.g_norm2
     mask=norm2>1e-10
     gg_nonzero=norm2[mask]
     gcart_nonzero=gspc.g_cart[:,mask]
-
-
-    '''gcart_nonzero = gspc.g_cart.T[np.linalg.norm(gspc.g_cart.T, axis=1) > 1e-5]
-    gg_nonzero = np.linalg.norm(gcart_nonzero, axis=1)**2
-    gcart_nonzero = gcart_nonzero.T
-    print("gg", dftcomm.pwgrp_intra.rank, "=", gg_nonzero)'''
 
     # getting the crystal characteristics
     l_atoms = crystal.l_atoms
@@ -110,7 +43,6 @@ def stress_ewald(
     omega = reallat.cellvol
 
     latvec = np.array(reallat.axes_alat)
-    recilat = ReciLattice.from_reallat(reallat=reallat)
     valence_all = np.repeat([sp.ppdata.valence for sp in l_atoms], [sp.numatoms for sp in l_atoms])
 
     # concatenated version of coordinate arrays where ith column represents the coordinate of ith atom.
@@ -184,14 +116,3 @@ def stress_ewald(
             S_S-=np.sum(r_tensor, axis=0)
     Stress = S_S + S_L
     return Stress*RY_KBAR
-
-
-
-
-
-
-
-
-
-
-
